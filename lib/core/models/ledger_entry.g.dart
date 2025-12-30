@@ -27,25 +27,31 @@ class LedgerEntryAdapter extends TypeAdapter<LedgerEntry> {
       depthInFeet: fields[7] as double,
       depthPerFeetRate: fields[8] as double,
       pvc: fields[9] as String,
-      pvcRate: fields[10] as double,
-      msPipe: fields[11] as String,
-      msPipeRate: fields[12] as double,
+      pvcRate: fields[10] as double? ?? 0,
+      msPipe: fields[11] as String? ?? '6inch',
+      msPipeRate: fields[12] as double? ?? 0,
       extraCharges: fields[13] as double,
       total: fields[14] as double,
-      isTotalManuallyEdited: fields[15] as bool,
+      isTotalManuallyEdited: fields[15] as bool? ?? false,
       received: fields[16] as double,
       balance: fields[17] as double,
       less: fields[18] as double,
       notes: fields[19] as String?,
       createdAt: fields[20] as DateTime,
       updatedAt: fields[21] as DateTime,
+      pvcInFeet: fields[22] as double? ?? 0,
+      pvcPerFeetRate: fields[23] as double? ?? 0,
+      msPipeInFeet: fields[24] as double? ?? 0,
+      msPipePerFeetRate: fields[25] as double? ?? 0,
+      stepRate: fields[26] as double? ?? 0,
+      isStepRateManuallyEdited: fields[27] as bool? ?? false,
     );
   }
 
   @override
   void write(BinaryWriter writer, LedgerEntry obj) {
     writer
-      ..writeByte(22)
+      ..writeByte(28)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -89,7 +95,19 @@ class LedgerEntryAdapter extends TypeAdapter<LedgerEntry> {
       ..writeByte(20)
       ..write(obj.createdAt)
       ..writeByte(21)
-      ..write(obj.updatedAt);
+      ..write(obj.updatedAt)
+      ..writeByte(22)
+      ..write(obj.pvcInFeet)
+      ..writeByte(23)
+      ..write(obj.pvcPerFeetRate)
+      ..writeByte(24)
+      ..write(obj.msPipeInFeet)
+      ..writeByte(25)
+      ..write(obj.msPipePerFeetRate)
+      ..writeByte(26)
+      ..write(obj.stepRate)
+      ..writeByte(27)
+      ..write(obj.isStepRateManuallyEdited);
   }
 
   @override

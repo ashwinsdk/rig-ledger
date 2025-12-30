@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 import 'core/theme/app_theme.dart';
 import 'core/database/database_service.dart';
@@ -22,11 +23,27 @@ void main() async {
   // Initialize database
   await DatabaseService.initialize();
 
+  // Request storage permissions
+  await _requestPermissions();
+
   runApp(
     const ProviderScope(
       child: RigLedgerApp(),
     ),
   );
+}
+
+Future<void> _requestPermissions() async {
+  // Request storage permission
+  final storageStatus = await Permission.storage.status;
+  if (!storageStatus.isGranted) {
+    await Permission.storage.request();
+  }
+
+  // For Android 11+ (API 30+), request manage external storage
+  if (await Permission.manageExternalStorage.status.isDenied) {
+    await Permission.manageExternalStorage.request();
+  }
 }
 
 class RigLedgerApp extends StatelessWidget {

@@ -6,6 +6,7 @@ import 'package:uuid/uuid.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/models/ledger_entry.dart';
 import '../../core/models/agent.dart';
+import '../../core/database/database_service.dart';
 import '../../core/providers/ledger_provider.dart';
 import '../../core/providers/agent_provider.dart';
 
@@ -26,13 +27,25 @@ class _LedgerFormScreenState extends ConsumerState<LedgerFormScreen> {
   late TextEditingController _billNumberController;
   Agent? _selectedAgent;
   late TextEditingController _addressController;
+
+  // Depth fields
   String _depth = '7inch';
   late TextEditingController _depthInFeetController;
   late TextEditingController _depthPerFeetRateController;
+  late TextEditingController _stepRateController;
+  bool _isStepRateManuallyEdited = false;
+
+  // PVC fields
   String _pvc = '7inch';
-  late TextEditingController _pvcRateController;
-  late TextEditingController _msPipeController;
-  late TextEditingController _msPipeRateController;
+  late TextEditingController _pvcInFeetController;
+  late TextEditingController _pvcPerFeetRateController;
+
+  // MS Pipe fields
+  String _msPipe = '6inch';
+  late TextEditingController _msPipeInFeetController;
+  late TextEditingController _msPipePerFeetRateController;
+
+  // Other fields
   late TextEditingController _extraChargesController;
   late TextEditingController _totalController;
   bool _isTotalManuallyEdited = false;
@@ -42,7 +55,7 @@ class _LedgerFormScreenState extends ConsumerState<LedgerFormScreen> {
   late TextEditingController _notesController;
 
   bool get isEditing => widget.entry != null;
-  LedgerEntry? _deletedEntry;
+  bool _isBillNumberDuplicate = false;
 
   @override
   void initState() {
@@ -53,17 +66,32 @@ class _LedgerFormScreenState extends ConsumerState<LedgerFormScreen> {
     _billNumberController =
         TextEditingController(text: entry?.billNumber ?? '');
     _addressController = TextEditingController(text: entry?.address ?? '');
+
+    // Depth
     _depth = entry?.depth ?? '7inch';
     _depthInFeetController =
         TextEditingController(text: entry?.depthInFeet.toString() ?? '0');
     _depthPerFeetRateController =
         TextEditingController(text: entry?.depthPerFeetRate.toString() ?? '0');
+    _stepRateController =
+        TextEditingController(text: entry?.stepRate.toString() ?? '0');
+    _isStepRateManuallyEdited = entry?.isStepRateManuallyEdited ?? false;
+
+    // PVC
     _pvc = entry?.pvc ?? '7inch';
-    _pvcRateController =
-        TextEditingController(text: entry?.pvcRate.toString() ?? '0');
-    _msPipeController = TextEditingController(text: entry?.msPipe ?? '');
-    _msPipeRateController =
-        TextEditingController(text: entry?.msPipeRate.toString() ?? '0');
+    _pvcInFeetController =
+        TextEditingController(text: entry?.pvcInFeet.toString() ?? '0');
+    _pvcPerFeetRateController =
+        TextEditingController(text: entry?.pvcPerFeetRate.toString() ?? '0');
+
+    // MS Pipe
+    _msPipe = entry?.msPipe ?? '6inch';
+    _msPipeInFeetController =
+        TextEditingController(text: entry?.msPipeInFeet.toString() ?? '0');
+    _msPipePerFeetRateController =
+        TextEditingController(text: entry?.msPipePerFeetRate.toString() ?? '0');
+
+    // Other
     _extraChargesController =
         TextEditingController(text: entry?.extraCharges.toString() ?? '0');
     _totalController =
@@ -90,14 +118,18 @@ class _LedgerFormScreenState extends ConsumerState<LedgerFormScreen> {
       }
     });
 
-    // Add listeners for calculation
-    _depthInFeetController.addListener(_updateCalculatedTotal);
-    _depthPerFeetRateController.addListener(_updateCalculatedTotal);
-    _pvcRateController.addListener(_updateCalculatedTotal);
-    _msPipeRateController.addListener(_updateCalculatedTotal);
-    _extraChargesController.addListener(_updateCalculatedTotal);
-    _receivedController.addListener(_updateBalance);
-    _lessController.addListener(_updateBalance);
+    // Add listeners for calculation - using wrapper that calls setState for live preview
+    _depthInFeetController.addListener(_onCalculationFieldChanged);
+    _depthPerFeetRateController.addListener(_onCalculationFieldChanged);
+    _stepRateController.addListener(_onTotalFieldChanged);
+    _pvcInFeetController.addListener(_onCalculationFieldChanged);
+    _pvcPerFeetRateController.addListener(_onCalculationFieldChanged);
+    _msPipeInFeetController.addListener(_onCalculationFieldChanged);
+    _msPipePerFeetRateController.addListener(_onCalculationFieldChanged);
+    _extraChargesController.addListener(_onCalculationFieldChanged);
+    _receivedController.addListener(_onBalanceFieldChanged);
+    _lessController.addListener(_onBalanceFieldChanged);
+    _billNumberController.addListener(_checkBillNumberDuplicate);
   }
 
   @override
@@ -106,9 +138,11 @@ class _LedgerFormScreenState extends ConsumerState<LedgerFormScreen> {
     _addressController.dispose();
     _depthInFeetController.dispose();
     _depthPerFeetRateController.dispose();
-    _pvcRateController.dispose();
-    _msPipeController.dispose();
-    _msPipeRateController.dispose();
+    _stepRateController.dispose();
+    _pvcInFeetController.dispose();
+    _pvcPerFeetRateController.dispose();
+    _msPipeInFeetController.dispose();
+    _msPipePerFeetRateController.dispose();
     _extraChargesController.dispose();
     _totalController.dispose();
     _receivedController.dispose();
@@ -118,20 +152,85 @@ class _LedgerFormScreenState extends ConsumerState<LedgerFormScreen> {
     super.dispose();
   }
 
+  // Wrapper methods that call setState for live preview updates
+  void _onCalculationFieldChanged() {
+    _updateStepRate();
+    setState(() {}); // Trigger rebuild for calculation preview
+  }
+
+  void _onTotalFieldChanged() {
+    _updateCalculatedTotal();
+    setState(() {}); // Trigger rebuild for calculation preview
+  }
+
+  void _onBalanceFieldChanged() {
+    _updateBalance();
+    setState(() {}); // Trigger rebuild for calculation preview
+  }
+
+  void _checkBillNumberDuplicate() {
+    final billNumber = _billNumberController.text.trim();
+    if (billNumber.isEmpty) {
+      if (_isBillNumberDuplicate) {
+        setState(() {
+          _isBillNumberDuplicate = false;
+        });
+      }
+      return;
+    }
+
+    final existingEntries = DatabaseService.getAllLedgerEntries();
+    final isDuplicate = existingEntries.any((entry) =>
+        entry.billNumber.toLowerCase() == billNumber.toLowerCase() &&
+        entry.id != widget.entry?.id);
+
+    if (isDuplicate != _isBillNumberDuplicate) {
+      setState(() {
+        _isBillNumberDuplicate = isDuplicate;
+      });
+    }
+  }
+
+  void _updateStepRate() {
+    if (_isStepRateManuallyEdited) {
+      _updateCalculatedTotal();
+      return;
+    }
+
+    final depthInFeet = double.tryParse(_depthInFeetController.text) ?? 0;
+    final depthRate = double.tryParse(_depthPerFeetRateController.text) ?? 0;
+
+    final stepRate = LedgerEntry.calculateStepRate(
+      depthType: _depth,
+      depthInFeet: depthInFeet,
+      baseRate: depthRate,
+    );
+
+    _stepRateController.text = stepRate.toStringAsFixed(2);
+    _updateCalculatedTotal();
+  }
+
   void _updateCalculatedTotal() {
     if (_isTotalManuallyEdited) return;
 
     final depthInFeet = double.tryParse(_depthInFeetController.text) ?? 0;
     final depthRate = double.tryParse(_depthPerFeetRateController.text) ?? 0;
-    final pvcRate = double.tryParse(_pvcRateController.text) ?? 0;
-    final msPipeRate = double.tryParse(_msPipeRateController.text) ?? 0;
+    final stepRate = double.tryParse(_stepRateController.text) ?? 0;
+    final pvcInFeet = double.tryParse(_pvcInFeetController.text) ?? 0;
+    final pvcPerFeetRate = double.tryParse(_pvcPerFeetRateController.text) ?? 0;
+    final msPipeInFeet = double.tryParse(_msPipeInFeetController.text) ?? 0;
+    final msPipePerFeetRate =
+        double.tryParse(_msPipePerFeetRateController.text) ?? 0;
     final extraCharges = double.tryParse(_extraChargesController.text) ?? 0;
 
     final total = LedgerEntry.calculateTotal(
       depthInFeet: depthInFeet,
       depthPerFeetRate: depthRate,
-      pvcRate: pvcRate,
-      msPipeRate: msPipeRate,
+      stepRate: stepRate,
+      pvcInFeet: pvcInFeet,
+      pvcPerFeetRate: pvcPerFeetRate,
+      msPipeInFeet: msPipeInFeet,
+      msPipePerFeetRate: msPipePerFeetRate,
       extraCharges: extraCharges,
     );
 
@@ -264,10 +363,15 @@ class _LedgerFormScreenState extends ConsumerState<LedgerFormScreen> {
       depth: _depth,
       depthInFeet: double.tryParse(_depthInFeetController.text) ?? 0,
       depthPerFeetRate: double.tryParse(_depthPerFeetRateController.text) ?? 0,
+      stepRate: double.tryParse(_stepRateController.text) ?? 0,
+      isStepRateManuallyEdited: _isStepRateManuallyEdited,
       pvc: _pvc,
-      pvcRate: double.tryParse(_pvcRateController.text) ?? 0,
-      msPipe: _msPipeController.text.trim(),
-      msPipeRate: double.tryParse(_msPipeRateController.text) ?? 0,
+      pvcInFeet: double.tryParse(_pvcInFeetController.text) ?? 0,
+      pvcPerFeetRate: double.tryParse(_pvcPerFeetRateController.text) ?? 0,
+      msPipe: _msPipe,
+      msPipeInFeet: double.tryParse(_msPipeInFeetController.text) ?? 0,
+      msPipePerFeetRate:
+          double.tryParse(_msPipePerFeetRateController.text) ?? 0,
       extraCharges: double.tryParse(_extraChargesController.text) ?? 0,
       total: double.tryParse(_totalController.text) ?? 0,
       isTotalManuallyEdited: _isTotalManuallyEdited,
@@ -323,30 +427,18 @@ class _LedgerFormScreenState extends ConsumerState<LedgerFormScreen> {
     );
 
     if (confirmed == true && widget.entry != null) {
-      _deletedEntry = widget.entry;
       await ref
           .read(ledgerEntriesProvider.notifier)
           .deleteEntry(widget.entry!.id);
 
       if (mounted) {
-        Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Entry deleted'),
+          const SnackBar(
+            content: Text('Entry deleted'),
             backgroundColor: AppColors.error,
-            action: SnackBarAction(
-              label: 'Undo',
-              textColor: Colors.white,
-              onPressed: () {
-                if (_deletedEntry != null) {
-                  ref
-                      .read(ledgerEntriesProvider.notifier)
-                      .addEntry(_deletedEntry!);
-                }
-              },
-            ),
           ),
         );
+        Navigator.pop(context);
       }
     }
   }
@@ -413,17 +505,50 @@ class _LedgerFormScreenState extends ConsumerState<LedgerFormScreen> {
             TextFormField(
               controller: _billNumberController,
               keyboardType: TextInputType.text,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 hintText: 'Enter bill number',
-                prefixIcon: Icon(Icons.receipt_outlined),
+                prefixIcon: const Icon(Icons.receipt_outlined),
+                suffixIcon: _isBillNumberDuplicate
+                    ? const Icon(Icons.warning_amber_rounded,
+                        color: Colors.orange)
+                    : null,
               ),
               validator: (value) {
                 if (value == null || value.trim().isEmpty) {
                   return 'Bill number is required';
                 }
+                if (_isBillNumberDuplicate) {
+                  return 'Bill number already exists';
+                }
                 return null;
               },
             ),
+            if (_isBillNumberDuplicate)
+              Container(
+                margin: const EdgeInsets.only(top: 8),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.orange.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.orange.shade200),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline,
+                        color: Colors.orange.shade700, size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'This bill number already exists. Please use a unique bill number.',
+                        style: TextStyle(
+                          color: Colors.orange.shade800,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             const SizedBox(height: 16),
 
             // Agent
@@ -469,17 +594,68 @@ class _LedgerFormScreenState extends ConsumerState<LedgerFormScreen> {
 
             // Address
             _buildSectionTitle('Address (City)'),
-            TextFormField(
-              controller: _addressController,
-              decoration: const InputDecoration(
-                hintText: 'Enter city/address',
-                prefixIcon: Icon(Icons.location_on_outlined),
-              ),
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) {
-                  return 'Address is required';
+            Autocomplete<String>(
+              initialValue: TextEditingValue(text: _addressController.text),
+              optionsBuilder: (TextEditingValue textEditingValue) {
+                if (textEditingValue.text.isEmpty) {
+                  return const Iterable<String>.empty();
                 }
-                return null;
+                final addresses = DatabaseService.getUniqueAddresses();
+                return addresses.where((address) => address
+                    .toLowerCase()
+                    .contains(textEditingValue.text.toLowerCase()));
+              },
+              onSelected: (String selection) {
+                _addressController.text = selection;
+              },
+              fieldViewBuilder: (context, textEditingController, focusNode,
+                  onFieldSubmitted) {
+                // Sync the autocomplete controller with our controller
+                textEditingController.text = _addressController.text;
+                textEditingController.addListener(() {
+                  _addressController.text = textEditingController.text;
+                });
+                return TextFormField(
+                  controller: textEditingController,
+                  focusNode: focusNode,
+                  decoration: const InputDecoration(
+                    hintText: 'Enter city/address',
+                    prefixIcon: Icon(Icons.location_on_outlined),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Address is required';
+                    }
+                    return null;
+                  },
+                );
+              },
+              optionsViewBuilder: (context, onSelected, options) {
+                return Align(
+                  alignment: Alignment.topLeft,
+                  child: Material(
+                    elevation: 4,
+                    borderRadius: BorderRadius.circular(8),
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxHeight: 200),
+                      child: ListView.builder(
+                        padding: EdgeInsets.zero,
+                        shrinkWrap: true,
+                        itemCount: options.length,
+                        itemBuilder: (context, index) {
+                          final option = options.elementAt(index);
+                          return ListTile(
+                            leading: const Icon(Icons.location_on_outlined,
+                                size: 20, color: AppColors.textSecondary),
+                            title: Text(option),
+                            dense: true,
+                            onTap: () => onSelected(option),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                );
               },
             ),
             const SizedBox(height: 24),
@@ -502,6 +678,7 @@ class _LedgerFormScreenState extends ConsumerState<LedgerFormScreen> {
                         setState(() {
                           _depth = value;
                         });
+                        _updateStepRate();
                       }
                     },
                   ),
@@ -523,17 +700,71 @@ class _LedgerFormScreenState extends ConsumerState<LedgerFormScreen> {
               ],
             ),
             const SizedBox(height: 12),
-            TextFormField(
-              controller: _depthPerFeetRateController,
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
-              inputFormatters: [
-                FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+            Row(
+              children: [
+                Expanded(
+                  child: TextFormField(
+                    controller: _depthPerFeetRateController,
+                    keyboardType:
+                        const TextInputType.numberWithOptions(decimal: true),
+                    inputFormatters: [
+                      FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+                    ],
+                    decoration: const InputDecoration(
+                      labelText: 'Rate per feet (₹)',
+                      prefixIcon: Icon(Icons.currency_rupee),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: TextFormField(
+                          controller: _stepRateController,
+                          keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true),
+                          inputFormatters: [
+                            FilteringTextInputFormatter.allow(
+                                RegExp(r'^\d*\.?\d*')),
+                          ],
+                          decoration: InputDecoration(
+                            labelText: 'Step Rate (₹)',
+                            prefixIcon: const Icon(Icons.trending_up),
+                            suffixIcon: _isStepRateManuallyEdited
+                                ? const Tooltip(
+                                    message: 'Manually edited',
+                                    child: Icon(Icons.edit,
+                                        color: AppColors.warning, size: 18),
+                                  )
+                                : null,
+                          ),
+                          onChanged: (value) {
+                            if (!_isStepRateManuallyEdited) {
+                              setState(() {
+                                _isStepRateManuallyEdited = true;
+                              });
+                            }
+                          },
+                        ),
+                      ),
+                      if (_isStepRateManuallyEdited)
+                        IconButton(
+                          onPressed: () {
+                            setState(() {
+                              _isStepRateManuallyEdited = false;
+                            });
+                            _updateStepRate();
+                          },
+                          icon: const Icon(Icons.refresh, size: 20),
+                          tooltip: 'Auto calculate',
+                          color: AppColors.primary,
+                        ),
+                    ],
+                  ),
+                ),
               ],
-              decoration: const InputDecoration(
-                labelText: 'Depth per feet rate',
-                prefixIcon: Icon(Icons.attach_money),
-              ),
             ),
             const SizedBox(height: 24),
 
@@ -562,19 +793,31 @@ class _LedgerFormScreenState extends ConsumerState<LedgerFormScreen> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: TextFormField(
-                    controller: _pvcRateController,
+                    controller: _pvcInFeetController,
                     keyboardType:
                         const TextInputType.numberWithOptions(decimal: true),
                     inputFormatters: [
                       FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
                     ],
                     decoration: const InputDecoration(
-                      labelText: 'PVC Rate',
-                      prefixIcon: Icon(Icons.attach_money),
+                      labelText: 'PVC (feet)',
                     ),
                   ),
                 ),
               ],
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _pvcPerFeetRateController,
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+              ],
+              decoration: const InputDecoration(
+                labelText: 'PVC Rate per feet (₹)',
+                prefixIcon: Icon(Icons.currency_rupee),
+              ),
             ),
             const SizedBox(height: 24),
 
@@ -583,30 +826,51 @@ class _LedgerFormScreenState extends ConsumerState<LedgerFormScreen> {
             Row(
               children: [
                 Expanded(
-                  child: TextFormField(
-                    controller: _msPipeController,
+                  child: DropdownButtonFormField<String>(
+                    value: _msPipe,
                     decoration: const InputDecoration(
-                      labelText: 'MS Pipe',
-                      hintText: 'Enter MS pipe details',
+                      labelText: 'MS Pipe Type',
                     ),
+                    items: ['6inch']
+                        .map((m) => DropdownMenuItem(value: m, child: Text(m)))
+                        .toList(),
+                    onChanged: (value) {
+                      if (value != null) {
+                        setState(() {
+                          _msPipe = value;
+                        });
+                      }
+                    },
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: TextFormField(
-                    controller: _msPipeRateController,
+                    controller: _msPipeInFeetController,
                     keyboardType:
                         const TextInputType.numberWithOptions(decimal: true),
                     inputFormatters: [
                       FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
                     ],
                     decoration: const InputDecoration(
-                      labelText: 'MS Pipe Rate',
-                      prefixIcon: Icon(Icons.attach_money),
+                      labelText: 'MS Pipe (feet)',
                     ),
                   ),
                 ),
               ],
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _msPipePerFeetRateController,
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+              ],
+              decoration: const InputDecoration(
+                labelText: 'MS Pipe Rate per feet (₹)',
+                prefixIcon: Icon(Icons.currency_rupee),
+              ),
             ),
             const SizedBox(height: 16),
 
@@ -619,7 +883,7 @@ class _LedgerFormScreenState extends ConsumerState<LedgerFormScreen> {
                 FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
               ],
               decoration: const InputDecoration(
-                labelText: 'Extra Charges',
+                labelText: 'Extra Charges (₹)',
                 prefixIcon: Icon(Icons.add_circle_outline),
               ),
             ),
@@ -642,7 +906,7 @@ class _LedgerFormScreenState extends ConsumerState<LedgerFormScreen> {
                       FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
                     ],
                     decoration: InputDecoration(
-                      prefixIcon: const Icon(Icons.calculate),
+                      prefixIcon: const Icon(Icons.currency_rupee),
                       suffixIcon: _isTotalManuallyEdited
                           ? const Tooltip(
                               message: 'Manually edited',
@@ -684,7 +948,7 @@ class _LedgerFormScreenState extends ConsumerState<LedgerFormScreen> {
                 FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
               ],
               decoration: const InputDecoration(
-                labelText: 'Received',
+                labelText: 'Received (₹)',
                 prefixIcon: Icon(Icons.payments_outlined),
               ),
             ),
@@ -699,7 +963,7 @@ class _LedgerFormScreenState extends ConsumerState<LedgerFormScreen> {
                 FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
               ],
               decoration: const InputDecoration(
-                labelText: 'Less (Discounts/Deductions)',
+                labelText: 'Less (Discounts/Deductions) (₹)',
                 prefixIcon: Icon(Icons.remove_circle_outline),
               ),
             ),
@@ -714,7 +978,7 @@ class _LedgerFormScreenState extends ConsumerState<LedgerFormScreen> {
                 FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
               ],
               decoration: const InputDecoration(
-                labelText: 'Balance',
+                labelText: 'Balance (₹)',
                 prefixIcon: Icon(Icons.account_balance_wallet_outlined),
               ),
               readOnly: true,
@@ -770,10 +1034,18 @@ class _LedgerFormScreenState extends ConsumerState<LedgerFormScreen> {
   Widget _buildCalculationPreview() {
     final depthInFeet = double.tryParse(_depthInFeetController.text) ?? 0;
     final depthRate = double.tryParse(_depthPerFeetRateController.text) ?? 0;
-    final pvcRate = double.tryParse(_pvcRateController.text) ?? 0;
-    final msPipeRate = double.tryParse(_msPipeRateController.text) ?? 0;
+    final stepRate = double.tryParse(_stepRateController.text) ?? 0;
+    final pvcInFeet = double.tryParse(_pvcInFeetController.text) ?? 0;
+    final pvcPerFeetRate = double.tryParse(_pvcPerFeetRateController.text) ?? 0;
+    final msPipeInFeet = double.tryParse(_msPipeInFeetController.text) ?? 0;
+    final msPipePerFeetRate =
+        double.tryParse(_msPipePerFeetRateController.text) ?? 0;
     final extraCharges = double.tryParse(_extraChargesController.text) ?? 0;
     final format = NumberFormat('#,##0.00');
+
+    final depthTotal = depthInFeet * depthRate;
+    final pvcTotal = pvcInFeet * pvcPerFeetRate;
+    final msPipeTotal = msPipeInFeet * msPipePerFeetRate;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -794,21 +1066,27 @@ class _LedgerFormScreenState extends ConsumerState<LedgerFormScreen> {
             ),
           ),
           const SizedBox(height: 12),
-          _buildCalcRow('Depth ($depthInFeet ft × $depthRate)',
-              format.format(depthInFeet * depthRate)),
-          _buildCalcRow('PVC Rate', format.format(pvcRate)),
-          _buildCalcRow('MS Pipe Rate', format.format(msPipeRate)),
-          _buildCalcRow('Extra Charges', format.format(extraCharges)),
+          _buildCalcRow('Depth ($depthInFeet ft × ₹$depthRate)',
+              '₹${format.format(depthTotal)}'),
+          _buildCalcRow('Step Rate', '₹${format.format(stepRate)}'),
+          _buildCalcRow('PVC ($pvcInFeet ft × ₹$pvcPerFeetRate)',
+              '₹${format.format(pvcTotal)}'),
+          _buildCalcRow('MS Pipe ($msPipeInFeet ft × ₹$msPipePerFeetRate)',
+              '₹${format.format(msPipeTotal)}'),
+          _buildCalcRow('Extra Charges', '₹${format.format(extraCharges)}'),
           const Divider(),
           _buildCalcRow(
             'Total',
-            format.format(LedgerEntry.calculateTotal(
+            '₹${format.format(LedgerEntry.calculateTotal(
               depthInFeet: depthInFeet,
               depthPerFeetRate: depthRate,
-              pvcRate: pvcRate,
-              msPipeRate: msPipeRate,
+              stepRate: stepRate,
+              pvcInFeet: pvcInFeet,
+              pvcPerFeetRate: pvcPerFeetRate,
+              msPipeInFeet: msPipeInFeet,
+              msPipePerFeetRate: msPipePerFeetRate,
               extraCharges: extraCharges,
-            )),
+            ))}',
             isBold: true,
           ),
         ],
@@ -822,11 +1100,14 @@ class _LedgerFormScreenState extends ConsumerState<LedgerFormScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            label,
-            style: TextStyle(
-              color: AppColors.textSecondary,
-              fontWeight: isBold ? FontWeight.w600 : FontWeight.normal,
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(
+                color: AppColors.textSecondary,
+                fontWeight: isBold ? FontWeight.w600 : FontWeight.normal,
+                fontSize: 13,
+              ),
             ),
           ),
           Text(

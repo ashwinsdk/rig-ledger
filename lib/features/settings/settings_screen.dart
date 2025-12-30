@@ -1,16 +1,15 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:share_plus/share_plus.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:csv/csv.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/database/database_service.dart';
 import '../../core/providers/ledger_provider.dart';
 import '../../core/providers/agent_provider.dart';
+import '../../core/services/file_save_service.dart';
 import '../export/csv_export_screen.dart';
 import '../export/csv_import_screen.dart';
 import '../export/pdf_export_screen.dart';
@@ -138,8 +137,12 @@ class SettingsScreen extends ConsumerWidget {
                     _SettingsTile(
                       icon: Icons.info_outlined,
                       title: 'RigLedger',
-                      subtitle: 'Version 1.0.0',
-                      trailing: const SizedBox.shrink(),
+                      subtitle: 'Version 1.0.1',
+                      trailing: Image.asset(
+                        'assets/images/logo.png',
+                        width: 32,
+                        height: 32,
+                      ),
                       onTap: () => _showAboutDialog(context),
                     ),
                   ],
@@ -172,18 +175,18 @@ class SettingsScreen extends ConsumerWidget {
       final backup = await DatabaseService.createBackup();
       final jsonString = const JsonEncoder.withIndent('  ').convert(backup);
 
-      final directory = await getApplicationDocumentsDirectory();
       final timestamp = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
       final fileName = 'rigledger_backup_$timestamp.json';
-      final file = File('${directory.path}/$fileName');
-      await file.writeAsString(jsonString);
 
-      await Share.shareXFiles(
-        [XFile(file.path)],
-        subject: 'RigLedger Backup',
+      final saved = await FileSaveService.saveStringFile(
+        context: context,
+        content: jsonString,
+        fileName: fileName,
+        shareSubject: 'RigLedger Backup',
+        dialogTitle: 'Save Backup File',
       );
 
-      if (context.mounted) {
+      if (context.mounted && saved) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Backup created successfully'),
@@ -329,12 +332,22 @@ class SettingsScreen extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('RigLedger'),
+        title: Row(
+          children: [
+            Image.asset(
+              'assets/images/logo.png',
+              width: 40,
+              height: 40,
+            ),
+            const SizedBox(width: 12),
+            const Text('RigLedger'),
+          ],
+        ),
         content: const Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Version: 1.0.0'),
+            Text('Version: 1.0.1'),
             SizedBox(height: 8),
             Text(
               'A fast, lightweight ledger for borewell drilling entries, income and expenses, and agent management.',
@@ -346,11 +359,11 @@ class SettingsScreen extends ConsumerWidget {
               style: TextStyle(fontWeight: FontWeight.w500),
             ),
             SizedBox(height: 4),
-            Text('• Offline-first operation'),
-            Text('• CSV import/export'),
-            Text('• PDF report generation'),
-            Text('• Agent management'),
-            Text('• Statistics & charts'),
+            Text('- Offline-first operation'),
+            Text('- CSV import/export'),
+            Text('- PDF report generation'),
+            Text('- Agent management'),
+            Text('- Statistics and charts'),
           ],
         ),
         actions: [

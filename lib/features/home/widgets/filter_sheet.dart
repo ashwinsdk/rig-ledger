@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/providers/ledger_provider.dart';
 import '../../../core/providers/agent_provider.dart';
-import '../../../core/models/agent.dart';
 
 class FilterSheet extends ConsumerStatefulWidget {
   const FilterSheet({super.key});
@@ -16,6 +15,8 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
   late TextEditingController _billNumberController;
   late TextEditingController _addressController;
   String? _selectedAgentId;
+  String? _selectedDepthType;
+  String? _selectedPvcType;
 
   @override
   void initState() {
@@ -24,6 +25,8 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
     _billNumberController = TextEditingController(text: filter.billNumber);
     _addressController = TextEditingController(text: filter.address);
     _selectedAgentId = filter.agentId;
+    _selectedDepthType = filter.depthType;
+    _selectedPvcType = filter.pvcType;
   }
 
   @override
@@ -134,6 +137,62 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
                 });
               },
             ),
+            const SizedBox(height: 16),
+            // Depth Type Dropdown
+            DropdownButtonFormField<String>(
+              value: _selectedDepthType,
+              decoration: const InputDecoration(
+                labelText: 'Depth Type',
+                prefixIcon: Icon(Icons.height),
+              ),
+              items: const [
+                DropdownMenuItem<String>(
+                  value: null,
+                  child: Text('All Depths'),
+                ),
+                DropdownMenuItem<String>(
+                  value: '7inch',
+                  child: Text('7 inch'),
+                ),
+                DropdownMenuItem<String>(
+                  value: '8inch',
+                  child: Text('8 inch'),
+                ),
+              ],
+              onChanged: (value) {
+                setState(() {
+                  _selectedDepthType = value;
+                });
+              },
+            ),
+            const SizedBox(height: 16),
+            // PVC Type Dropdown
+            DropdownButtonFormField<String>(
+              value: _selectedPvcType,
+              decoration: const InputDecoration(
+                labelText: 'PVC Type',
+                prefixIcon: Icon(Icons.plumbing),
+              ),
+              items: const [
+                DropdownMenuItem<String>(
+                  value: null,
+                  child: Text('All PVC'),
+                ),
+                DropdownMenuItem<String>(
+                  value: '7inch',
+                  child: Text('7 inch'),
+                ),
+                DropdownMenuItem<String>(
+                  value: '8inch',
+                  child: Text('8 inch'),
+                ),
+              ],
+              onChanged: (value) {
+                setState(() {
+                  _selectedPvcType = value;
+                });
+              },
+            ),
             const SizedBox(height: 24),
             // Action buttons
             Row(
@@ -159,6 +218,8 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
                             ? _addressController.text
                             : null,
                         agentId: _selectedAgentId,
+                        depthType: _selectedDepthType,
+                        pvcType: _selectedPvcType,
                       );
                       Navigator.pop(context);
                     },

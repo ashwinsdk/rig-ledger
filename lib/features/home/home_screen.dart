@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/providers/ledger_provider.dart';
-import '../../core/providers/agent_provider.dart';
 import 'widgets/ledger_list.dart';
 import 'widgets/calendar_view.dart';
 import 'widgets/summary_row.dart';
@@ -20,6 +19,7 @@ class HomeScreen extends ConsumerWidget {
     final isDailyView = ref.watch(isDailyViewProvider);
     final searchQuery = ref.watch(searchQueryProvider);
     final filter = ref.watch(ledgerFilterProvider);
+    final timePeriod = ref.watch(timePeriodProvider);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -111,46 +111,68 @@ class HomeScreen extends ConsumerWidget {
                       ),
                     ),
 
-                  // Month Navigation Row
-                  Padding(
+                  // Time Period Chips
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
                     padding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                     child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        IconButton(
-                          icon: const Icon(Icons.chevron_left,
-                              color: Colors.white),
-                          onPressed: () {
-                            ref.read(selectedMonthProvider.notifier).state =
-                                DateTime(
-                              selectedMonth.year,
-                              selectedMonth.month - 1,
-                            );
-                          },
-                        ),
-                        Text(
-                          DateFormat('MMMM yyyy').format(selectedMonth),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 18,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.chevron_right,
-                              color: Colors.white),
-                          onPressed: () {
-                            ref.read(selectedMonthProvider.notifier).state =
-                                DateTime(
-                              selectedMonth.year,
-                              selectedMonth.month + 1,
-                            );
-                          },
-                        ),
+                        _buildPeriodChip(
+                            ref, 'Month', TimePeriod.month, timePeriod),
+                        _buildPeriodChip(ref, '3 Months',
+                            TimePeriod.threeMonths, timePeriod),
+                        _buildPeriodChip(
+                            ref, '6 Months', TimePeriod.sixMonths, timePeriod),
+                        _buildPeriodChip(
+                            ref, 'Year', TimePeriod.year, timePeriod),
+                        _buildPeriodChip(
+                            ref, 'All', TimePeriod.all, timePeriod),
                       ],
                     ),
                   ),
+
+                  // Month Navigation Row (only show for month view)
+                  if (timePeriod == TimePeriod.month)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 8),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.chevron_left,
+                                color: Colors.white),
+                            onPressed: () {
+                              ref.read(selectedMonthProvider.notifier).state =
+                                  DateTime(
+                                selectedMonth.year,
+                                selectedMonth.month - 1,
+                              );
+                            },
+                          ),
+                          Text(
+                            DateFormat('MMMM yyyy').format(selectedMonth),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.chevron_right,
+                                color: Colors.white),
+                            onPressed: () {
+                              ref.read(selectedMonthProvider.notifier).state =
+                                  DateTime(
+                                selectedMonth.year,
+                                selectedMonth.month + 1,
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
 
                   // View Toggle
                   Container(
@@ -265,6 +287,34 @@ class HomeScreen extends ConsumerWidget {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => const LedgerFormScreen(),
+      ),
+    );
+  }
+
+  Widget _buildPeriodChip(WidgetRef ref, String label, TimePeriod period,
+      TimePeriod currentPeriod) {
+    final isSelected = period == currentPeriod;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      child: GestureDetector(
+        onTap: () {
+          ref.read(timePeriodProvider.notifier).state = period;
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          decoration: BoxDecoration(
+            color: isSelected ? Colors.white : Colors.white.withOpacity(0.2),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              color: isSelected ? AppColors.primary : Colors.white,
+              fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+              fontSize: 13,
+            ),
+          ),
+        ),
       ),
     );
   }

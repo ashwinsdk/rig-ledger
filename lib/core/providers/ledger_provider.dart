@@ -5,6 +5,18 @@ import '../models/ledger_entry.dart';
 
 const _uuid = Uuid();
 
+/// Time period filter options
+enum TimePeriod {
+  month, // Current selected month (default)
+  threeMonths, // Last 3 months
+  sixMonths, // Last 6 months
+  year, // Last 12 months
+  all, // All time
+}
+
+/// Current time period filter
+final timePeriodProvider = StateProvider<TimePeriod>((ref) => TimePeriod.month);
+
 /// Current selected month for filtering
 final selectedMonthProvider = StateProvider<DateTime>((ref) {
   final now = DateTime.now();
@@ -22,28 +34,42 @@ class LedgerFilter {
   final String? billNumber;
   final String? address;
   final String? agentId;
+  final String? depthType;
+  final String? pvcType;
 
   const LedgerFilter({
     this.billNumber,
     this.address,
     this.agentId,
+    this.depthType,
+    this.pvcType,
   });
 
   bool get hasFilters =>
-      billNumber != null || address != null || agentId != null;
+      billNumber != null ||
+      address != null ||
+      agentId != null ||
+      depthType != null ||
+      pvcType != null;
 
   LedgerFilter copyWith({
     String? billNumber,
     String? address,
     String? agentId,
+    String? depthType,
+    String? pvcType,
     bool clearBillNumber = false,
     bool clearAddress = false,
     bool clearAgentId = false,
+    bool clearDepthType = false,
+    bool clearPvcType = false,
   }) {
     return LedgerFilter(
       billNumber: clearBillNumber ? null : (billNumber ?? this.billNumber),
       address: clearAddress ? null : (address ?? this.address),
       agentId: clearAgentId ? null : (agentId ?? this.agentId),
+      depthType: clearDepthType ? null : (depthType ?? this.depthType),
+      pvcType: clearPvcType ? null : (pvcType ?? this.pvcType),
     );
   }
 
@@ -97,16 +123,36 @@ final ledgerEntriesProvider =
   return LedgerEntriesNotifier();
 });
 
-/// Filtered entries for current month
+/// Filtered entries based on time period
 final filteredLedgerEntriesProvider = Provider<List<LedgerEntry>>((ref) {
   final entries = ref.watch(ledgerEntriesProvider);
   final selectedMonth = ref.watch(selectedMonthProvider);
+  final timePeriod = ref.watch(timePeriodProvider);
   final searchQuery = ref.watch(searchQueryProvider);
   final filter = ref.watch(ledgerFilterProvider);
 
+  final now = DateTime.now();
+
+  // Filter by time period
   var filtered = entries.where((entry) {
-    return entry.date.year == selectedMonth.year &&
-        entry.date.month == selectedMonth.month;
+    switch (timePeriod) {
+      case TimePeriod.month:
+        return entry.date.year == selectedMonth.year &&
+            entry.date.month == selectedMonth.month;
+      case TimePeriod.threeMonths:
+        final threeMonthsAgo = DateTime(now.year, now.month - 2, 1);
+        return entry.date
+            .isAfter(threeMonthsAgo.subtract(const Duration(days: 1)));
+      case TimePeriod.sixMonths:
+        final sixMonthsAgo = DateTime(now.year, now.month - 5, 1);
+        return entry.date
+            .isAfter(sixMonthsAgo.subtract(const Duration(days: 1)));
+      case TimePeriod.year:
+        final oneYearAgo = DateTime(now.year - 1, now.month, 1);
+        return entry.date.isAfter(oneYearAgo.subtract(const Duration(days: 1)));
+      case TimePeriod.all:
+        return true;
+    }
   }).toList();
 
   // Apply search
@@ -140,6 +186,15 @@ final filteredLedgerEntriesProvider = Provider<List<LedgerEntry>>((ref) {
   if (filter.agentId != null) {
     filtered =
         filtered.where((entry) => entry.agentId == filter.agentId).toList();
+  }
+
+  if (filter.depthType != null) {
+    filtered =
+        filtered.where((entry) => entry.depth == filter.depthType).toList();
+  }
+
+  if (filter.pvcType != null) {
+    filtered = filtered.where((entry) => entry.pvc == filter.pvcType).toList();
   }
 
   // Sort by date descending
@@ -185,6 +240,44 @@ final monthlyStatsProvider = Provider<Map<String, double>>((ref) {
     'total': total,
     'received': received,
     'balance': balance,
+  };
+});
+
+/// Feet totals by type for 7inch/8inch
+final feetTotalsProvider = Provider<Map<String, double>>((ref) {
+  final entries = ref.watch(filteredLedgerEntriesProvider);
+
+  double depth7inch = 0;
+  double depth8inch = 0;
+  double pvc7inch = 0;
+  double pvc8inch = 0;
+  double msPipeTotal = 0;
+
+  for (final entry in entries) {
+    // Calculate depth feet by type
+    if (entry.depth == '7inch') {
+      depth7inch += entry.depthInFeet;
+    } else if (entry.depth == '8inch') {
+      depth8inch += entry.depthInFeet;
+    }
+
+    // Calculate PVC feet by type
+    if (entry.pvc == '7inch') {
+      pvc7inch += entry.pvcInFeet;
+    } else if (entry.pvc == '8inch') {
+      pvc8inch += entry.pvcInFeet;
+    }
+
+    // MS Pipe total
+    msPipeTotal += entry.msPipeInFeet;
+  }
+
+  return {
+    'depth7inch': depth7inch,
+    'depth8inch': depth8inch,
+    'pvc7inch': pvc7inch,
+    'pvc8inch': pvc8inch,
+    'msPipeTotal': msPipeTotal,
   };
 });
 

@@ -1,14 +1,13 @@
 import 'dart:convert';
-import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:share_plus/share_plus.dart';
 import 'package:csv/csv.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/database/database_service.dart';
 import '../../core/models/ledger_entry.dart';
+import '../../core/services/file_save_service.dart';
 
 class CsvExportScreen extends ConsumerStatefulWidget {
   const CsvExportScreen({super.key});
@@ -298,21 +297,20 @@ class _CsvExportScreenState extends ConsumerState<CsvExportScreen> {
 
       final csv = const ListToCsvConverter().convert(rows);
 
-      final directory = await getApplicationDocumentsDirectory();
       final dateFormat = DateFormat('yyyyMMdd');
       final fileName = _exportAll
           ? 'rigledger_export_all_${dateFormat.format(DateTime.now())}.csv'
           : 'rigledger_export_${dateFormat.format(_startDate)}_to_${dateFormat.format(_endDate)}.csv';
 
-      final file = File('${directory.path}/$fileName');
-      await file.writeAsString(csv, encoding: utf8);
-
-      await Share.shareXFiles(
-        [XFile(file.path)],
-        subject: 'RigLedger CSV Export',
+      final saved = await FileSaveService.saveStringFile(
+        context: context,
+        content: csv,
+        fileName: fileName,
+        shareSubject: 'RigLedger CSV Export',
+        dialogTitle: 'Save CSV Export',
       );
 
-      if (mounted) {
+      if (mounted && saved) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('CSV exported successfully'),

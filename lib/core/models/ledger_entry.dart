@@ -35,13 +35,13 @@ class LedgerEntry extends HiveObject {
   String pvc; // '7inch' or '8inch'
 
   @HiveField(10)
-  double pvcRate;
+  double pvcRate; // Legacy - kept for backward compatibility
 
   @HiveField(11)
-  String msPipe;
+  String msPipe; // Type: '6inch'
 
   @HiveField(12)
-  double msPipeRate;
+  double msPipeRate; // Legacy - kept for backward compatibility
 
   @HiveField(13)
   double extraCharges;
@@ -70,6 +70,25 @@ class LedgerEntry extends HiveObject {
   @HiveField(21)
   DateTime updatedAt;
 
+  // New fields for updated requirements
+  @HiveField(22)
+  double pvcInFeet; // PVC feet
+
+  @HiveField(23)
+  double pvcPerFeetRate; // PVC rate per feet
+
+  @HiveField(24)
+  double msPipeInFeet; // MS Pipe feet
+
+  @HiveField(25)
+  double msPipePerFeetRate; // MS Pipe rate per feet
+
+  @HiveField(26)
+  double stepRate; // Step rate for depth
+
+  @HiveField(27)
+  bool isStepRateManuallyEdited; // Manual override for step rate
+
   LedgerEntry({
     required this.id,
     required this.date,
@@ -81,9 +100,9 @@ class LedgerEntry extends HiveObject {
     required this.depthInFeet,
     required this.depthPerFeetRate,
     required this.pvc,
-    required this.pvcRate,
+    this.pvcRate = 0, // Legacy
     required this.msPipe,
-    required this.msPipeRate,
+    this.msPipeRate = 0, // Legacy
     required this.extraCharges,
     required this.total,
     required this.isTotalManuallyEdited,
@@ -93,19 +112,108 @@ class LedgerEntry extends HiveObject {
     this.notes,
     required this.createdAt,
     required this.updatedAt,
+    this.pvcInFeet = 0,
+    this.pvcPerFeetRate = 0,
+    this.msPipeInFeet = 0,
+    this.msPipePerFeetRate = 0,
+    this.stepRate = 0,
+    this.isStepRateManuallyEdited = false,
   });
 
-  /// Calculate total based on formula
+  /// Calculate step rate based on depth type and feet
+  /// Formula:
+  /// 7inch: 0-300ft same rate (d), then cumulative:
+  ///   300-400: d+10 per feet, 400-500: d+20 per feet, 500-600: d+30 per feet,
+  ///   600-700: d+50 per feet, 700-800: d+70 per feet, 800-900: d+90 per feet,
+  ///   900+: continues with +20 per 100ft bracket
+  /// 8inch: 0-300ft same rate (d), then cumulative:
+  ///   300-400: d+10 per feet, 400-500: d+20 per feet, 500-600: d+40 per feet,
+  ///   600-700: d+60 per feet, 700-800: d+80 per feet, 800-900: d+100 per feet,
+  ///   900+: continues with +20 per 100ft bracket
+  static double calculateStepRate({
+    required String depthType,
+    required double depthInFeet,
+    required double baseRate,
+  }) {
+    if (depthInFeet <= 300) return 0;
+
+    double totalStepRate = 0;
+    final is7inch = depthType == '7inch';
+
+    // Define cumulative rate additions per 100ft bracket
+    // For 7inch: +10, +10, +10, +20, +20, +20 (cumulative: 10, 20, 30, 50, 70, 90)
+    // For 8inch: +10, +10, +20, +20, +20, +20 (cumulative: 10, 20, 40, 60, 80, 100)
+    final List<Map<String, dynamic>> brackets = is7inch
+        ? [
+            {'start': 300, 'end': 400, 'extraPerFeet': 10}, // d+10
+            {'start': 400, 'end': 500, 'extraPerFeet': 20}, // d+20
+            {'start': 500, 'end': 600, 'extraPerFeet': 30}, // d+30
+            {'start': 600, 'end': 700, 'extraPerFeet': 50}, // d+50
+            {'start': 700, 'end': 800, 'extraPerFeet': 70}, // d+70
+            {'start': 800, 'end': 900, 'extraPerFeet': 90}, // d+90
+          ]
+        : [
+            {'start': 300, 'end': 400, 'extraPerFeet': 10}, // d+10
+            {'start': 400, 'end': 500, 'extraPerFeet': 20}, // d+20
+            {'start': 500, 'end': 600, 'extraPerFeet': 40}, // d+40
+            {'start': 600, 'end': 700, 'extraPerFeet': 60}, // d+60
+            {'start': 700, 'end': 800, 'extraPerFeet': 80}, // d+80
+            {'start': 800, 'end': 900, 'extraPerFeet': 100}, // d+100
+          ];
+
+    for (final bracket in brackets) {
+      final start = bracket['start'] as int;
+      final end = bracket['end'] as int;
+      final extraPerFeet = bracket['extraPerFeet'] as int;
+
+      if (depthInFeet > start) {
+        final feetInBracket = (depthInFeet >= end ? end : depthInFeet) - start;
+        if (feetInBracket > 0) {
+          totalStepRate += feetInBracket * extraPerFeet;
+        }
+      }
+    }
+
+    // For depth beyond 900ft, continue incrementing by +20 per 100ft bracket
+    if (depthInFeet > 900) {
+      final feetBeyond900 = depthInFeet - 900;
+      final lastExtraRate = is7inch ? 90 : 100; // Rate at 800-900 bracket
+
+      // Calculate how many complete 100ft brackets beyond 900
+      final completeBrackets = (feetBeyond900 / 100).floor();
+      final remainingFeet = feetBeyond900 % 100;
+
+      // Each bracket beyond 900 adds another +20
+      for (int i = 0; i < completeBrackets; i++) {
+        totalStepRate += 100 * (lastExtraRate + 20 * (i + 1));
+      }
+
+      // Remaining feet in the current bracket
+      if (remainingFeet > 0) {
+        totalStepRate +=
+            remainingFeet * (lastExtraRate + 20 * (completeBrackets + 1));
+      }
+    }
+
+    return totalStepRate;
+  }
+
+  /// Calculate total based on new formula
+  /// Total = (Depth × Depth per feet rate) + Step rate + (PVC × PVC per feet rate) + (MS pipe × MS pipe per feet rate) + Extra charges
   static double calculateTotal({
     required double depthInFeet,
     required double depthPerFeetRate,
-    required double pvcRate,
-    required double msPipeRate,
+    required double stepRate,
+    required double pvcInFeet,
+    required double pvcPerFeetRate,
+    required double msPipeInFeet,
+    required double msPipePerFeetRate,
     required double extraCharges,
   }) {
     return (depthInFeet * depthPerFeetRate) +
-        pvcRate +
-        msPipeRate +
+        stepRate +
+        (pvcInFeet * pvcPerFeetRate) +
+        (msPipeInFeet * msPipePerFeetRate) +
         extraCharges;
   }
 
@@ -141,6 +249,12 @@ class LedgerEntry extends HiveObject {
     String? notes,
     DateTime? createdAt,
     DateTime? updatedAt,
+    double? pvcInFeet,
+    double? pvcPerFeetRate,
+    double? msPipeInFeet,
+    double? msPipePerFeetRate,
+    double? stepRate,
+    bool? isStepRateManuallyEdited,
   }) {
     return LedgerEntry(
       id: id ?? this.id,
@@ -166,6 +280,13 @@ class LedgerEntry extends HiveObject {
       notes: notes ?? this.notes,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      pvcInFeet: pvcInFeet ?? this.pvcInFeet,
+      pvcPerFeetRate: pvcPerFeetRate ?? this.pvcPerFeetRate,
+      msPipeInFeet: msPipeInFeet ?? this.msPipeInFeet,
+      msPipePerFeetRate: msPipePerFeetRate ?? this.msPipePerFeetRate,
+      stepRate: stepRate ?? this.stepRate,
+      isStepRateManuallyEdited:
+          isStepRateManuallyEdited ?? this.isStepRateManuallyEdited,
     );
   }
 
@@ -180,13 +301,17 @@ class LedgerEntry extends HiveObject {
       'depth': depth,
       'depthInFeet': depthInFeet,
       'depthPerFeetRate': depthPerFeetRate,
+      'stepRate': stepRate,
       'pvc': pvc,
-      'pvcRate': pvcRate,
+      'pvcInFeet': pvcInFeet,
+      'pvcPerFeetRate': pvcPerFeetRate,
       'msPipe': msPipe,
-      'msPipeRate': msPipeRate,
+      'msPipeInFeet': msPipeInFeet,
+      'msPipePerFeetRate': msPipePerFeetRate,
       'extraCharges': extraCharges,
       'total': total,
       'isTotalManuallyEdited': isTotalManuallyEdited,
+      'isStepRateManuallyEdited': isStepRateManuallyEdited,
       'received': received,
       'balance': balance,
       'less': less,
@@ -207,13 +332,18 @@ class LedgerEntry extends HiveObject {
       depth: map['depth'] as String,
       depthInFeet: (map['depthInFeet'] as num).toDouble(),
       depthPerFeetRate: (map['depthPerFeetRate'] as num).toDouble(),
+      stepRate: (map['stepRate'] as num?)?.toDouble() ?? 0,
       pvc: map['pvc'] as String,
-      pvcRate: (map['pvcRate'] as num).toDouble(),
-      msPipe: map['msPipe'] as String,
-      msPipeRate: (map['msPipeRate'] as num).toDouble(),
+      pvcInFeet: (map['pvcInFeet'] as num?)?.toDouble() ?? 0,
+      pvcPerFeetRate: (map['pvcPerFeetRate'] as num?)?.toDouble() ?? 0,
+      msPipe: map['msPipe'] as String? ?? '6inch',
+      msPipeInFeet: (map['msPipeInFeet'] as num?)?.toDouble() ?? 0,
+      msPipePerFeetRate: (map['msPipePerFeetRate'] as num?)?.toDouble() ?? 0,
       extraCharges: (map['extraCharges'] as num).toDouble(),
       total: (map['total'] as num).toDouble(),
       isTotalManuallyEdited: map['isTotalManuallyEdited'] as bool? ?? false,
+      isStepRateManuallyEdited:
+          map['isStepRateManuallyEdited'] as bool? ?? false,
       received: (map['received'] as num).toDouble(),
       balance: (map['balance'] as num).toDouble(),
       less: (map['less'] as num).toDouble(),
@@ -226,17 +356,20 @@ class LedgerEntry extends HiveObject {
   /// Convert to CSV row
   List<String> toCsvRow() {
     return [
-      date.toIso8601String().split('T')[0], // YYYY-MM-DD
+      date.toIso8601String().split('T')[0],
       billNumber,
       agentName,
       address,
       depth,
       depthInFeet.toString(),
       depthPerFeetRate.toString(),
+      stepRate.toString(),
       pvc,
-      pvcRate.toString(),
+      pvcInFeet.toString(),
+      pvcPerFeetRate.toString(),
       msPipe,
-      msPipeRate.toString(),
+      msPipeInFeet.toString(),
+      msPipePerFeetRate.toString(),
       extraCharges.toString(),
       total.toString(),
       received.toString(),
@@ -247,18 +380,21 @@ class LedgerEntry extends HiveObject {
 
   static List<String> csvHeaders = [
     'Date',
-    'Bill number',
-    'Agent name',
+    'Bill Number',
+    'Agent Name',
     'Address',
-    'Depth',
-    'Depth in feet',
-    'Depth per feet rate',
-    'PVC',
-    'PVC rate',
-    'MS pipe',
-    'MS pipe rate',
-    'Extra-chargers',
-    'TOTAL',
+    'Depth Type',
+    'Depth (feet)',
+    'Depth Rate/ft',
+    'Step Rate',
+    'PVC Type',
+    'PVC (feet)',
+    'PVC Rate/ft',
+    'MS Pipe Type',
+    'MS Pipe (feet)',
+    'MS Pipe Rate/ft',
+    'Extra Charges',
+    'Total',
     'Received',
     'Balance',
     'Less',

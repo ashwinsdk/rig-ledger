@@ -91,6 +91,17 @@ class DatabaseService {
       ..sort((a, b) => b.date.compareTo(a.date));
   }
 
+  /// Get all unique addresses from ledger entries
+  static List<String> getUniqueAddresses() {
+    final addresses = _ledgerBox.values
+        .map((entry) => entry.address.trim())
+        .where((address) => address.isNotEmpty)
+        .toSet()
+        .toList();
+    addresses.sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+    return addresses;
+  }
+
   // Agent Operations
   static Future<void> saveAgent(Agent agent) async {
     await _agentBox.put(agent.id, agent);

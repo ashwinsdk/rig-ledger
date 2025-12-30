@@ -6,7 +6,13 @@ import '../../core/theme/app_colors.dart';
 import '../../core/database/database_service.dart';
 import '../../core/providers/ledger_provider.dart';
 
-enum DateRangeOption { currentMonth, lastThreeMonths, custom }
+enum DateRangeOption {
+  currentMonth,
+  lastThreeMonths,
+  lastSixMonths,
+  lastYear,
+  custom
+}
 
 class StatsScreen extends ConsumerStatefulWidget {
   const StatsScreen({super.key});
@@ -51,17 +57,18 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
                     ),
                     const SizedBox(height: 16),
                     // Date range selector
-                    Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
                       child: Row(
                         children: [
-                          _buildRangeTab('Month', DateRangeOption.currentMonth),
-                          _buildRangeTab(
-                              '3 Months', DateRangeOption.lastThreeMonths),
-                          _buildRangeTab('Custom', DateRangeOption.custom),
+                          _buildRangeChip(
+                              'Month', DateRangeOption.currentMonth),
+                          _buildRangeChip(
+                              '3 Mo', DateRangeOption.lastThreeMonths),
+                          _buildRangeChip(
+                              '6 Mo', DateRangeOption.lastSixMonths),
+                          _buildRangeChip('Year', DateRangeOption.lastYear),
+                          _buildRangeChip('Custom', DateRangeOption.custom),
                         ],
                       ),
                     ),
@@ -97,9 +104,10 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
     );
   }
 
-  Widget _buildRangeTab(String label, DateRangeOption option) {
+  Widget _buildRangeChip(String label, DateRangeOption option) {
     final isSelected = _dateRangeOption == option;
-    return Expanded(
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4),
       child: GestureDetector(
         onTap: () {
           setState(() {
@@ -112,17 +120,16 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
           });
         },
         child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           decoration: BoxDecoration(
-            color: isSelected ? Colors.white : Colors.transparent,
-            borderRadius: BorderRadius.circular(12),
+            color: isSelected ? Colors.white : Colors.white.withOpacity(0.2),
+            borderRadius: BorderRadius.circular(20),
           ),
           child: Text(
             label,
-            textAlign: TextAlign.center,
             style: TextStyle(
               color: isSelected ? AppColors.primary : Colors.white,
-              fontWeight: FontWeight.w500,
+              fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
               fontSize: 13,
             ),
           ),
@@ -240,6 +247,16 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
           DateTime(now.year, now.month - 2, 1),
           DateTime(now.year, now.month + 1, 0),
         );
+      case DateRangeOption.lastSixMonths:
+        return (
+          DateTime(now.year, now.month - 5, 1),
+          DateTime(now.year, now.month + 1, 0),
+        );
+      case DateRangeOption.lastYear:
+        return (
+          DateTime(now.year - 1, now.month, 1),
+          DateTime(now.year, now.month + 1, 0),
+        );
       case DateRangeOption.custom:
         return (
           _customStartDate ?? DateTime(now.year, now.month, 1),
@@ -272,7 +289,7 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
             Expanded(
               child: _SummaryCard(
                 title: 'Total',
-                value: format.format(total),
+                value: '₹${format.format(total)}',
                 icon: Icons.account_balance_wallet_outlined,
                 color: AppColors.primary,
               ),
@@ -294,7 +311,7 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
             Expanded(
               child: _SummaryCard(
                 title: 'Received',
-                value: format.format(received),
+                value: '₹${format.format(received)}',
                 icon: Icons.check_circle_outline,
                 color: AppColors.success,
               ),
@@ -303,7 +320,7 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
             Expanded(
               child: _SummaryCard(
                 title: 'Pending',
-                value: format.format(balance),
+                value: '₹${format.format(balance)}',
                 icon: Icons.pending_outlined,
                 color: AppColors.warning,
               ),
@@ -461,7 +478,7 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
                     ),
                   ),
                   Text(
-                    format.format(entry.value),
+                    '₹${format.format(entry.value)}',
                     style: const TextStyle(
                       color: AppColors.textSecondary,
                     ),

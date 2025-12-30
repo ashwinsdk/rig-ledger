@@ -92,7 +92,7 @@ class _DateGroup extends StatelessWidget {
                 ),
               ),
               Text(
-                currencyFormat.format(dayTotal),
+                '₹${currencyFormat.format(dayTotal)}',
                 style: const TextStyle(
                   color: AppColors.primary,
                   fontSize: 14,
@@ -200,7 +200,7 @@ class _LedgerEntryCard extends StatelessWidget {
                     Expanded(
                       child: _ValueDisplay(
                         label: 'Total',
-                        value: currencyFormat.format(entry.total),
+                        value: '₹${currencyFormat.format(entry.total)}',
                         isHighlighted: true,
                         showOverride: entry.isTotalManuallyEdited,
                       ),
@@ -208,14 +208,14 @@ class _LedgerEntryCard extends StatelessWidget {
                     Expanded(
                       child: _ValueDisplay(
                         label: 'Received',
-                        value: currencyFormat.format(entry.received),
+                        value: '₹${currencyFormat.format(entry.received)}',
                         color: AppColors.success,
                       ),
                     ),
                     Expanded(
                       child: _ValueDisplay(
                         label: 'Balance',
-                        value: currencyFormat.format(entry.balance),
+                        value: '₹${currencyFormat.format(entry.balance)}',
                         isHighlighted: true,
                         color: entry.balance > 0
                             ? AppColors.warning

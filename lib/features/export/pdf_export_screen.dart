@@ -1,16 +1,29 @@
-import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:share_plus/share_plus.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/database/database_service.dart';
 import '../../core/models/ledger_entry.dart';
+import '../../core/services/file_save_service.dart';
+
+class PdfColumn {
+  final String id;
+  final String label;
+  final String Function(LedgerEntry) getValue;
+  final double flex;
+
+  const PdfColumn({
+    required this.id,
+    required this.label,
+    required this.getValue,
+    this.flex = 1.0,
+  });
+}
 
 class PdfExportScreen extends ConsumerStatefulWidget {
   const PdfExportScreen({super.key});
@@ -25,9 +38,113 @@ class _PdfExportScreenState extends ConsumerState<PdfExportScreen> {
   bool _isGenerating = false;
   bool _isPreviewMode = false;
 
+  final NumberFormat _currencyFormat = NumberFormat('#,##0.00');
+  final NumberFormat _feetFormat = NumberFormat('#,##0');
+  final DateFormat _dateFormat = DateFormat('yyyy-MM-dd');
+
+  // Available columns for selection
+  late final List<PdfColumn> _allColumns;
+  late Set<String> _selectedColumnIds;
+
+  @override
+  void initState() {
+    super.initState();
+    _allColumns = [
+      PdfColumn(
+          id: 'date',
+          label: 'Date',
+          getValue: (e) => _dateFormat.format(e.date),
+          flex: 0.9),
+      PdfColumn(
+          id: 'billNumber',
+          label: 'Bill#',
+          getValue: (e) => e.billNumber,
+          flex: 0.7),
+      PdfColumn(
+          id: 'agent', label: 'Agent', getValue: (e) => e.agentName, flex: 1.0),
+      PdfColumn(
+          id: 'address',
+          label: 'Address',
+          getValue: (e) => e.address,
+          flex: 1.0),
+      PdfColumn(
+          id: 'depthType', label: 'Depth', getValue: (e) => e.depth, flex: 0.5),
+      PdfColumn(
+          id: 'depthFeet',
+          label: 'Depth ft',
+          getValue: (e) => _feetFormat.format(e.depthInFeet),
+          flex: 0.5),
+      PdfColumn(
+          id: 'depthRate',
+          label: 'Depth Rate',
+          getValue: (e) => _currencyFormat.format(e.depthPerFeetRate),
+          flex: 0.5),
+      PdfColumn(
+          id: 'stepRate',
+          label: 'Step Rate',
+          getValue: (e) => _currencyFormat.format(e.stepRate),
+          flex: 0.6),
+      PdfColumn(id: 'pvcType', label: 'PVC', getValue: (e) => e.pvc, flex: 0.5),
+      PdfColumn(
+          id: 'pvcFeet',
+          label: 'PVC ft',
+          getValue: (e) => _feetFormat.format(e.pvcInFeet),
+          flex: 0.5),
+      PdfColumn(
+          id: 'pvcRate',
+          label: 'PVC Rate',
+          getValue: (e) => _currencyFormat.format(e.pvcPerFeetRate),
+          flex: 0.5),
+      PdfColumn(
+          id: 'msPipeType',
+          label: 'MS Type',
+          getValue: (e) => e.msPipe,
+          flex: 0.5),
+      PdfColumn(
+          id: 'msPipeFeet',
+          label: 'MS ft',
+          getValue: (e) => _feetFormat.format(e.msPipeInFeet),
+          flex: 0.5),
+      PdfColumn(
+          id: 'msPipeRate',
+          label: 'MS Rate',
+          getValue: (e) => _currencyFormat.format(e.msPipePerFeetRate),
+          flex: 0.5),
+      PdfColumn(
+          id: 'extra',
+          label: 'Extra',
+          getValue: (e) => _currencyFormat.format(e.extraCharges),
+          flex: 0.5),
+      PdfColumn(
+          id: 'total',
+          label: 'Total',
+          getValue: (e) => _currencyFormat.format(e.total),
+          flex: 0.6),
+      PdfColumn(
+          id: 'received',
+          label: 'Received',
+          getValue: (e) => _currencyFormat.format(e.received),
+          flex: 0.6),
+      PdfColumn(
+          id: 'balance',
+          label: 'Balance',
+          getValue: (e) => _currencyFormat.format(e.balance),
+          flex: 0.6),
+      PdfColumn(
+          id: 'less',
+          label: 'Less',
+          getValue: (e) => _currencyFormat.format(e.less),
+          flex: 0.5),
+    ];
+    // Default: select all columns
+    _selectedColumnIds = _allColumns.map((c) => c.id).toSet();
+  }
+
+  List<PdfColumn> get _selectedColumns =>
+      _allColumns.where((c) => _selectedColumnIds.contains(c.id)).toList();
+
   @override
   Widget build(BuildContext context) {
-    final dateFormat = DateFormat('dd MMM yyyy');
     final entries =
         DatabaseService.getLedgerEntriesByDateRange(_startDate, _endDate);
 
@@ -60,181 +177,26 @@ class _PdfExportScreenState extends ConsumerState<PdfExportScreen> {
             ),
         ],
       ),
-      body: _isPreviewMode
-          ? _buildPdfPreview(entries)
-          : _buildOptions(dateFormat, entries),
+      body: _isPreviewMode ? _buildPdfPreview(entries) : _buildOptions(entries),
     );
   }
 
-  Widget _buildOptions(DateFormat dateFormat, List<LedgerEntry> entries) {
+  Widget _buildOptions(List<LedgerEntry> entries) {
+    final dateFormat = DateFormat('dd MMM yyyy');
+
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
         // Date range
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.shadow.withOpacity(0.05),
-                blurRadius: 10,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Date Range',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: InkWell(
-                      onTap: () => _selectDate(isStart: true),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'From',
-                            style: TextStyle(
-                              color: AppColors.textSecondary,
-                              fontSize: 12,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              border: Border.all(color: AppColors.border),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Row(
-                              children: [
-                                const Icon(Icons.calendar_today,
-                                    size: 16, color: AppColors.primary),
-                                const SizedBox(width: 8),
-                                Text(dateFormat.format(_startDate)),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: InkWell(
-                      onTap: () => _selectDate(isStart: false),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'To',
-                            style: TextStyle(
-                              color: AppColors.textSecondary,
-                              fontSize: 12,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              border: Border.all(color: AppColors.border),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Row(
-                              children: [
-                                const Icon(Icons.calendar_today,
-                                    size: 16, color: AppColors.primary),
-                                const SizedBox(width: 8),
-                                Text(dateFormat.format(_endDate)),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
+        _buildDateRangeCard(dateFormat),
         const SizedBox(height: 16),
 
-        // Summary
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.shadow.withOpacity(0.05),
-                blurRadius: 10,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    'Summary',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: AppColors.accentLight.withOpacity(0.3),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Text(
-                      '${entries.length} entries',
-                      style: const TextStyle(
-                        color: AppColors.primary,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              if (entries.isNotEmpty) ...[
-                const SizedBox(height: 16),
-                _buildSummaryRow(
-                  'Total',
-                  entries.fold<double>(0, (sum, e) => sum + e.total),
-                ),
-                _buildSummaryRow(
-                  'Received',
-                  entries.fold<double>(0, (sum, e) => sum + e.received),
-                ),
-                _buildSummaryRow(
-                  'Balance',
-                  entries.fold<double>(0, (sum, e) => sum + e.balance),
-                ),
-              ],
-            ],
-          ),
-        ),
+        // Column Selection
+        _buildColumnSelectionCard(),
+        const SizedBox(height: 16),
+
+        // Summary with feet totals
+        _buildSummaryCard(entries),
         const SizedBox(height: 24),
 
         // Export buttons
@@ -297,6 +259,296 @@ class _PdfExportScreenState extends ConsumerState<PdfExportScreen> {
     );
   }
 
+  Widget _buildDateRangeCard(DateFormat dateFormat) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.shadow.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Date Range',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: InkWell(
+                  onTap: () => _selectDate(isStart: true),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'From',
+                        style: TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 12,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: AppColors.border),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.calendar_today,
+                                size: 16, color: AppColors.primary),
+                            const SizedBox(width: 8),
+                            Text(dateFormat.format(_startDate)),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: InkWell(
+                  onTap: () => _selectDate(isStart: false),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'To',
+                        style: TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 12,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: AppColors.border),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.calendar_today,
+                                size: 16, color: AppColors.primary),
+                            const SizedBox(width: 8),
+                            Text(dateFormat.format(_endDate)),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildColumnSelectionCard() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.shadow.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Columns to Export',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              Row(
+                children: [
+                  TextButton(
+                    onPressed: () {
+                      setState(() {
+                        _selectedColumnIds =
+                            _allColumns.map((c) => c.id).toSet();
+                      });
+                    },
+                    child: const Text('All'),
+                  ),
+                  TextButton(
+                    onPressed: () {
+                      setState(() {
+                        _selectedColumnIds = {};
+                      });
+                    },
+                    child: const Text('None'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: _allColumns.map((column) {
+              final isSelected = _selectedColumnIds.contains(column.id);
+              return FilterChip(
+                label: Text(column.label),
+                selected: isSelected,
+                onSelected: (selected) {
+                  setState(() {
+                    if (selected) {
+                      _selectedColumnIds.add(column.id);
+                    } else {
+                      _selectedColumnIds.remove(column.id);
+                    }
+                  });
+                },
+                selectedColor: AppColors.primary.withOpacity(0.2),
+                checkmarkColor: AppColors.primary,
+              );
+            }).toList(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSummaryCard(List<LedgerEntry> entries) {
+    // Calculate totals
+    double totalSum = 0;
+    double receivedSum = 0;
+    double balanceSum = 0;
+    double depth7inch = 0;
+    double depth8inch = 0;
+    double pvc7inch = 0;
+    double pvc8inch = 0;
+    double msPipeTotal = 0;
+
+    for (final e in entries) {
+      totalSum += e.total;
+      receivedSum += e.received;
+      balanceSum += e.balance;
+
+      if (e.depth == '7inch') {
+        depth7inch += e.depthInFeet;
+      } else if (e.depth == '8inch') {
+        depth8inch += e.depthInFeet;
+      }
+
+      if (e.pvc == '7inch') {
+        pvc7inch += e.pvcInFeet;
+      } else if (e.pvc == '8inch') {
+        pvc8inch += e.pvcInFeet;
+      }
+
+      msPipeTotal += e.msPipeInFeet;
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.shadow.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Summary',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: AppColors.accentLight.withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Text(
+                  '${entries.length} entries',
+                  style: const TextStyle(
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (entries.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            // Financial Summary
+            _buildSummaryRow(
+                'Total', 'Rs. ${_currencyFormat.format(totalSum)}'),
+            _buildSummaryRow(
+                'Received', 'Rs. ${_currencyFormat.format(receivedSum)}'),
+            _buildSummaryRow(
+                'Balance', 'Rs. ${_currencyFormat.format(balanceSum)}'),
+            const Divider(height: 24),
+            // Feet Totals
+            const Text(
+              'Feet Totals',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 8),
+            _buildSummaryRow(
+                '7" Depth', '${_feetFormat.format(depth7inch)} ft'),
+            _buildSummaryRow(
+                '8" Depth', '${_feetFormat.format(depth8inch)} ft'),
+            _buildSummaryRow('7" PVC', '${_feetFormat.format(pvc7inch)} ft'),
+            _buildSummaryRow('8" PVC', '${_feetFormat.format(pvc8inch)} ft'),
+            _buildSummaryRow(
+                'MS Pipe', '${_feetFormat.format(msPipeTotal)} ft'),
+          ],
+        ],
+      ),
+    );
+  }
+
   Widget _buildPdfPreview(List<LedgerEntry> entries) {
     return PdfPreview(
       build: (format) => _generatePdf(entries),
@@ -304,11 +556,15 @@ class _PdfExportScreenState extends ConsumerState<PdfExportScreen> {
       canChangeOrientation: false,
       canChangePageFormat: false,
       pdfFileName: _getPdfFileName(),
+      allowPrinting: true,
+      allowSharing: true,
+      maxPageWidth: 700,
+      pdfPreviewPageDecoration: const BoxDecoration(),
+      previewPageMargin: const EdgeInsets.all(8),
     );
   }
 
-  Widget _buildSummaryRow(String label, double value) {
-    final format = NumberFormat('#,##0.00');
+  Widget _buildSummaryRow(String label, String value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
@@ -316,7 +572,7 @@ class _PdfExportScreenState extends ConsumerState<PdfExportScreen> {
         children: [
           Text(label, style: const TextStyle(color: AppColors.textSecondary)),
           Text(
-            format.format(value),
+            value,
             style: const TextStyle(fontWeight: FontWeight.w500),
           ),
         ],
@@ -349,24 +605,49 @@ class _PdfExportScreenState extends ConsumerState<PdfExportScreen> {
 
   Future<Uint8List> _generatePdf(List<LedgerEntry> entries) async {
     final pdf = pw.Document();
-    final dateFormat = DateFormat('yyyy-MM-dd');
-    final currencyFormat = NumberFormat('#,##0.00');
 
     // Calculate totals
-    final totalSum = entries.fold<double>(0, (sum, e) => sum + e.total);
-    final receivedSum = entries.fold<double>(0, (sum, e) => sum + e.received);
-    final balanceSum = entries.fold<double>(0, (sum, e) => sum + e.balance);
+    double totalSum = 0;
+    double receivedSum = 0;
+    double balanceSum = 0;
+    double depth7inch = 0;
+    double depth8inch = 0;
+    double pvc7inch = 0;
+    double pvc8inch = 0;
+    double msPipeTotal = 0;
+
+    for (final e in entries) {
+      totalSum += e.total;
+      receivedSum += e.received;
+      balanceSum += e.balance;
+
+      if (e.depth == '7inch') {
+        depth7inch += e.depthInFeet;
+      } else if (e.depth == '8inch') {
+        depth8inch += e.depthInFeet;
+      }
+
+      if (e.pvc == '7inch') {
+        pvc7inch += e.pvcInFeet;
+      } else if (e.pvc == '8inch') {
+        pvc8inch += e.pvcInFeet;
+      }
+
+      msPipeTotal += e.msPipeInFeet;
+    }
 
     // Sort entries by date
     entries.sort((a, b) => a.date.compareTo(b.date));
 
-    const rowsPerPage = 20; // Fewer rows for landscape with more columns
+    final columns = _selectedColumns;
+    final rowsPerPage = 22;
     final totalPages = (entries.length / rowsPerPage).ceil().clamp(1, 999);
 
     for (int page = 0; page < totalPages; page++) {
       final startIndex = page * rowsPerPage;
       final endIndex = (startIndex + rowsPerPage).clamp(0, entries.length);
       final pageEntries = entries.sublist(startIndex, endIndex);
+      final isLastPage = page == totalPages - 1;
 
       pdf.addPage(
         pw.Page(
@@ -395,12 +676,12 @@ class _PdfExportScreenState extends ConsumerState<PdfExportScreen> {
                 ),
                 pw.SizedBox(height: 8),
                 pw.Text(
-                  'Period: ${dateFormat.format(_startDate)} to ${dateFormat.format(_endDate)}',
+                  'Period: ${_dateFormat.format(_startDate)} to ${_dateFormat.format(_endDate)}',
                   style: const pw.TextStyle(fontSize: 12),
                 ),
                 pw.SizedBox(height: 4),
                 pw.Text(
-                  'Generated: ${dateFormat.format(DateTime.now())}',
+                  'Generated: ${_dateFormat.format(DateTime.now())}',
                   style: pw.TextStyle(fontSize: 10, color: PdfColors.grey700),
                 ),
                 pw.SizedBox(height: 16),
@@ -417,13 +698,13 @@ class _PdfExportScreenState extends ConsumerState<PdfExportScreen> {
                       mainAxisAlignment: pw.MainAxisAlignment.spaceAround,
                       children: [
                         _buildPdfSummaryItem(
-                            'Total Entries', entries.length.toString()),
+                            'Entries', entries.length.toString()),
                         _buildPdfSummaryItem(
-                            'Total', currencyFormat.format(totalSum)),
-                        _buildPdfSummaryItem(
-                            'Received', currencyFormat.format(receivedSum)),
-                        _buildPdfSummaryItem(
-                            'Balance', currencyFormat.format(balanceSum)),
+                            'Total', 'Rs. ${_currencyFormat.format(totalSum)}'),
+                        _buildPdfSummaryItem('Received',
+                            'Rs. ${_currencyFormat.format(receivedSum)}'),
+                        _buildPdfSummaryItem('Balance',
+                            'Rs. ${_currencyFormat.format(balanceSum)}'),
                       ],
                     ),
                   ),
@@ -435,72 +716,67 @@ class _PdfExportScreenState extends ConsumerState<PdfExportScreen> {
                   child: pw.Table(
                     border: pw.TableBorder.all(color: PdfColors.grey300),
                     columnWidths: {
-                      0: const pw.FlexColumnWidth(0.9), // Date
-                      1: const pw.FlexColumnWidth(0.7), // Bill No
-                      2: const pw.FlexColumnWidth(1.0), // Agent
-                      3: const pw.FlexColumnWidth(1.0), // Address
-                      4: const pw.FlexColumnWidth(0.5), // Depth
-                      5: const pw.FlexColumnWidth(0.5), // Depth ft
-                      6: const pw.FlexColumnWidth(0.5), // Depth Rate
-                      7: const pw.FlexColumnWidth(0.5), // PVC
-                      8: const pw.FlexColumnWidth(0.5), // PVC Rate
-                      9: const pw.FlexColumnWidth(0.6), // MS Pipe
-                      10: const pw.FlexColumnWidth(0.5), // MS Rate
-                      11: const pw.FlexColumnWidth(0.5), // Extra
-                      12: const pw.FlexColumnWidth(0.6), // Total
-                      13: const pw.FlexColumnWidth(0.6), // Received
-                      14: const pw.FlexColumnWidth(0.6), // Balance
-                      15: const pw.FlexColumnWidth(0.5), // Less
+                      for (int i = 0; i < columns.length; i++)
+                        i: pw.FlexColumnWidth(columns[i].flex),
                     },
                     children: [
                       // Header row
                       pw.TableRow(
-                        decoration: pw.BoxDecoration(
+                        decoration: const pw.BoxDecoration(
                           color: PdfColors.blue100,
                         ),
-                        children: [
-                          _buildTableCell('Date', isHeader: true),
-                          _buildTableCell('Bill#', isHeader: true),
-                          _buildTableCell('Agent', isHeader: true),
-                          _buildTableCell('Address', isHeader: true),
-                          _buildTableCell('Depth', isHeader: true),
-                          _buildTableCell('Feet', isHeader: true),
-                          _buildTableCell('Rate', isHeader: true),
-                          _buildTableCell('PVC', isHeader: true),
-                          _buildTableCell('PVC₹', isHeader: true),
-                          _buildTableCell('MS Pipe', isHeader: true),
-                          _buildTableCell('MS₹', isHeader: true),
-                          _buildTableCell('Extra', isHeader: true),
-                          _buildTableCell('Total', isHeader: true),
-                          _buildTableCell('Recd', isHeader: true),
-                          _buildTableCell('Balance', isHeader: true),
-                          _buildTableCell('Less', isHeader: true),
-                        ],
+                        children: columns
+                            .map(
+                                (c) => _buildTableCell(c.label, isHeader: true))
+                            .toList(),
                       ),
                       // Data rows
                       ...pageEntries.map((entry) => pw.TableRow(
-                            children: [
-                              _buildTableCell(dateFormat.format(entry.date)),
-                              _buildTableCell(entry.billNumber),
-                              _buildTableCell(entry.agentName),
-                              _buildTableCell(entry.address),
-                              _buildTableCell(entry.depth),
-                              _buildTableCell(entry.depthInFeet.toStringAsFixed(0)),
-                              _buildTableCell(currencyFormat.format(entry.depthPerFeetRate)),
-                              _buildTableCell(entry.pvc),
-                              _buildTableCell(currencyFormat.format(entry.pvcRate)),
-                              _buildTableCell(entry.msPipe),
-                              _buildTableCell(currencyFormat.format(entry.msPipeRate)),
-                              _buildTableCell(currencyFormat.format(entry.extraCharges)),
-                              _buildTableCell(currencyFormat.format(entry.total)),
-                              _buildTableCell(currencyFormat.format(entry.received)),
-                              _buildTableCell(currencyFormat.format(entry.balance)),
-                              _buildTableCell(currencyFormat.format(entry.less)),
-                            ],
+                            children: columns
+                                .map((c) => _buildTableCell(c.getValue(entry)))
+                                .toList(),
                           )),
                     ],
                   ),
                 ),
+
+                // Feet totals on last page
+                if (isLastPage) ...[
+                  pw.SizedBox(height: 16),
+                  pw.Container(
+                    padding: const pw.EdgeInsets.all(12),
+                    decoration: pw.BoxDecoration(
+                      color: PdfColors.grey100,
+                      borderRadius: pw.BorderRadius.circular(8),
+                    ),
+                    child: pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        pw.Text(
+                          'Feet Totals',
+                          style: pw.TextStyle(
+                              fontSize: 12, fontWeight: pw.FontWeight.bold),
+                        ),
+                        pw.SizedBox(height: 8),
+                        pw.Row(
+                          mainAxisAlignment: pw.MainAxisAlignment.spaceAround,
+                          children: [
+                            _buildPdfSummaryItem('7" Depth',
+                                '${_feetFormat.format(depth7inch)} ft'),
+                            _buildPdfSummaryItem('8" Depth',
+                                '${_feetFormat.format(depth8inch)} ft'),
+                            _buildPdfSummaryItem(
+                                '7" PVC', '${_feetFormat.format(pvc7inch)} ft'),
+                            _buildPdfSummaryItem(
+                                '8" PVC', '${_feetFormat.format(pvc8inch)} ft'),
+                            _buildPdfSummaryItem('MS Pipe',
+                                '${_feetFormat.format(msPipeTotal)} ft'),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ],
             );
           },
@@ -518,7 +794,7 @@ class _PdfExportScreenState extends ConsumerState<PdfExportScreen> {
             style: pw.TextStyle(fontSize: 10, color: PdfColors.grey700)),
         pw.SizedBox(height: 4),
         pw.Text(value,
-            style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
+            style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)),
       ],
     );
   }
@@ -547,17 +823,17 @@ class _PdfExportScreenState extends ConsumerState<PdfExportScreen> {
           DatabaseService.getLedgerEntriesByDateRange(_startDate, _endDate);
       final pdfBytes = await _generatePdf(entries);
 
-      final directory = await getApplicationDocumentsDirectory();
       final fileName = _getPdfFileName();
-      final file = File('${directory.path}/$fileName');
-      await file.writeAsBytes(pdfBytes);
 
-      await Share.shareXFiles(
-        [XFile(file.path)],
-        subject: 'RigLedger PDF Report',
+      final saved = await FileSaveService.saveFile(
+        context: context,
+        bytes: Uint8List.fromList(pdfBytes),
+        fileName: fileName,
+        shareSubject: 'RigLedger PDF Report',
+        dialogTitle: 'Save PDF Report',
       );
 
-      if (mounted) {
+      if (mounted && saved) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('PDF exported successfully'),
