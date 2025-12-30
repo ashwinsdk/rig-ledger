@@ -1,0 +1,52 @@
+name: rig_ledger
+description: A fast, lightweight, production-ready ledger for borewell drilling entries, income and expenses, and agent management.
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  
+  # State Management
+  flutter_riverpod: ^2.4.9
+  riverpod_annotation: ^2.3.3
+  
+  # Local Database
+  hive_flutter: ^1.1.0
+  hive: ^2.2.3
+  
+  # UI Components
+  fl_chart: ^0.66.2
+  intl: ^0.19.0
+  
+  # File Operations
+  path_provider: ^2.1.2
+  share_plus: ^10.0.0
+  file_picker: ^8.0.0
+  csv: ^6.0.0
+  pdf: ^3.10.7
+  printing: ^5.12.0
+  permission_handler: ^11.2.0
+  
+  # Utilities
+  uuid: ^4.3.3
+  flutter_svg: ^2.0.9
+  collection: ^1.18.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.1
+  hive_generator: ^2.0.1
+  build_runner: ^2.4.8
+  riverpod_generator: ^2.3.9
+
+flutter:
+  uses-material-design: true
+  
+  assets:
+    - assets/images/
+    - assets/icons/

@@ -1,0 +1,105 @@
+name: Build and Release APK
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag (e.g., v1.0.0)'
+        required: true
+        default: 'v1.0.0'
+
+jobs:
+  build:
+    name: Build APK
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.38.3'
+          channel: 'stable'
+          cache: true
+
+      - name: Get dependencies
+        run: flutter pub get
+
+      - name: Run build_runner
+        run: flutter pub run build_runner build --delete-conflicting-outputs
+
+      - name: Build APK (Debug)
+        run: flutter build apk --debug
+
+      - name: Build APK (Release)
+        run: flutter build apk --release
+
+      - name: Build App Bundle (Release)
+        run: flutter build appbundle --release
+
+      - name: Get version from tag
+        id: get_version
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.get_version.outputs.VERSION }}
+          name: RigLedger ${{ steps.get_version.outputs.VERSION }}
+          body: |
+            ## RigLedger ${{ steps.get_version.outputs.VERSION }}
+            
+            ### Downloads
+            - **app-release.apk** - Production-ready APK for direct installation
+            - **app-debug.apk** - Debug build with logging enabled
+            - **app-release.aab** - Android App Bundle for Play Store
+            
+            ### Installation
+            1. Download `app-release.apk`
+            2. Enable "Install from unknown sources" on your Android device
+            3. Open the APK file to install
+            
+            ### Requirements
+            - Android 5.0 (API 21) or higher
+          files: |
+            build/app/outputs/flutter-apk/app-debug.apk
+            build/app/outputs/flutter-apk/app-release.apk
+            build/app/outputs/bundle/release/app-release.aab
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Debug APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-debug
+          path: build/app/outputs/flutter-apk/app-debug.apk
+
+      - name: Upload Release APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release
+          path: build/app/outputs/flutter-apk/app-release.apk
+
+      - name: Upload App Bundle Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-bundle
+          path: build/app/outputs/bundle/release/app-release.aab
