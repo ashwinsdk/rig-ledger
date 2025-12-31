@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import '../database/database_service.dart';
 import '../models/agent.dart';
+import 'ledger_provider.dart';
 
 const _uuid = Uuid();
 
@@ -23,6 +24,7 @@ class AgentsNotifier extends StateNotifier<List<Agent>> {
       notes: notes,
       createdAt: DateTime.now(),
       updatedAt: DateTime.now(),
+      vehicleId: DatabaseService.currentVehicleId,
     );
     await DatabaseService.saveAgent(agent);
     loadAgents();
@@ -79,9 +81,11 @@ final agentsProvider =
   return AgentsNotifier();
 });
 
-/// Agent bill counts
+/// Agent bill counts - watches both agents and ledger entries for reactivity
 final agentBillCountsProvider = Provider<Map<String, int>>((ref) {
   final agents = ref.watch(agentsProvider);
+  // Watch ledger entries to trigger recalculation when entries change
+  ref.watch(ledgerEntriesProvider);
 
   final Map<String, int> counts = {};
   for (final agent in agents) {

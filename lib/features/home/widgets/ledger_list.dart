@@ -3,8 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/models/ledger_entry.dart';
+import '../../../core/models/vehicle.dart';
 import '../../../core/providers/ledger_provider.dart';
+import '../../../core/providers/vehicle_provider.dart';
 import '../../ledger_form/ledger_form_screen.dart';
+import '../../ledger_form/side_bore_form_screen.dart';
 
 class LedgerList extends ConsumerWidget {
   const LedgerList({super.key});
@@ -109,13 +112,13 @@ class _DateGroup extends StatelessWidget {
   }
 }
 
-class _LedgerEntryCard extends StatelessWidget {
+class _LedgerEntryCard extends ConsumerWidget {
   final LedgerEntry entry;
 
   const _LedgerEntryCard({required this.entry});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final currencyFormat = NumberFormat('#,##0.00');
 
     return Container(
@@ -134,7 +137,7 @@ class _LedgerEntryCard extends StatelessWidget {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: () => _openEditForm(context),
+          onTap: () => _openEditForm(context, ref),
           borderRadius: BorderRadius.circular(16),
           child: Padding(
             padding: const EdgeInsets.all(16),
@@ -232,10 +235,15 @@ class _LedgerEntryCard extends StatelessWidget {
     );
   }
 
-  void _openEditForm(BuildContext context) {
+  void _openEditForm(BuildContext context, WidgetRef ref) {
+    final currentVehicle = ref.read(currentVehicleProvider);
+    final isSideBore = currentVehicle?.vehicleType == VehicleType.sideBore;
+
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (context) => LedgerFormScreen(entry: entry),
+        builder: (context) => isSideBore
+            ? SideBoreFormScreen(entry: entry)
+            : LedgerFormScreen(entry: entry),
       ),
     );
   }

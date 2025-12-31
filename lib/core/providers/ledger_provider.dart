@@ -23,6 +23,11 @@ final selectedMonthProvider = StateProvider<DateTime>((ref) {
   return DateTime(now.year, now.month);
 });
 
+/// Current selected year for year view filtering
+final selectedYearProvider = StateProvider<int>((ref) {
+  return DateTime.now().year;
+});
+
 /// View mode: true = daily view, false = calendar view
 final isDailyViewProvider = StateProvider<bool>((ref) => true);
 
@@ -127,6 +132,7 @@ final ledgerEntriesProvider =
 final filteredLedgerEntriesProvider = Provider<List<LedgerEntry>>((ref) {
   final entries = ref.watch(ledgerEntriesProvider);
   final selectedMonth = ref.watch(selectedMonthProvider);
+  final selectedYear = ref.watch(selectedYearProvider);
   final timePeriod = ref.watch(timePeriodProvider);
   final searchQuery = ref.watch(searchQueryProvider);
   final filter = ref.watch(ledgerFilterProvider);
@@ -148,8 +154,8 @@ final filteredLedgerEntriesProvider = Provider<List<LedgerEntry>>((ref) {
         return entry.date
             .isAfter(sixMonthsAgo.subtract(const Duration(days: 1)));
       case TimePeriod.year:
-        final oneYearAgo = DateTime(now.year - 1, now.month, 1);
-        return entry.date.isAfter(oneYearAgo.subtract(const Duration(days: 1)));
+        // Filter by selected year
+        return entry.date.year == selectedYear;
       case TimePeriod.all:
         return true;
     }
@@ -292,6 +298,19 @@ final calendarDayTotalsProvider = Provider<Map<int, double>>((ref) {
   }
 
   return dayTotals;
+});
+
+/// PhonePe names for current vehicle (from ledger entries)
+final phonePeNamesProvider = Provider<List<String>>((ref) {
+  final entries = ref.watch(ledgerEntriesProvider);
+  final names = <String>{};
+  for (final entry in entries) {
+    if (entry.phonePeName != null && entry.phonePeName!.isNotEmpty) {
+      names.add(entry.phonePeName!);
+    }
+  }
+  return names.toList()
+    ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
 });
 
 /// Generate new entry ID

@@ -49,10 +49,16 @@ class _LedgerFormScreenState extends ConsumerState<LedgerFormScreen> {
   late TextEditingController _extraChargesController;
   late TextEditingController _totalController;
   bool _isTotalManuallyEdited = false;
-  late TextEditingController _receivedController;
+  late TextEditingController _cashController;
+  // Main-bore: Cash only, no PhonePe
   late TextEditingController _balanceController;
   late TextEditingController _lessController;
   late TextEditingController _notesController;
+
+  double get _totalReceived {
+    final cash = double.tryParse(_cashController.text) ?? 0;
+    return cash;
+  }
 
   bool get isEditing => widget.entry != null;
   bool _isBillNumberDuplicate = false;
@@ -97,8 +103,9 @@ class _LedgerFormScreenState extends ConsumerState<LedgerFormScreen> {
     _totalController =
         TextEditingController(text: entry?.total.toString() ?? '0');
     _isTotalManuallyEdited = entry?.isTotalManuallyEdited ?? false;
-    _receivedController =
-        TextEditingController(text: entry?.received.toString() ?? '0');
+    _cashController =
+        TextEditingController(text: entry?.receivedCash.toString() ?? '0');
+    // Main-bore: Cash only, no PhonePe
     _balanceController =
         TextEditingController(text: entry?.balance.toString() ?? '0');
     _lessController =
@@ -127,7 +134,7 @@ class _LedgerFormScreenState extends ConsumerState<LedgerFormScreen> {
     _msPipeInFeetController.addListener(_onCalculationFieldChanged);
     _msPipePerFeetRateController.addListener(_onCalculationFieldChanged);
     _extraChargesController.addListener(_onCalculationFieldChanged);
-    _receivedController.addListener(_onBalanceFieldChanged);
+    _cashController.addListener(_onBalanceFieldChanged);
     _lessController.addListener(_onBalanceFieldChanged);
     _billNumberController.addListener(_checkBillNumberDuplicate);
   }
@@ -145,7 +152,7 @@ class _LedgerFormScreenState extends ConsumerState<LedgerFormScreen> {
     _msPipePerFeetRateController.dispose();
     _extraChargesController.dispose();
     _totalController.dispose();
-    _receivedController.dispose();
+    _cashController.dispose();
     _balanceController.dispose();
     _lessController.dispose();
     _notesController.dispose();
@@ -240,7 +247,7 @@ class _LedgerFormScreenState extends ConsumerState<LedgerFormScreen> {
 
   void _updateBalance() {
     final total = double.tryParse(_totalController.text) ?? 0;
-    final received = double.tryParse(_receivedController.text) ?? 0;
+    final received = _totalReceived;
     final less = double.tryParse(_lessController.text) ?? 0;
 
     final balance = LedgerEntry.calculateBalance(
@@ -353,6 +360,10 @@ class _LedgerFormScreenState extends ConsumerState<LedgerFormScreen> {
       return;
     }
 
+    final cash = double.tryParse(_cashController.text) ?? 0;
+    // Main-bore: Cash only, no PhonePe
+    final totalReceived = cash;
+
     final entry = LedgerEntry(
       id: widget.entry?.id ?? _uuid.v4(),
       date: _date,
@@ -375,7 +386,10 @@ class _LedgerFormScreenState extends ConsumerState<LedgerFormScreen> {
       extraCharges: double.tryParse(_extraChargesController.text) ?? 0,
       total: double.tryParse(_totalController.text) ?? 0,
       isTotalManuallyEdited: _isTotalManuallyEdited,
-      received: double.tryParse(_receivedController.text) ?? 0,
+      received: totalReceived,
+      receivedCash: cash,
+      receivedPhonePe: 0, // Main-bore: No PhonePe
+      phonePeName: null, // Main-bore: No PhonePe name
       balance: double.tryParse(_balanceController.text) ?? 0,
       less: double.tryParse(_lessController.text) ?? 0,
       notes: _notesController.text.trim().isNotEmpty
@@ -383,6 +397,7 @@ class _LedgerFormScreenState extends ConsumerState<LedgerFormScreen> {
           : null,
       createdAt: widget.entry?.createdAt ?? DateTime.now(),
       updatedAt: DateTime.now(),
+      vehicleId: widget.entry?.vehicleId ?? DatabaseService.currentVehicleId,
     );
 
     if (isEditing) {
@@ -939,17 +954,22 @@ class _LedgerFormScreenState extends ConsumerState<LedgerFormScreen> {
             ),
             const SizedBox(height: 16),
 
-            // Received
+            // Payment Section Header
+            _buildSectionTitle('Payment'),
+
+            // Cash Amount
             TextFormField(
-              controller: _receivedController,
+              controller: _cashController,
               keyboardType:
                   const TextInputType.numberWithOptions(decimal: true),
               inputFormatters: [
                 FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
               ],
-              decoration: const InputDecoration(
-                labelText: 'Received (₹)',
-                prefixIcon: Icon(Icons.payments_outlined),
+              decoration: InputDecoration(
+                labelText: 'Cash Received (₹)',
+                prefixIcon: const Icon(Icons.money, color: AppColors.success),
+                filled: true,
+                fillColor: AppColors.success.withOpacity(0.05),
               ),
             ),
             const SizedBox(height: 16),

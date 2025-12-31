@@ -22,6 +22,9 @@ class Agent extends HiveObject {
   @HiveField(5)
   DateTime updatedAt;
 
+  @HiveField(6)
+  String vehicleId; // Vehicle this agent belongs to
+
   Agent({
     required this.id,
     required this.name,
@@ -29,6 +32,7 @@ class Agent extends HiveObject {
     this.notes,
     required this.createdAt,
     required this.updatedAt,
+    this.vehicleId = 'default',
   });
 
   Agent copyWith({
@@ -38,6 +42,7 @@ class Agent extends HiveObject {
     String? notes,
     DateTime? createdAt,
     DateTime? updatedAt,
+    String? vehicleId,
   }) {
     return Agent(
       id: id ?? this.id,
@@ -46,12 +51,14 @@ class Agent extends HiveObject {
       notes: notes ?? this.notes,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      vehicleId: vehicleId ?? this.vehicleId,
     );
   }
 
   Map<String, dynamic> toMap() {
     return {
       'id': id,
+      'vehicleId': vehicleId,
       'name': name,
       'phone': phone,
       'notes': notes,
@@ -63,6 +70,7 @@ class Agent extends HiveObject {
   factory Agent.fromMap(Map<String, dynamic> map) {
     return Agent(
       id: map['id'] as String,
+      vehicleId: map['vehicleId'] as String? ?? 'default',
       name: map['name'] as String,
       phone: map['phone'] as String?,
       notes: map['notes'] as String?,

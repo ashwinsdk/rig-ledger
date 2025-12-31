@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -9,10 +8,14 @@ import '../../core/theme/app_colors.dart';
 import '../../core/database/database_service.dart';
 import '../../core/providers/ledger_provider.dart';
 import '../../core/providers/agent_provider.dart';
+import '../../core/providers/vehicle_provider.dart';
+import '../../core/providers/side_ledger_provider.dart';
 import '../../core/services/file_save_service.dart';
+import '../../core/services/google_drive_service.dart';
 import '../export/csv_export_screen.dart';
 import '../export/csv_import_screen.dart';
 import '../export/pdf_export_screen.dart';
+import 'vehicle_management_screen.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -51,6 +54,34 @@ class SettingsScreen extends ConsumerWidget {
             child: ListView(
               padding: const EdgeInsets.all(16),
               children: [
+                // Vehicle Section
+                _buildSectionTitle('Vehicle'),
+                _SettingsCard(
+                  children: [
+                    Consumer(
+                      builder: (context, ref, child) {
+                        final currentVehicle =
+                            ref.watch(currentVehicleProvider);
+                        return _SettingsTile(
+                          icon: Icons.directions_car_outlined,
+                          title: 'Manage Vehicles',
+                          subtitle: currentVehicle != null
+                              ? 'Current: ${currentVehicle.name}'
+                              : 'Add, edit, or switch vehicles',
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  const VehicleManagementScreen(),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+
                 // Export/Import Section
                 _buildSectionTitle('Export & Import'),
                 _SettingsCard(
@@ -115,6 +146,11 @@ class SettingsScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 24),
 
+                // Google Drive Backup Section
+                _buildSectionTitle('Google Drive Backup'),
+                const _GoogleDriveBackupCard(),
+                const SizedBox(height: 24),
+
                 // Data Section
                 _buildSectionTitle('Data'),
                 _SettingsCard(
@@ -137,7 +173,7 @@ class SettingsScreen extends ConsumerWidget {
                     _SettingsTile(
                       icon: Icons.info_outlined,
                       title: 'RigLedger',
-                      subtitle: 'Version 1.0.1',
+                      subtitle: 'Version 1.0.2',
                       trailing: Image.asset(
                         'assets/images/logo.png',
                         width: 32,
@@ -245,6 +281,11 @@ class SettingsScreen extends ConsumerWidget {
       await DatabaseService.restoreBackup(backup);
       ref.read(ledgerEntriesProvider.notifier).refresh();
       ref.read(agentsProvider.notifier).refresh();
+      ref.read(vehiclesProvider.notifier).refresh();
+      ref.read(dieselEntriesProvider.notifier).refresh();
+      ref.read(pvcEntriesProvider.notifier).refresh();
+      ref.read(bitEntriesProvider.notifier).refresh();
+      ref.read(hammerEntriesProvider.notifier).refresh();
 
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -288,6 +329,8 @@ class SettingsScreen extends ConsumerWidget {
             SizedBox(height: 8),
             Text('• All ledger entries'),
             Text('• All agents'),
+            Text('• All side-ledger entries'),
+            Text('• All vehicles (except default)'),
             SizedBox(height: 16),
             Text(
               'This action cannot be undone!',
@@ -316,6 +359,11 @@ class SettingsScreen extends ConsumerWidget {
       await DatabaseService.clearAllData();
       ref.read(ledgerEntriesProvider.notifier).refresh();
       ref.read(agentsProvider.notifier).refresh();
+      ref.read(vehiclesProvider.notifier).refresh();
+      ref.read(dieselEntriesProvider.notifier).refresh();
+      ref.read(pvcEntriesProvider.notifier).refresh();
+      ref.read(bitEntriesProvider.notifier).refresh();
+      ref.read(hammerEntriesProvider.notifier).refresh();
 
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -347,7 +395,7 @@ class SettingsScreen extends ConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Version: 1.0.1'),
+            Text('Version: 1.0.2'),
             SizedBox(height: 8),
             Text(
               'A fast, lightweight ledger for borewell drilling entries, income and expenses, and agent management.',
@@ -359,6 +407,8 @@ class SettingsScreen extends ConsumerWidget {
               style: TextStyle(fontWeight: FontWeight.w500),
             ),
             SizedBox(height: 4),
+            Text('- Multi-vehicle support'),
+            Text('- Side-ledger (Diesel, PVC, Bit, Hammer)'),
             Text('- Offline-first operation'),
             Text('- CSV import/export'),
             Text('- PDF report generation'),
@@ -443,6 +493,301 @@ class _SettingsTile extends StatelessWidget {
           const Icon(Icons.chevron_right, color: AppColors.textSecondary),
       onTap: onTap,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+    );
+  }
+}
+
+class _GoogleDriveBackupCard extends StatefulWidget {
+  const _GoogleDriveBackupCard();
+
+  @override
+  State<_GoogleDriveBackupCard> createState() => _GoogleDriveBackupCardState();
+}
+
+class _GoogleDriveBackupCardState extends State<_GoogleDriveBackupCard> {
+  bool _isLoading = false;
+  bool _isBackingUp = false;
+  bool _isRestoring = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeGoogleDrive();
+  }
+
+  Future<void> _initializeGoogleDrive() async {
+    setState(() => _isLoading = true);
+    await GoogleDriveService.initialize();
+    if (mounted) setState(() => _isLoading = false);
+  }
+
+  Future<void> _signIn() async {
+    setState(() => _isLoading = true);
+    final success = await GoogleDriveService.signIn();
+    if (mounted) {
+      setState(() => _isLoading = false);
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Connected to Google Drive'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to connect to Google Drive'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _signOut() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Disconnect Google Drive'),
+        content: const Text(
+          'Are you sure you want to disconnect from Google Drive? Auto-backup will be disabled.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: AppColors.error),
+            child: const Text('Disconnect'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true && mounted) {
+      await GoogleDriveService.signOut();
+      setState(() {});
+    }
+  }
+
+  Future<void> _backupNow() async {
+    setState(() => _isBackingUp = true);
+    final success = await GoogleDriveService.backup();
+    if (mounted) {
+      setState(() => _isBackingUp = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(success ? 'Backup successful' : 'Backup failed'),
+          backgroundColor: success ? AppColors.success : AppColors.error,
+        ),
+      );
+    }
+  }
+
+  Future<void> _restoreFromDrive(WidgetRef ref) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Restore from Google Drive'),
+        content: const Text(
+          'This will replace all current data with the backup from Google Drive. This action cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: AppColors.warning),
+            child: const Text('Restore'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true || !mounted) return;
+
+    setState(() => _isRestoring = true);
+
+    try {
+      final backupData = await GoogleDriveService.restore();
+      if (backupData != null) {
+        await DatabaseService.restoreBackup(backupData);
+
+        // Refresh all providers to reflect restored data
+        ref.read(vehiclesProvider.notifier).refresh();
+        ref.read(ledgerEntriesProvider.notifier).refresh();
+        ref.read(agentsProvider.notifier).refresh();
+        ref.read(dieselEntriesProvider.notifier).refresh();
+        ref.read(pvcEntriesProvider.notifier).refresh();
+        ref.read(bitEntriesProvider.notifier).refresh();
+        ref.read(hammerEntriesProvider.notifier).refresh();
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Data restored successfully'),
+              backgroundColor: AppColors.success,
+            ),
+          );
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('No backup found on Google Drive'),
+              backgroundColor: AppColors.warning,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to restore: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isRestoring = false);
+    }
+  }
+
+  String _formatLastBackup() {
+    final lastBackup = GoogleDriveService.lastBackupTime;
+    if (lastBackup == null) return 'Never';
+    final now = DateTime.now();
+    final diff = now.difference(lastBackup);
+    if (diff.inMinutes < 1) return 'Just now';
+    if (diff.inHours < 1) return '${diff.inMinutes} min ago';
+    if (diff.inDays < 1) return '${diff.inHours} hours ago';
+    return DateFormat('MMM d, yyyy').format(lastBackup);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading) {
+      return Container(
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    final isSignedIn = GoogleDriveService.isSignedIn;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.shadow.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          if (!isSignedIn) ...[
+            // Not signed in - show connect button
+            ListTile(
+              leading: const Icon(Icons.cloud_off_outlined,
+                  color: AppColors.textSecondary),
+              title: const Text('Google Drive not connected'),
+              subtitle: const Text('Connect for automatic cloud backup'),
+              trailing: ElevatedButton(
+                onPressed: _signIn,
+                child: const Text('Connect'),
+              ),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            ),
+          ] else ...[
+            // Signed in - show account info and options
+            ListTile(
+              leading: const Icon(Icons.cloud_done_outlined,
+                  color: AppColors.success),
+              title: Text(GoogleDriveService.userEmail ?? 'Connected'),
+              subtitle: Text('Last backup: ${_formatLastBackup()}'),
+              trailing: IconButton(
+                icon: const Icon(Icons.logout, color: AppColors.textSecondary),
+                onPressed: _signOut,
+                tooltip: 'Disconnect',
+              ),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            ),
+            const Divider(height: 1),
+            // Auto-backup toggle
+            ListTile(
+              leading: const Icon(Icons.sync, color: AppColors.primary),
+              title: const Text('Auto Backup'),
+              subtitle: const Text('Backup automatically every 6 hours'),
+              trailing: Switch(
+                value: GoogleDriveService.isAutoBackupEnabled,
+                onChanged: (value) async {
+                  await GoogleDriveService.setAutoBackupEnabled(value);
+                  setState(() {});
+                },
+                activeColor: AppColors.primary,
+              ),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            ),
+            const Divider(height: 1),
+            // Backup now button
+            ListTile(
+              leading: _isBackingUp
+                  ? const SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.backup_outlined, color: AppColors.primary),
+              title: const Text('Backup Now'),
+              subtitle: const Text('Upload backup to Google Drive'),
+              trailing: const Icon(Icons.chevron_right,
+                  color: AppColors.textSecondary),
+              onTap: _isBackingUp ? null : _backupNow,
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            ),
+            const Divider(height: 1),
+            // Restore from Drive
+            Consumer(
+              builder: (context, ref, child) {
+                return ListTile(
+                  leading: _isRestoring
+                      ? const SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.cloud_download_outlined,
+                          color: AppColors.primary),
+                  title: const Text('Restore from Drive'),
+                  subtitle: const Text('Download and restore backup'),
+                  trailing: const Icon(Icons.chevron_right,
+                      color: AppColors.textSecondary),
+                  onTap: _isRestoring ? null : () => _restoreFromDrive(ref),
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                );
+              },
+            ),
+          ],
+        ],
+      ),
     );
   }
 }

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/providers/ledger_provider.dart';
+import '../../core/providers/vehicle_provider.dart';
 import 'widgets/ledger_list.dart';
 import 'widgets/calendar_view.dart';
 import 'widgets/summary_row.dart';
@@ -16,6 +17,7 @@ class HomeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final selectedMonth = ref.watch(selectedMonthProvider);
+    final selectedYear = ref.watch(selectedYearProvider);
     final isDailyView = ref.watch(isDailyViewProvider);
     final searchQuery = ref.watch(searchQueryProvider);
     final filter = ref.watch(ledgerFilterProvider);
@@ -45,15 +47,34 @@ class HomeScreen extends ConsumerWidget {
                           onPressed: () => _showSearchSheet(context),
                           tooltip: 'Search',
                         ),
-                        const Expanded(
-                          child: Text(
-                            'RigLedger',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 20,
-                              fontWeight: FontWeight.w600,
-                            ),
+                        Expanded(
+                          child: Column(
+                            children: [
+                              const Text(
+                                'RigLedger',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              Consumer(
+                                builder: (context, ref, child) {
+                                  final currentVehicle =
+                                      ref.watch(currentVehicleProvider);
+                                  if (currentVehicle == null)
+                                    return const SizedBox.shrink();
+                                  return Text(
+                                    currentVehicle.name,
+                                    style: TextStyle(
+                                      color: Colors.white.withOpacity(0.8),
+                                      fontSize: 12,
+                                    ),
+                                  );
+                                },
+                              ),
+                            ],
                           ),
                         ),
                         Stack(
@@ -168,6 +189,42 @@ class HomeScreen extends ConsumerWidget {
                                 selectedMonth.year,
                                 selectedMonth.month + 1,
                               );
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+
+                  // Year Navigation Row (only show for year view)
+                  if (timePeriod == TimePeriod.year)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 8),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.chevron_left,
+                                color: Colors.white),
+                            onPressed: () {
+                              ref.read(selectedYearProvider.notifier).state =
+                                  selectedYear - 1;
+                            },
+                          ),
+                          Text(
+                            selectedYear.toString(),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.chevron_right,
+                                color: Colors.white),
+                            onPressed: () {
+                              ref.read(selectedYearProvider.notifier).state =
+                                  selectedYear + 1;
                             },
                           ),
                         ],

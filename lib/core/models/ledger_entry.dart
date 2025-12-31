@@ -89,6 +89,18 @@ class LedgerEntry extends HiveObject {
   @HiveField(27)
   bool isStepRateManuallyEdited; // Manual override for step rate
 
+  @HiveField(28)
+  String vehicleId; // Vehicle this entry belongs to
+
+  @HiveField(29)
+  double receivedCash; // Cash payment amount
+
+  @HiveField(30)
+  double receivedPhonePe; // PhonePe payment amount
+
+  @HiveField(31)
+  String? phonePeName; // PhonePe payer name
+
   LedgerEntry({
     required this.id,
     required this.date,
@@ -118,6 +130,10 @@ class LedgerEntry extends HiveObject {
     this.msPipePerFeetRate = 0,
     this.stepRate = 0,
     this.isStepRateManuallyEdited = false,
+    this.vehicleId = 'default',
+    this.receivedCash = 0,
+    this.receivedPhonePe = 0,
+    this.phonePeName,
   });
 
   /// Calculate step rate based on depth type and feet
@@ -255,6 +271,10 @@ class LedgerEntry extends HiveObject {
     double? msPipePerFeetRate,
     double? stepRate,
     bool? isStepRateManuallyEdited,
+    String? vehicleId,
+    double? receivedCash,
+    double? receivedPhonePe,
+    String? phonePeName,
   }) {
     return LedgerEntry(
       id: id ?? this.id,
@@ -287,12 +307,17 @@ class LedgerEntry extends HiveObject {
       stepRate: stepRate ?? this.stepRate,
       isStepRateManuallyEdited:
           isStepRateManuallyEdited ?? this.isStepRateManuallyEdited,
+      vehicleId: vehicleId ?? this.vehicleId,
+      receivedCash: receivedCash ?? this.receivedCash,
+      receivedPhonePe: receivedPhonePe ?? this.receivedPhonePe,
+      phonePeName: phonePeName ?? this.phonePeName,
     );
   }
 
   Map<String, dynamic> toMap() {
     return {
       'id': id,
+      'vehicleId': vehicleId,
       'date': date.toIso8601String(),
       'billNumber': billNumber,
       'agentId': agentId,
@@ -313,6 +338,9 @@ class LedgerEntry extends HiveObject {
       'isTotalManuallyEdited': isTotalManuallyEdited,
       'isStepRateManuallyEdited': isStepRateManuallyEdited,
       'received': received,
+      'receivedCash': receivedCash,
+      'receivedPhonePe': receivedPhonePe,
+      'phonePeName': phonePeName,
       'balance': balance,
       'less': less,
       'notes': notes,
@@ -324,6 +352,7 @@ class LedgerEntry extends HiveObject {
   factory LedgerEntry.fromMap(Map<String, dynamic> map) {
     return LedgerEntry(
       id: map['id'] as String,
+      vehicleId: map['vehicleId'] as String? ?? 'default',
       date: DateTime.parse(map['date'] as String),
       billNumber: map['billNumber'] as String,
       agentId: map['agentId'] as String,
@@ -345,6 +374,9 @@ class LedgerEntry extends HiveObject {
       isStepRateManuallyEdited:
           map['isStepRateManuallyEdited'] as bool? ?? false,
       received: (map['received'] as num).toDouble(),
+      receivedCash: (map['receivedCash'] as num?)?.toDouble() ?? 0,
+      receivedPhonePe: (map['receivedPhonePe'] as num?)?.toDouble() ?? 0,
+      phonePeName: map['phonePeName'] as String?,
       balance: (map['balance'] as num).toDouble(),
       less: (map['less'] as num).toDouble(),
       notes: map['notes'] as String?,
@@ -375,6 +407,7 @@ class LedgerEntry extends HiveObject {
       received.toString(),
       balance.toString(),
       less.toString(),
+      notes ?? '',
     ];
   }
 
@@ -398,5 +431,6 @@ class LedgerEntry extends HiveObject {
     'Received',
     'Balance',
     'Less',
+    'Notes',
   ];
 }

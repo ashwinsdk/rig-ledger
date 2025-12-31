@@ -9,7 +9,22 @@ import 'package:printing/printing.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/database/database_service.dart';
 import '../../core/models/ledger_entry.dart';
+import '../../core/models/diesel_entry.dart';
+import '../../core/models/pvc_entry.dart';
+import '../../core/models/bit_entry.dart';
+import '../../core/models/hammer_entry.dart';
 import '../../core/services/file_save_service.dart';
+
+enum PdfExportType {
+  ledger('Ledger'),
+  diesel('Diesel'),
+  pvc('PVC'),
+  bit('Bit'),
+  hammer('Hammer');
+
+  final String label;
+  const PdfExportType(this.label);
+}
 
 class PdfColumn {
   final String id;
@@ -37,6 +52,7 @@ class _PdfExportScreenState extends ConsumerState<PdfExportScreen> {
   DateTime _endDate = DateTime.now();
   bool _isGenerating = false;
   bool _isPreviewMode = false;
+  PdfExportType _exportType = PdfExportType.ledger;
 
   final NumberFormat _currencyFormat = NumberFormat('#,##0.00');
   final NumberFormat _feetFormat = NumberFormat('#,##0');
@@ -143,10 +159,34 @@ class _PdfExportScreenState extends ConsumerState<PdfExportScreen> {
   List<PdfColumn> get _selectedColumns =>
       _allColumns.where((c) => _selectedColumnIds.contains(c.id)).toList();
 
+  int _getEntriesCount() {
+    final vehicleId = DatabaseService.currentVehicleId;
+    switch (_exportType) {
+      case PdfExportType.ledger:
+        return DatabaseService.getLedgerEntriesByDateRange(_startDate, _endDate)
+            .length;
+      case PdfExportType.diesel:
+        return DatabaseService.getDieselEntriesByDateRange(
+                vehicleId, _startDate, _endDate)
+            .length;
+      case PdfExportType.pvc:
+        return DatabaseService.getPvcEntriesByDateRange(
+                vehicleId, _startDate, _endDate)
+            .length;
+      case PdfExportType.bit:
+        return DatabaseService.getBitEntriesByDateRange(
+                vehicleId, _startDate, _endDate)
+            .length;
+      case PdfExportType.hammer:
+        return DatabaseService.getHammerEntriesByDateRange(
+                vehicleId, _startDate, _endDate)
+            .length;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final entries =
-        DatabaseService.getLedgerEntriesByDateRange(_startDate, _endDate);
+    final entriesCount = _getEntriesCount();
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -155,7 +195,7 @@ class _PdfExportScreenState extends ConsumerState<PdfExportScreen> {
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
         actions: [
-          if (entries.isNotEmpty && !_isPreviewMode)
+          if (entriesCount > 0 && !_isPreviewMode)
             IconButton(
               icon: const Icon(Icons.preview),
               onPressed: () {
@@ -177,33 +217,39 @@ class _PdfExportScreenState extends ConsumerState<PdfExportScreen> {
             ),
         ],
       ),
-      body: _isPreviewMode ? _buildPdfPreview(entries) : _buildOptions(entries),
+      body: _isPreviewMode ? _buildPdfPreview() : _buildOptions(entriesCount),
     );
   }
 
-  Widget _buildOptions(List<LedgerEntry> entries) {
+  Widget _buildOptions(int entriesCount) {
     final dateFormat = DateFormat('dd MMM yyyy');
 
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
+        // Export Type Selector
+        _buildExportTypeCard(),
+        const SizedBox(height: 16),
+
         // Date range
         _buildDateRangeCard(dateFormat),
         const SizedBox(height: 16),
 
-        // Column Selection
-        _buildColumnSelectionCard(),
-        const SizedBox(height: 16),
+        // Column Selection (only for ledger type)
+        if (_exportType == PdfExportType.ledger) ...[
+          _buildColumnSelectionCard(),
+          const SizedBox(height: 16),
+        ],
 
         // Summary with feet totals
-        _buildSummaryCard(entries),
+        _buildSummaryCard(),
         const SizedBox(height: 24),
 
         // Export buttons
         SizedBox(
           height: 50,
           child: ElevatedButton.icon(
-            onPressed: entries.isEmpty || _isGenerating ? null : _exportPdf,
+            onPressed: entriesCount == 0 || _isGenerating ? null : _exportPdf,
             icon: _isGenerating
                 ? const SizedBox(
                     width: 20,
@@ -221,7 +267,7 @@ class _PdfExportScreenState extends ConsumerState<PdfExportScreen> {
         SizedBox(
           height: 50,
           child: OutlinedButton.icon(
-            onPressed: entries.isEmpty
+            onPressed: entriesCount == 0
                 ? null
                 : () {
                     setState(() {
@@ -233,7 +279,7 @@ class _PdfExportScreenState extends ConsumerState<PdfExportScreen> {
           ),
         ),
 
-        if (entries.isEmpty) ...[
+        if (entriesCount == 0) ...[
           const SizedBox(height: 24),
           Container(
             padding: const EdgeInsets.all(16),
@@ -241,14 +287,14 @@ class _PdfExportScreenState extends ConsumerState<PdfExportScreen> {
               color: AppColors.warning.withOpacity(0.1),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Row(
+            child: Row(
               children: [
-                Icon(Icons.info_outline, color: AppColors.warning),
-                SizedBox(width: 12),
+                const Icon(Icons.info_outline, color: AppColors.warning),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    'No entries found in the selected date range.',
-                    style: TextStyle(color: AppColors.warning),
+                    'No ${_exportType.label} entries found in the selected date range.',
+                    style: const TextStyle(color: AppColors.warning),
                   ),
                 ),
               ],
@@ -256,6 +302,72 @@ class _PdfExportScreenState extends ConsumerState<PdfExportScreen> {
           ),
         ],
       ],
+    );
+  }
+
+  Widget _buildExportTypeCard() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.shadow.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Export Type',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: PdfExportType.values.map((type) {
+              final isSelected = _exportType == type;
+              return GestureDetector(
+                onTap: () {
+                  setState(() {
+                    _exportType = type;
+                  });
+                },
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    color:
+                        isSelected ? AppColors.primary : AppColors.background,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: isSelected ? AppColors.primary : AppColors.border,
+                    ),
+                  ),
+                  child: Text(
+                    type.label,
+                    style: TextStyle(
+                      color:
+                          isSelected ? Colors.white : AppColors.textSecondary,
+                      fontWeight:
+                          isSelected ? FontWeight.w600 : FontWeight.normal,
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ],
+      ),
     );
   }
 
@@ -440,7 +552,27 @@ class _PdfExportScreenState extends ConsumerState<PdfExportScreen> {
     );
   }
 
-  Widget _buildSummaryCard(List<LedgerEntry> entries) {
+  Widget _buildSummaryCard() {
+    final vehicleId = DatabaseService.currentVehicleId;
+
+    switch (_exportType) {
+      case PdfExportType.ledger:
+        return _buildLedgerSummaryCard();
+      case PdfExportType.diesel:
+        return _buildDieselSummaryCard(vehicleId);
+      case PdfExportType.pvc:
+        return _buildPvcSummaryCard(vehicleId);
+      case PdfExportType.bit:
+        return _buildBitSummaryCard(vehicleId);
+      case PdfExportType.hammer:
+        return _buildHammerSummaryCard(vehicleId);
+    }
+  }
+
+  Widget _buildLedgerSummaryCard() {
+    final entries =
+        DatabaseService.getLedgerEntriesByDateRange(_startDate, _endDate);
+
     // Calculate totals
     double totalSum = 0;
     double receivedSum = 0;
@@ -549,9 +681,139 @@ class _PdfExportScreenState extends ConsumerState<PdfExportScreen> {
     );
   }
 
-  Widget _buildPdfPreview(List<LedgerEntry> entries) {
+  Widget _buildDieselSummaryCard(String vehicleId) {
+    final entries = DatabaseService.getDieselEntriesByDateRange(
+        vehicleId, _startDate, _endDate);
+    double totalAmount = 0, totalPaid = 0, totalPending = 0, totalLitres = 0;
+    for (final e in entries) {
+      totalAmount += e.total;
+      totalPaid += e.paid;
+      totalPending += e.pending;
+      totalLitres += e.litre;
+    }
+    return _buildGenericSummaryCard('Diesel', entries.length, [
+      ('Total Litres', '${_currencyFormat.format(totalLitres)} L'),
+      ('Total Amount', 'Rs. ${_currencyFormat.format(totalAmount)}'),
+      ('Paid', 'Rs. ${_currencyFormat.format(totalPaid)}'),
+      ('Pending', 'Rs. ${_currencyFormat.format(totalPending)}'),
+    ]);
+  }
+
+  Widget _buildPvcSummaryCard(String vehicleId) {
+    final entries = DatabaseService.getPvcEntriesByDateRange(
+        vehicleId, _startDate, _endDate);
+    double totalAmount = 0, totalPaid = 0, totalPending = 0;
+    int totalCount = 0;
+    for (final e in entries) {
+      totalAmount += e.total;
+      totalPaid += e.paid;
+      totalPending += e.pending;
+      totalCount += e.count;
+    }
+    return _buildGenericSummaryCard('PVC', entries.length, [
+      ('Total Count', '$totalCount pcs'),
+      ('Total Amount', 'Rs. ${_currencyFormat.format(totalAmount)}'),
+      ('Paid', 'Rs. ${_currencyFormat.format(totalPaid)}'),
+      ('Pending', 'Rs. ${_currencyFormat.format(totalPending)}'),
+    ]);
+  }
+
+  Widget _buildBitSummaryCard(String vehicleId) {
+    final entries = DatabaseService.getBitEntriesByDateRange(
+        vehicleId, _startDate, _endDate);
+    double totalAmount = 0, totalPaid = 0, totalPending = 0;
+    int totalCount = 0;
+    for (final e in entries) {
+      totalAmount += e.total;
+      totalPaid += e.paid;
+      totalPending += e.pending;
+      totalCount += e.count;
+    }
+    return _buildGenericSummaryCard('Bit', entries.length, [
+      ('Total Count', '$totalCount pcs'),
+      ('Total Amount', 'Rs. ${_currencyFormat.format(totalAmount)}'),
+      ('Paid', 'Rs. ${_currencyFormat.format(totalPaid)}'),
+      ('Pending', 'Rs. ${_currencyFormat.format(totalPending)}'),
+    ]);
+  }
+
+  Widget _buildHammerSummaryCard(String vehicleId) {
+    final entries = DatabaseService.getHammerEntriesByDateRange(
+        vehicleId, _startDate, _endDate);
+    double totalAmount = 0, totalPaid = 0, totalPending = 0;
+    int totalCount = 0;
+    for (final e in entries) {
+      totalAmount += e.total;
+      totalPaid += e.paid;
+      totalPending += e.pending;
+      totalCount += e.count;
+    }
+    return _buildGenericSummaryCard('Hammer', entries.length, [
+      ('Total Count', '$totalCount pcs'),
+      ('Total Amount', 'Rs. ${_currencyFormat.format(totalAmount)}'),
+      ('Paid', 'Rs. ${_currencyFormat.format(totalPaid)}'),
+      ('Pending', 'Rs. ${_currencyFormat.format(totalPending)}'),
+    ]);
+  }
+
+  Widget _buildGenericSummaryCard(
+      String title, int count, List<(String, String)> rows) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.shadow.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                '$title Summary',
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: AppColors.accentLight.withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Text(
+                  '$count entries',
+                  style: const TextStyle(
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (count > 0) ...[
+            const SizedBox(height: 16),
+            ...rows.map((r) => _buildSummaryRow(r.$1, r.$2)),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPdfPreview() {
     return PdfPreview(
-      build: (format) => _generatePdf(entries),
+      build: (format) => _generatePdfForType(),
       canDebug: false,
       canChangeOrientation: false,
       canChangePageFormat: false,
@@ -600,7 +862,8 @@ class _PdfExportScreenState extends ConsumerState<PdfExportScreen> {
 
   String _getPdfFileName() {
     final dateFormat = DateFormat('yyyyMMdd');
-    return 'rigledger_${dateFormat.format(_startDate)}_to_${dateFormat.format(_endDate)}.pdf';
+    final typeName = _exportType.label.toLowerCase();
+    return 'rigledger_${typeName}_${dateFormat.format(_startDate)}_to_${dateFormat.format(_endDate)}.pdf';
   }
 
   Future<Uint8List> _generatePdf(List<LedgerEntry> entries) async {
@@ -813,15 +1076,318 @@ class _PdfExportScreenState extends ConsumerState<PdfExportScreen> {
     );
   }
 
+  Future<Uint8List> _generatePdfForType() async {
+    final vehicleId = DatabaseService.currentVehicleId;
+
+    switch (_exportType) {
+      case PdfExportType.ledger:
+        final entries =
+            DatabaseService.getLedgerEntriesByDateRange(_startDate, _endDate);
+        return _generatePdf(entries);
+      case PdfExportType.diesel:
+        final entries = DatabaseService.getDieselEntriesByDateRange(
+            vehicleId, _startDate, _endDate);
+        return _generateDieselPdf(entries);
+      case PdfExportType.pvc:
+        final entries = DatabaseService.getPvcEntriesByDateRange(
+            vehicleId, _startDate, _endDate);
+        return _generatePvcPdf(entries);
+      case PdfExportType.bit:
+        final entries = DatabaseService.getBitEntriesByDateRange(
+            vehicleId, _startDate, _endDate);
+        return _generateBitPdf(entries);
+      case PdfExportType.hammer:
+        final entries = DatabaseService.getHammerEntriesByDateRange(
+            vehicleId, _startDate, _endDate);
+        return _generateHammerPdf(entries);
+    }
+  }
+
+  Future<Uint8List> _generateDieselPdf(List<DieselEntry> entries) async {
+    final pdf = pw.Document();
+
+    double totalAmount = 0, totalPaid = 0, totalPending = 0, totalLitres = 0;
+    for (final e in entries) {
+      totalAmount += e.total;
+      totalPaid += e.paid;
+      totalPending += e.pending;
+      totalLitres += e.litre;
+    }
+
+    entries.sort((a, b) => a.date.compareTo(b.date));
+    final rowsPerPage = 25;
+    final totalPages = (entries.length / rowsPerPage).ceil().clamp(1, 999);
+
+    for (int page = 0; page < totalPages; page++) {
+      final startIndex = page * rowsPerPage;
+      final endIndex = (startIndex + rowsPerPage).clamp(0, entries.length);
+      final pageEntries = entries.sublist(startIndex, endIndex);
+      final isLastPage = page == totalPages - 1;
+
+      pdf.addPage(
+        pw.Page(
+          pageFormat: PdfPageFormat.a4,
+          margin: const pw.EdgeInsets.all(24),
+          build: (context) {
+            return pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Text('Diesel Ledger Report',
+                    style: pw.TextStyle(
+                        fontSize: 18, fontWeight: pw.FontWeight.bold)),
+                pw.SizedBox(height: 4),
+                pw.Text(
+                    '${_dateFormat.format(_startDate)} to ${_dateFormat.format(_endDate)}',
+                    style: const pw.TextStyle(
+                        fontSize: 10, color: PdfColors.grey600)),
+                pw.SizedBox(height: 16),
+                pw.TableHelper.fromTextArray(
+                  headerStyle:
+                      pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 9),
+                  cellStyle: const pw.TextStyle(fontSize: 8),
+                  headerDecoration:
+                      const pw.BoxDecoration(color: PdfColors.grey300),
+                  headers: [
+                    'Date',
+                    'Bill#',
+                    'Litres',
+                    'Rate',
+                    'Total',
+                    'Paid',
+                    'Pending'
+                  ],
+                  data: pageEntries
+                      .map((e) => [
+                            _dateFormat.format(e.date),
+                            e.billNumber,
+                            _currencyFormat.format(e.litre),
+                            _currencyFormat.format(e.rate),
+                            _currencyFormat.format(e.total),
+                            _currencyFormat.format(e.paid),
+                            _currencyFormat.format(e.pending),
+                          ])
+                      .toList(),
+                ),
+                if (isLastPage) ...[
+                  pw.SizedBox(height: 16),
+                  pw.Container(
+                    padding: const pw.EdgeInsets.all(8),
+                    decoration: pw.BoxDecoration(border: pw.Border.all()),
+                    child: pw.Row(
+                      mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                      children: [
+                        pw.Text(
+                            'Total: ${_currencyFormat.format(totalLitres)} L'),
+                        pw.Text(
+                            'Amount: Rs.${_currencyFormat.format(totalAmount)}'),
+                        pw.Text(
+                            'Paid: Rs.${_currencyFormat.format(totalPaid)}'),
+                        pw.Text(
+                            'Pending: Rs.${_currencyFormat.format(totalPending)}'),
+                      ],
+                    ),
+                  ),
+                ],
+                pw.Spacer(),
+                pw.Text('Page ${page + 1} of $totalPages',
+                    style: const pw.TextStyle(
+                        fontSize: 8, color: PdfColors.grey600)),
+              ],
+            );
+          },
+        ),
+      );
+    }
+    return pdf.save();
+  }
+
+  Future<Uint8List> _generatePvcPdf(List<PvcEntry> entries) async {
+    return _generateSideLedgerPdf(
+      title: 'PVC Ledger Report',
+      headers: [
+        'Date',
+        'Bill#',
+        'Type',
+        'Count',
+        'Rate',
+        'Total',
+        'Paid',
+        'Pending'
+      ],
+      entries: entries,
+      getRow: (e) => [
+        _dateFormat.format(e.date),
+        e.billNumber,
+        e.type,
+        e.count.toString(),
+        _currencyFormat.format(e.rate),
+        _currencyFormat.format(e.total),
+        _currencyFormat.format(e.paid),
+        _currencyFormat.format(e.pending),
+      ],
+      getTotals: () {
+        int count = 0;
+        double total = 0, paid = 0, pending = 0;
+        for (final e in entries) {
+          count += e.count;
+          total += e.total;
+          paid += e.paid;
+          pending += e.pending;
+        }
+        return 'Count: $count  |  Total: Rs.${_currencyFormat.format(total)}  |  Paid: Rs.${_currencyFormat.format(paid)}  |  Pending: Rs.${_currencyFormat.format(pending)}';
+      },
+    );
+  }
+
+  Future<Uint8List> _generateBitPdf(List<BitEntry> entries) async {
+    return _generateSideLedgerPdf(
+      title: 'Bit Ledger Report',
+      headers: [
+        'Date',
+        'Bill#',
+        'Type',
+        'Count',
+        'Rate',
+        'Total',
+        'Paid',
+        'Pending'
+      ],
+      entries: entries,
+      getRow: (e) => [
+        _dateFormat.format(e.date),
+        e.billNumber,
+        e.type,
+        e.count.toString(),
+        _currencyFormat.format(e.rate),
+        _currencyFormat.format(e.total),
+        _currencyFormat.format(e.paid),
+        _currencyFormat.format(e.pending),
+      ],
+      getTotals: () {
+        int count = 0;
+        double total = 0, paid = 0, pending = 0;
+        for (final e in entries) {
+          count += e.count;
+          total += e.total;
+          paid += e.paid;
+          pending += e.pending;
+        }
+        return 'Count: $count  |  Total: Rs.${_currencyFormat.format(total)}  |  Paid: Rs.${_currencyFormat.format(paid)}  |  Pending: Rs.${_currencyFormat.format(pending)}';
+      },
+    );
+  }
+
+  Future<Uint8List> _generateHammerPdf(List<HammerEntry> entries) async {
+    return _generateSideLedgerPdf(
+      title: 'Hammer Ledger Report',
+      headers: [
+        'Date',
+        'Bill#',
+        'Type',
+        'Count',
+        'Rate',
+        'Total',
+        'Paid',
+        'Pending'
+      ],
+      entries: entries,
+      getRow: (e) => [
+        _dateFormat.format(e.date),
+        e.billNumber,
+        e.type,
+        e.count.toString(),
+        _currencyFormat.format(e.rate),
+        _currencyFormat.format(e.total),
+        _currencyFormat.format(e.paid),
+        _currencyFormat.format(e.pending),
+      ],
+      getTotals: () {
+        int count = 0;
+        double total = 0, paid = 0, pending = 0;
+        for (final e in entries) {
+          count += e.count;
+          total += e.total;
+          paid += e.paid;
+          pending += e.pending;
+        }
+        return 'Count: $count  |  Total: Rs.${_currencyFormat.format(total)}  |  Paid: Rs.${_currencyFormat.format(paid)}  |  Pending: Rs.${_currencyFormat.format(pending)}';
+      },
+    );
+  }
+
+  Future<Uint8List> _generateSideLedgerPdf<T>({
+    required String title,
+    required List<String> headers,
+    required List<T> entries,
+    required List<String> Function(T) getRow,
+    required String Function() getTotals,
+  }) async {
+    final pdf = pw.Document();
+    final rowsPerPage = 25;
+    final totalPages = (entries.length / rowsPerPage).ceil().clamp(1, 999);
+
+    for (int page = 0; page < totalPages; page++) {
+      final startIndex = page * rowsPerPage;
+      final endIndex = (startIndex + rowsPerPage).clamp(0, entries.length);
+      final pageEntries = entries.sublist(startIndex, endIndex);
+      final isLastPage = page == totalPages - 1;
+
+      pdf.addPage(
+        pw.Page(
+          pageFormat: PdfPageFormat.a4,
+          margin: const pw.EdgeInsets.all(24),
+          build: (context) {
+            return pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Text(title,
+                    style: pw.TextStyle(
+                        fontSize: 18, fontWeight: pw.FontWeight.bold)),
+                pw.SizedBox(height: 4),
+                pw.Text(
+                    '${_dateFormat.format(_startDate)} to ${_dateFormat.format(_endDate)}',
+                    style: const pw.TextStyle(
+                        fontSize: 10, color: PdfColors.grey600)),
+                pw.SizedBox(height: 16),
+                pw.TableHelper.fromTextArray(
+                  headerStyle:
+                      pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 9),
+                  cellStyle: const pw.TextStyle(fontSize: 8),
+                  headerDecoration:
+                      const pw.BoxDecoration(color: PdfColors.grey300),
+                  headers: headers,
+                  data: pageEntries.map((e) => getRow(e)).toList(),
+                ),
+                if (isLastPage) ...[
+                  pw.SizedBox(height: 16),
+                  pw.Container(
+                    padding: const pw.EdgeInsets.all(8),
+                    decoration: pw.BoxDecoration(border: pw.Border.all()),
+                    child: pw.Text(getTotals(),
+                        style: pw.TextStyle(
+                            fontSize: 10, fontWeight: pw.FontWeight.bold)),
+                  ),
+                ],
+                pw.Spacer(),
+                pw.Text('Page ${page + 1} of $totalPages',
+                    style: const pw.TextStyle(
+                        fontSize: 8, color: PdfColors.grey600)),
+              ],
+            );
+          },
+        ),
+      );
+    }
+    return pdf.save();
+  }
+
   Future<void> _exportPdf() async {
     setState(() {
       _isGenerating = true;
     });
 
     try {
-      final entries =
-          DatabaseService.getLedgerEntriesByDateRange(_startDate, _endDate);
-      final pdfBytes = await _generatePdf(entries);
+      final pdfBytes = await _generatePdfForType();
 
       final fileName = _getPdfFileName();
 
@@ -829,7 +1395,7 @@ class _PdfExportScreenState extends ConsumerState<PdfExportScreen> {
         context: context,
         bytes: Uint8List.fromList(pdfBytes),
         fileName: fileName,
-        shareSubject: 'RigLedger PDF Report',
+        shareSubject: 'RigLedger ${_exportType.label} Report',
         dialogTitle: 'Save PDF Report',
       );
 

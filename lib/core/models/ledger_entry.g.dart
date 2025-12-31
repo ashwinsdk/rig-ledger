@@ -27,12 +27,12 @@ class LedgerEntryAdapter extends TypeAdapter<LedgerEntry> {
       depthInFeet: fields[7] as double,
       depthPerFeetRate: fields[8] as double,
       pvc: fields[9] as String,
-      pvcRate: fields[10] as double? ?? 0,
-      msPipe: fields[11] as String? ?? '6inch',
-      msPipeRate: fields[12] as double? ?? 0,
+      pvcRate: fields[10] as double,
+      msPipe: fields[11] as String,
+      msPipeRate: fields[12] as double,
       extraCharges: fields[13] as double,
       total: fields[14] as double,
-      isTotalManuallyEdited: fields[15] as bool? ?? false,
+      isTotalManuallyEdited: fields[15] as bool,
       received: fields[16] as double,
       balance: fields[17] as double,
       less: fields[18] as double,
@@ -45,13 +45,17 @@ class LedgerEntryAdapter extends TypeAdapter<LedgerEntry> {
       msPipePerFeetRate: fields[25] as double? ?? 0,
       stepRate: fields[26] as double? ?? 0,
       isStepRateManuallyEdited: fields[27] as bool? ?? false,
+      vehicleId: (fields[28] as String?) ?? 'default',
+      receivedCash: fields[29] as double? ?? 0,
+      receivedPhonePe: fields[30] as double? ?? 0,
+      phonePeName: fields[31] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, LedgerEntry obj) {
     writer
-      ..writeByte(28)
+      ..writeByte(32)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -107,7 +111,15 @@ class LedgerEntryAdapter extends TypeAdapter<LedgerEntry> {
       ..writeByte(26)
       ..write(obj.stepRate)
       ..writeByte(27)
-      ..write(obj.isStepRateManuallyEdited);
+      ..write(obj.isStepRateManuallyEdited)
+      ..writeByte(28)
+      ..write(obj.vehicleId)
+      ..writeByte(29)
+      ..write(obj.receivedCash)
+      ..writeByte(30)
+      ..write(obj.receivedPhonePe)
+      ..writeByte(31)
+      ..write(obj.phonePeName);
   }
 
   @override

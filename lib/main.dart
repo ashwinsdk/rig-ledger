@@ -6,6 +6,7 @@ import 'package:permission_handler/permission_handler.dart';
 
 import 'core/theme/app_theme.dart';
 import 'core/database/database_service.dart';
+import 'core/services/google_drive_service.dart';
 import 'features/navigation/main_navigation.dart';
 
 void main() async {
@@ -25,6 +26,12 @@ void main() async {
 
   // Request storage permissions
   await _requestPermissions();
+
+  // Initialize Google Drive (try silent sign-in)
+  await GoogleDriveService.initialize();
+
+  // Perform auto-backup if enabled
+  await GoogleDriveService.performAutoBackupIfEnabled();
 
   runApp(
     const ProviderScope(

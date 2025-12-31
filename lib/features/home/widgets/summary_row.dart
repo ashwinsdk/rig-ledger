@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/providers/ledger_provider.dart';
+import '../../../core/providers/vehicle_provider.dart';
+import '../../../core/models/vehicle.dart';
 
 class SummaryRow extends ConsumerWidget {
   const SummaryRow({super.key});
@@ -11,6 +13,8 @@ class SummaryRow extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final stats = ref.watch(monthlyStatsProvider);
     final feetTotals = ref.watch(feetTotalsProvider);
+    final currentVehicle = ref.watch(currentVehicleProvider);
+    final isSideBore = currentVehicle?.vehicleType == VehicleType.sideBore;
     final currencyFormat = NumberFormat('#,##0.00');
     final feetFormat = NumberFormat('#,##0');
 
@@ -82,11 +86,11 @@ class SummaryRow extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Padding(
-                padding: EdgeInsets.only(left: 8, bottom: 8),
+              Padding(
+                padding: const EdgeInsets.only(left: 8, bottom: 8),
                 child: Text(
-                  'Feet Totals',
-                  style: TextStyle(
+                  isSideBore ? 'Depth Totals' : 'Feet Totals',
+                  style: const TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
                     color: AppColors.textSecondary,
@@ -111,30 +115,33 @@ class SummaryRow extends ConsumerWidget {
                       color: Colors.indigo,
                     ),
                   ),
-                  Expanded(
-                    child: _FeetItem(
-                      label: '7" PVC',
-                      value:
-                          '${feetFormat.format(feetTotals['pvc7inch'] ?? 0)} ft',
-                      color: Colors.teal,
+                  // Only show PVC and MS for main bore
+                  if (!isSideBore) ...[
+                    Expanded(
+                      child: _FeetItem(
+                        label: '7" PVC',
+                        value:
+                            '${feetFormat.format(feetTotals['pvc7inch'] ?? 0)} ft',
+                        color: Colors.teal,
+                      ),
                     ),
-                  ),
-                  Expanded(
-                    child: _FeetItem(
-                      label: '8" PVC',
-                      value:
-                          '${feetFormat.format(feetTotals['pvc8inch'] ?? 0)} ft',
-                      color: Colors.cyan,
+                    Expanded(
+                      child: _FeetItem(
+                        label: '8" PVC',
+                        value:
+                            '${feetFormat.format(feetTotals['pvc8inch'] ?? 0)} ft',
+                        color: Colors.cyan,
+                      ),
                     ),
-                  ),
-                  Expanded(
-                    child: _FeetItem(
-                      label: 'MS Pipe',
-                      value:
-                          '${feetFormat.format(feetTotals['msPipeTotal'] ?? 0)} ft',
-                      color: Colors.orange,
+                    Expanded(
+                      child: _FeetItem(
+                        label: 'MS Pipe',
+                        value:
+                            '${feetFormat.format(feetTotals['msPipeTotal'] ?? 0)} ft',
+                        color: Colors.orange,
+                      ),
                     ),
-                  ),
+                  ],
                 ],
               ),
             ],
