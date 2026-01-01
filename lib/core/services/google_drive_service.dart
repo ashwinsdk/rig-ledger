@@ -78,8 +78,12 @@ class GoogleDriveService {
         } else if (e.toString().contains('network_error')) {
           errorMessage = 'Network error. Please check your internet connection';
         } else if (e.toString().contains('ApiException: 10')) {
-          errorMessage =
-              'Google Sign-In not configured. Please contact developer';
+          errorMessage = 'Google Sign-In configuration error.\n\n'
+              'Developer: Add SHA-1 and SHA-256 fingerprints to Firebase Console:\n'
+              '1. Run: keytool -list -v -keystore <keystore-path> -alias <alias>\n'
+              '2. Add fingerprints to Firebase Project Settings\n'
+              '3. Download new google-services.json and rebuild app\n\n'
+              'Contact: github.com/ashwinsdk';
         } else if (e.toString().contains('ApiException: 12500')) {
           errorMessage = 'Google Play Services needs to be updated';
         }

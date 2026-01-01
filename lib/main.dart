@@ -21,6 +21,11 @@ void main() async {
     DeviceOrientation.portraitDown,
   ]);
 
+  // Hide system navigation bars for immersive experience
+  await SystemChrome.setEnabledSystemUIMode(
+    SystemUiMode.immersiveSticky,
+  );
+
   // Initialize Hive
   await Hive.initFlutter();
 

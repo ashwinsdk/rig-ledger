@@ -173,7 +173,7 @@ class SettingsScreen extends ConsumerWidget {
                     _SettingsTile(
                       icon: Icons.info_outlined,
                       title: 'RigLedger',
-                      subtitle: 'Version 1.0.2',
+                      subtitle: 'Version 1.0.5',
                       trailing: Image.asset(
                         'assets/images/logo.png',
                         width: 32,
@@ -391,29 +391,47 @@ class SettingsScreen extends ConsumerWidget {
             const Text('RigLedger'),
           ],
         ),
-        content: const Column(
+        content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Version: 1.0.2'),
-            SizedBox(height: 8),
-            Text(
+            const Text('Version: 1.0.5'),
+            const SizedBox(height: 8),
+            const Text(
               'A fast, lightweight ledger for borewell drilling entries, income and expenses, and agent management.',
               style: TextStyle(color: AppColors.textSecondary),
             ),
-            SizedBox(height: 16),
-            Text(
+            const SizedBox(height: 16),
+            const Text(
               'Features:',
               style: TextStyle(fontWeight: FontWeight.w500),
             ),
-            SizedBox(height: 4),
-            Text('- Multi-vehicle support'),
-            Text('- Side-ledger (Diesel, PVC, Bit, Hammer)'),
-            Text('- Offline-first operation'),
-            Text('- CSV import/export'),
-            Text('- PDF report generation'),
-            Text('- Agent management'),
-            Text('- Statistics and charts'),
+            const SizedBox(height: 4),
+            const Text('- Multi-vehicle support'),
+            const Text('- Side-ledger (Diesel, PVC, Bit, Hammer)'),
+            const Text('- Offline-first operation'),
+            const Text('- CSV import/export'),
+            const Text('- PDF report generation'),
+            const Text('- Agent management'),
+            const Text('- Statistics and charts'),
+            const SizedBox(height: 16),
+            const Text(
+              'Developer:',
+              style: TextStyle(fontWeight: FontWeight.w500),
+            ),
+            const SizedBox(height: 4),
+            GestureDetector(
+              onTap: () {
+                // Could add URL launcher here if needed
+              },
+              child: const Text(
+                'github.com/ashwinsdk',
+                style: TextStyle(
+                  color: AppColors.primary,
+                  decoration: TextDecoration.underline,
+                ),
+              ),
+            ),
           ],
         ),
         actions: [

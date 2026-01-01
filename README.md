@@ -4,9 +4,14 @@ A fast, lightweight, production-ready native Android Flutter application for bor
 
 ## Version
 
-Current: 1.0.4
+Current: 1.0.5
 
 ### Changelog
+
+v1.0.5
+- Fixed UI being hidden by mobile navigation bars with edge-to-edge display
+- Fixed Google Drive error
+- Updated About section with developer GitHub contact
 
 v1.0.4
 - Added multi-type selection for PVC, Bit, and Hammer in Side Ledger
@@ -118,6 +123,7 @@ Google Drive Backup:
 - Backup to Google Drive app folder
 - Restore from Google Drive
 - Automatic file naming with timestamp
+- **Note**: Physical Android devices require proper Firebase configuration with SHA-1/SHA-256 fingerprints. See [GOOGLE_DRIVE_SETUP.md](GOOGLE_DRIVE_SETUP.md) for detailed setup instructions.
 
 ### Clear Data
 - Complete data wipe with confirmation

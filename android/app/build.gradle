@@ -65,3 +65,6 @@ flutter {
 dependencies {
     implementation 'androidx.multidex:multidex:2.0.1'
 }
+
+// Google Services plugin - must be at the bottom
+apply plugin: 'com.google.gms.google-services'
