@@ -1,8 +1,11 @@
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:device_info_plus/device_info_plus.dart';
 
 import 'core/theme/app_theme.dart';
 import 'core/database/database_service.dart';
@@ -41,15 +44,42 @@ void main() async {
 }
 
 Future<void> _requestPermissions() async {
-  // Request storage permission
-  final storageStatus = await Permission.storage.status;
-  if (!storageStatus.isGranted) {
-    await Permission.storage.request();
-  }
+  if (!Platform.isAndroid) return;
 
-  // For Android 11+ (API 30+), request manage external storage
-  if (await Permission.manageExternalStorage.status.isDenied) {
-    await Permission.manageExternalStorage.request();
+  try {
+    // Get Android SDK version
+    final androidInfo = await DeviceInfoPlugin().androidInfo;
+    final sdkInt = androidInfo.version.sdkInt;
+
+    if (sdkInt >= 33) {
+      // Android 13+ (API 33+): Use granular media permissions
+      // For documents/files, no runtime permission needed - uses SAF
+      debugPrint(
+          'Android 13+: Using scoped storage, no broad permissions needed');
+    } else if (sdkInt >= 30) {
+      // Android 11-12 (API 30-32): Request MANAGE_EXTERNAL_STORAGE
+      final manageStatus = await Permission.manageExternalStorage.status;
+      if (!manageStatus.isGranted) {
+        await Permission.manageExternalStorage.request();
+      }
+    } else {
+      // Android 10 and below: Request legacy storage permission
+      final storageStatus = await Permission.storage.status;
+      if (!storageStatus.isGranted) {
+        await Permission.storage.request();
+      }
+    }
+  } catch (e) {
+    // Fallback: Try requesting storage permission the old way
+    debugPrint('Error detecting SDK version: $e');
+    try {
+      final storageStatus = await Permission.storage.status;
+      if (!storageStatus.isGranted) {
+        await Permission.storage.request();
+      }
+    } catch (_) {
+      // Ignore - permissions will be handled when needed
+    }
   }
 }
 

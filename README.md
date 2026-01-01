@@ -4,9 +4,15 @@ A fast, lightweight, production-ready native Android Flutter application for bor
 
 ## Version
 
-Current: 1.0.3
+Current: 1.0.4
 
 ### Changelog
+
+v1.0.4
+- Added multi-type selection for PVC, Bit, and Hammer in Side Ledger
+- Updated PDF export to show each type as separate columns with counts and a single total column
+- Updated forms and lists to input and display per-type details across PVC, Bit, and Hammer
+- Minor fixes and performance improvements
 
 v1.0.3
 - Added multi-vehicle support with complete data isolation
@@ -17,11 +23,6 @@ v1.0.3
 - Added 5 PDF export types (Full, Summary, Pending, Agent-wise, Date Range)
 - Fixed vehicle-specific agent and entry management
 - Improved gradient UI across all form screens
-
-v1.0.2
-- Added calendar view with daily groupings
-- Added feet totals tracking
-- Improved CSV import with column mapping
 
 v1.0.1
 - Initial release with core ledger functionality

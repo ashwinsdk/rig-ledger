@@ -1,4 +1,5 @@
 import 'package:hive/hive.dart';
+import 'type_detail.dart';
 
 part 'pvc_entry.g.dart';
 
@@ -17,13 +18,14 @@ class PvcEntry extends HiveObject {
   String billNumber; // Numeric only
 
   @HiveField(4)
-  String type; // '7inch', '8inch', '10inch', 'MS'
+  String
+      type; // '7inch', '8inch', '10inch', 'MS' - kept for backward compatibility
 
   @HiveField(5)
-  int count;
+  int count; // Kept for backward compatibility
 
   @HiveField(6)
-  double rate;
+  double rate; // Kept for backward compatibility
 
   @HiveField(7)
   double total;
@@ -52,12 +54,23 @@ class PvcEntry extends HiveObject {
   @HiveField(15)
   DateTime updatedAt;
 
+  /// Multiple types selection (deprecated, use typeDetailsJson)
+  @HiveField(16)
+  List<String>? types;
+
+  /// JSON-encoded list of type details with count and rate per type
+  /// Format: [{"type": "7 inch", "count": 5, "rate": 100.0}, ...]
+  @HiveField(17)
+  String? typeDetailsJson;
+
   PvcEntry({
     required this.id,
     required this.vehicleId,
     required this.date,
     required this.billNumber,
     required this.type,
+    this.types,
+    this.typeDetailsJson,
     required this.count,
     required this.rate,
     required this.total,
@@ -71,7 +84,25 @@ class PvcEntry extends HiveObject {
     required this.updatedAt,
   });
 
-  static const List<String> pvcTypes = ['7inch', '8inch', '10inch', 'MS'];
+  static const List<String> pvcTypes = ['7 inch', '8 inch', '10 inch', 'MS'];
+
+  /// Get parsed type details
+  List<TypeDetail>? get typeDetails => TypeDetail.decodeList(typeDetailsJson);
+
+  /// Set type details (encodes to JSON)
+  set typeDetails(List<TypeDetail>? value) {
+    typeDetailsJson = TypeDetail.encodeList(value);
+  }
+
+  /// Calculate total from type details
+  static double calculateTotalFromDetails(List<TypeDetail> details) {
+    return TypeDetail.totalAmount(details);
+  }
+
+  /// Calculate total count from type details
+  static int calculateCountFromDetails(List<TypeDetail> details) {
+    return TypeDetail.totalCount(details);
+  }
 
   /// Calculate total
   static double calculateTotal(int count, double rate) {
@@ -89,6 +120,8 @@ class PvcEntry extends HiveObject {
     DateTime? date,
     String? billNumber,
     String? type,
+    List<String>? types,
+    String? typeDetailsJson,
     int? count,
     double? rate,
     double? total,
@@ -107,6 +140,8 @@ class PvcEntry extends HiveObject {
       date: date ?? this.date,
       billNumber: billNumber ?? this.billNumber,
       type: type ?? this.type,
+      types: types ?? this.types,
+      typeDetailsJson: typeDetailsJson ?? this.typeDetailsJson,
       count: count ?? this.count,
       rate: rate ?? this.rate,
       total: total ?? this.total,
@@ -128,6 +163,8 @@ class PvcEntry extends HiveObject {
       'date': date.toIso8601String(),
       'billNumber': billNumber,
       'type': type,
+      'types': types,
+      'typeDetailsJson': typeDetailsJson,
       'count': count,
       'rate': rate,
       'total': total,
@@ -149,6 +186,8 @@ class PvcEntry extends HiveObject {
       date: DateTime.parse(map['date'] as String),
       billNumber: map['billNumber'] as String,
       type: map['type'] as String,
+      types: map['types'] != null ? List<String>.from(map['types']) : null,
+      typeDetailsJson: map['typeDetailsJson'] as String?,
       count: map['count'] as int,
       rate: (map['rate'] as num).toDouble(),
       total: (map['total'] as num).toDouble(),
@@ -165,14 +204,93 @@ class PvcEntry extends HiveObject {
     );
   }
 
+  /// Get display type - shows types from details or falls back
+  String get displayType {
+    final details = typeDetails;
+    if (details != null && details.isNotEmpty) {
+      return TypeDetail.displayTypes(details);
+    }
+    if (types != null && types!.isNotEmpty) {
+      return types!.join(', ');
+    }
+    return type;
+  }
+
+  /// Get detailed breakdown string
+  String get displayTypeDetails {
+    final details = typeDetails;
+    if (details != null && details.isNotEmpty) {
+      return TypeDetail.displayDetailed(details);
+    }
+    return '$type: $count × ₹$rate';
+  }
+
+  /// Get total count from type details or fallback
+  int get totalCount {
+    final details = typeDetails;
+    if (details != null && details.isNotEmpty) {
+      return TypeDetail.totalCount(details);
+    }
+    return count;
+  }
+
+  /// Get calculated total from type details or fallback
+  double get calculatedTotal {
+    final details = typeDetails;
+    if (details != null && details.isNotEmpty) {
+      return TypeDetail.totalAmount(details);
+    }
+    return total;
+  }
+
+  /// Generate CSV rows - one row per type detail
+  List<List<String>> toCsvRows() {
+    final details = typeDetails;
+    if (details != null && details.isNotEmpty) {
+      return details
+          .map((d) => [
+                date.toIso8601String().split('T')[0],
+                billNumber,
+                d.type,
+                d.count.toString(),
+                d.rate.toString(),
+                d.total.toString(),
+                paid.toString(),
+                pending.toString(),
+                balance.toString(),
+                paidDate?.toIso8601String().split('T')[0] ?? '',
+                storagePlace,
+                notes ?? '',
+              ])
+          .toList();
+    }
+    // Fallback for old entries
+    return [
+      [
+        date.toIso8601String().split('T')[0],
+        billNumber,
+        type,
+        count.toString(),
+        rate.toString(),
+        total.toString(),
+        paid.toString(),
+        pending.toString(),
+        balance.toString(),
+        paidDate?.toIso8601String().split('T')[0] ?? '',
+        storagePlace,
+        notes ?? '',
+      ]
+    ];
+  }
+
   List<String> toCsvRow() {
     return [
       date.toIso8601String().split('T')[0],
       billNumber,
-      type,
-      count.toString(),
-      rate.toString(),
-      total.toString(),
+      displayType,
+      totalCount.toString(),
+      '', // Rate varies by type
+      calculatedTotal.toString(),
       paid.toString(),
       pending.toString(),
       balance.toString(),

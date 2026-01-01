@@ -1,33 +1,58 @@
 import 'dart:io';
 import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:device_info_plus/device_info_plus.dart';
 import '../theme/app_colors.dart';
 
 enum SaveOption { share, saveToFiles }
 
 class FileSaveService {
-  /// Request storage permissions
+  /// Request storage permissions based on Android version
   static Future<bool> requestStoragePermission() async {
     if (Platform.isAndroid) {
-      // Check and request storage permission
-      var status = await Permission.storage.status;
-      if (!status.isGranted) {
-        status = await Permission.storage.request();
-      }
+      try {
+        final androidInfo = await DeviceInfoPlugin().androidInfo;
+        final sdkInt = androidInfo.version.sdkInt;
 
-      // For Android 11+, also check manage external storage
-      if (status.isGranted) {
-        final manageStatus = await Permission.manageExternalStorage.status;
-        if (!manageStatus.isGranted) {
-          await Permission.manageExternalStorage.request();
+        if (sdkInt >= 33) {
+          // Android 13+: No broad storage permission needed
+          // File picker uses SAF which doesn't require runtime permissions
+          debugPrint('Android 13+: Using SAF, no storage permission needed');
+          return true;
+        } else if (sdkInt >= 30) {
+          // Android 11-12: Need MANAGE_EXTERNAL_STORAGE
+          final status = await Permission.manageExternalStorage.status;
+          if (!status.isGranted) {
+            final result = await Permission.manageExternalStorage.request();
+            return result.isGranted;
+          }
+          return true;
+        } else {
+          // Android 10 and below: Use legacy storage permission
+          var status = await Permission.storage.status;
+          if (!status.isGranted) {
+            status = await Permission.storage.request();
+          }
+          return status.isGranted;
+        }
+      } catch (e) {
+        // Fallback if device_info_plus fails
+        debugPrint('Error detecting SDK version: $e');
+        try {
+          var status = await Permission.storage.status;
+          if (!status.isGranted) {
+            status = await Permission.storage.request();
+          }
+          return status.isGranted;
+        } catch (_) {
+          return true; // Proceed anyway, file picker may work
         }
       }
-
-      return status.isGranted;
     }
     return true; // iOS handles permissions differently via file picker
   }

@@ -523,7 +523,7 @@ class _GoogleDriveBackupCardState extends State<_GoogleDriveBackupCard> {
 
   Future<void> _signIn() async {
     setState(() => _isLoading = true);
-    final success = await GoogleDriveService.signIn();
+    final (success, errorMessage) = await GoogleDriveService.signIn();
     if (mounted) {
       setState(() => _isLoading = false);
       if (success) {
@@ -535,8 +535,8 @@ class _GoogleDriveBackupCardState extends State<_GoogleDriveBackupCard> {
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Failed to connect to Google Drive'),
+          SnackBar(
+            content: Text(errorMessage ?? 'Failed to connect to Google Drive'),
             backgroundColor: AppColors.error,
           ),
         );

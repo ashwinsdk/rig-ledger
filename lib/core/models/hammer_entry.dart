@@ -1,4 +1,5 @@
 import 'package:hive/hive.dart';
+import 'type_detail.dart';
 
 part 'hammer_entry.g.dart';
 
@@ -17,16 +18,16 @@ class HammerEntry extends HiveObject {
   String billNumber; // Numeric only
 
   @HiveField(4)
-  String type; // '6.5inch', '7inch'
+  String type; // Kept for backward compatibility
 
   @HiveField(5)
   String hammerName;
 
   @HiveField(6)
-  int count;
+  int count; // Kept for backward compatibility
 
   @HiveField(7)
-  double rate;
+  double rate; // Kept for backward compatibility
 
   @HiveField(8)
   double total;
@@ -52,12 +53,22 @@ class HammerEntry extends HiveObject {
   @HiveField(15)
   DateTime updatedAt;
 
+  /// Multiple types selection (deprecated, use typeDetailsJson)
+  @HiveField(16)
+  List<String>? types;
+
+  /// JSON-encoded list of type details with count and rate per type
+  @HiveField(17)
+  String? typeDetailsJson;
+
   HammerEntry({
     required this.id,
     required this.vehicleId,
     required this.date,
     required this.billNumber,
     required this.type,
+    this.types,
+    this.typeDetailsJson,
     required this.hammerName,
     required this.count,
     required this.rate,
@@ -71,7 +82,15 @@ class HammerEntry extends HiveObject {
     required this.updatedAt,
   });
 
-  static const List<String> hammerTypes = ['6.5inch', '7inch'];
+  static const List<String> hammerTypes = ['6.5 inch', '7 inch'];
+
+  /// Get parsed type details
+  List<TypeDetail>? get typeDetails => TypeDetail.decodeList(typeDetailsJson);
+
+  /// Set type details (encodes to JSON)
+  set typeDetails(List<TypeDetail>? value) {
+    typeDetailsJson = TypeDetail.encodeList(value);
+  }
 
   /// Calculate total
   static double calculateTotal(int count, double rate) {
@@ -89,6 +108,8 @@ class HammerEntry extends HiveObject {
     DateTime? date,
     String? billNumber,
     String? type,
+    List<String>? types,
+    String? typeDetailsJson,
     String? hammerName,
     int? count,
     double? rate,
@@ -107,6 +128,8 @@ class HammerEntry extends HiveObject {
       date: date ?? this.date,
       billNumber: billNumber ?? this.billNumber,
       type: type ?? this.type,
+      types: types ?? this.types,
+      typeDetailsJson: typeDetailsJson ?? this.typeDetailsJson,
       hammerName: hammerName ?? this.hammerName,
       count: count ?? this.count,
       rate: rate ?? this.rate,
@@ -128,6 +151,8 @@ class HammerEntry extends HiveObject {
       'date': date.toIso8601String(),
       'billNumber': billNumber,
       'type': type,
+      'types': types,
+      'typeDetailsJson': typeDetailsJson,
       'hammerName': hammerName,
       'count': count,
       'rate': rate,
@@ -149,6 +174,8 @@ class HammerEntry extends HiveObject {
       date: DateTime.parse(map['date'] as String),
       billNumber: map['billNumber'] as String,
       type: map['type'] as String,
+      types: map['types'] != null ? List<String>.from(map['types']) : null,
+      typeDetailsJson: map['typeDetailsJson'] as String?,
       hammerName: map['hammerName'] as String,
       count: map['count'] as int,
       rate: (map['rate'] as num).toDouble(),
@@ -165,15 +192,54 @@ class HammerEntry extends HiveObject {
     );
   }
 
+  /// Get display type - shows types from details or falls back
+  String get displayType {
+    final details = typeDetails;
+    if (details != null && details.isNotEmpty) {
+      return TypeDetail.displayTypes(details);
+    }
+    if (types != null && types!.isNotEmpty) {
+      return types!.join(', ');
+    }
+    return type;
+  }
+
+  /// Get detailed breakdown string
+  String get displayTypeDetails {
+    final details = typeDetails;
+    if (details != null && details.isNotEmpty) {
+      return TypeDetail.displayDetailed(details);
+    }
+    return '$type: $count × ₹$rate';
+  }
+
+  /// Get total count from type details or fallback
+  int get totalCount {
+    final details = typeDetails;
+    if (details != null && details.isNotEmpty) {
+      return TypeDetail.totalCount(details);
+    }
+    return count;
+  }
+
+  /// Get calculated total from type details or fallback
+  double get calculatedTotal {
+    final details = typeDetails;
+    if (details != null && details.isNotEmpty) {
+      return TypeDetail.totalAmount(details);
+    }
+    return total;
+  }
+
   List<String> toCsvRow() {
     return [
       date.toIso8601String().split('T')[0],
       billNumber,
-      type,
+      displayType,
       hammerName,
-      count.toString(),
-      rate.toString(),
-      total.toString(),
+      totalCount.toString(),
+      '', // Rate varies by type
+      calculatedTotal.toString(),
       paid.toString(),
       pending.toString(),
       balance.toString(),

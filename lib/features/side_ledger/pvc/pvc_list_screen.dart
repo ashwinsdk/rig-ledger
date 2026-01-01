@@ -126,8 +126,17 @@ class _PvcListScreenState extends ConsumerState<PvcListScreen> {
     double totalPending = 0;
 
     for (final entry in filteredEntries) {
-      countByType[entry.type] = (countByType[entry.type] ?? 0) + entry.count;
-      totalAmount += entry.total;
+      // Use type details if available
+      final details = entry.typeDetails;
+      if (details != null && details.isNotEmpty) {
+        for (final detail in details) {
+          countByType[detail.type] =
+              (countByType[detail.type] ?? 0) + detail.count;
+        }
+      } else {
+        countByType[entry.type] = (countByType[entry.type] ?? 0) + entry.count;
+      }
+      totalAmount += entry.calculatedTotal;
       totalPaid += entry.paid;
       totalPending += entry.pending;
     }
@@ -419,17 +428,17 @@ class _PvcEntryCard extends StatelessWidget {
               Row(
                 children: [
                   Expanded(
-                    child: _buildHighlightBox(entry.type, typeColor),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child:
-                        _buildHighlightBox('${entry.count} pcs', Colors.purple),
+                    child: _buildHighlightBox(entry.displayType, typeColor),
                   ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: _buildHighlightBox(
-                      currencyFormat.format(entry.total),
+                        '${entry.totalCount} pcs', Colors.purple),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _buildHighlightBox(
+                      currencyFormat.format(entry.calculatedTotal),
                       Colors.green,
                     ),
                   ),
@@ -437,17 +446,49 @@ class _PvcEntryCard extends StatelessWidget {
               ),
               const SizedBox(height: 12),
 
+              // Type details (if multiple)
+              if (entry.typeDetails != null &&
+                  entry.typeDetails!.length > 1) ...[
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: entry.typeDetails!.map((detail) {
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 2),
+                        child: Text(
+                          '${detail.type}: ${detail.count} × ₹${detail.rate.toStringAsFixed(0)} = ₹${detail.total.toStringAsFixed(0)}',
+                          style: TextStyle(
+                            color: Colors.grey.shade700,
+                            fontSize: 12,
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
+
               // Payment info
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    'Rate: ₹${entry.rate.toStringAsFixed(0)}/pc',
-                    style: TextStyle(
-                      color: Colors.grey.shade600,
-                      fontSize: 13,
-                    ),
-                  ),
+                  if (entry.typeDetails == null ||
+                      entry.typeDetails!.length == 1)
+                    Text(
+                      'Rate: ₹${entry.rate.toStringAsFixed(0)}/pc',
+                      style: TextStyle(
+                        color: Colors.grey.shade600,
+                        fontSize: 13,
+                      ),
+                    )
+                  else
+                    const SizedBox(),
                   Row(
                     children: [
                       Text(

@@ -115,8 +115,17 @@ class _HammerListScreenState extends ConsumerState<HammerListScreen> {
     double totalPending = 0;
 
     for (final entry in filteredEntries) {
-      countByType[entry.type] = (countByType[entry.type] ?? 0) + entry.count;
-      totalAmount += entry.total;
+      // Use type details if available
+      final details = entry.typeDetails;
+      if (details != null && details.isNotEmpty) {
+        for (final detail in details) {
+          countByType[detail.type] =
+              (countByType[detail.type] ?? 0) + detail.count;
+        }
+      } else {
+        countByType[entry.type] = (countByType[entry.type] ?? 0) + entry.count;
+      }
+      totalAmount += entry.calculatedTotal;
       totalPaid += entry.paid;
       totalPending += entry.pending;
     }
@@ -408,23 +417,51 @@ class _HammerEntryCard extends StatelessWidget {
               Row(
                 children: [
                   Expanded(
-                    child: _buildHighlightBox(entry.type, typeColor),
+                    child: _buildHighlightBox(entry.displayType, typeColor),
                   ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: _buildHighlightBox(
-                        '${entry.count} pcs', Colors.deepOrange),
+                        '${entry.totalCount} pcs', Colors.deepOrange),
                   ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: _buildHighlightBox(
-                      currencyFormat.format(entry.total),
+                      currencyFormat.format(entry.calculatedTotal),
                       Colors.green,
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 12),
+
+              // Type details (if multiple)
+              if (entry.typeDetails != null &&
+                  entry.typeDetails!.length > 1) ...[
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: entry.typeDetails!.map((detail) {
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 2),
+                        child: Text(
+                          '${detail.type}: ${detail.count} × ₹${detail.rate.toStringAsFixed(0)} = ₹${detail.total.toStringAsFixed(0)}',
+                          style: TextStyle(
+                            color: Colors.grey.shade700,
+                            fontSize: 12,
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
 
               // Hammer name and payment info
               Row(

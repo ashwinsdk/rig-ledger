@@ -59,18 +59,32 @@ class GoogleDriveService {
     }
   }
 
-  // Sign in
-  static Future<bool> signIn() async {
+  // Sign in - returns (success, errorMessage)
+  static Future<(bool, String?)> signIn() async {
     try {
       _currentUser = await _googleSignIn.signIn();
       if (_currentUser != null) {
         await _initializeDriveApi();
-        return true;
+        return (true, null);
       }
-      return false;
+      // User cancelled sign-in
+      return (false, 'Sign-in was cancelled');
     } catch (e) {
       debugPrint('Google Sign-In error: $e');
-      return false;
+      String errorMessage = 'Failed to connect to Google Drive';
+      if (e.toString().contains('PlatformException')) {
+        if (e.toString().contains('sign_in_required')) {
+          errorMessage = 'Please add a Google account to your device first';
+        } else if (e.toString().contains('network_error')) {
+          errorMessage = 'Network error. Please check your internet connection';
+        } else if (e.toString().contains('ApiException: 10')) {
+          errorMessage =
+              'Google Sign-In not configured. Please contact developer';
+        } else if (e.toString().contains('ApiException: 12500')) {
+          errorMessage = 'Google Play Services needs to be updated';
+        }
+      }
+      return (false, errorMessage);
     }
   }
 

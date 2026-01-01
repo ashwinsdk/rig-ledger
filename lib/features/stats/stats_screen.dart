@@ -985,7 +985,7 @@ class _StatsScreenState extends ConsumerState<StatsScreen>
       );
     }
 
-    // Count by type
+    // Count by type (support multi-select types)
     final Map<String, int> typeCounts = {};
     double totalAmount = 0;
     double totalPaid = 0;
@@ -993,7 +993,11 @@ class _StatsScreenState extends ConsumerState<StatsScreen>
     int totalCount = 0;
 
     for (final entry in entries) {
-      typeCounts[entry.type] = (typeCounts[entry.type] ?? 0) + entry.count;
+      // Use types list if available, otherwise fallback to single type
+      final typesList = entry.types ?? [entry.type];
+      for (final type in typesList) {
+        typeCounts[type] = (typeCounts[type] ?? 0) + entry.count;
+      }
       totalAmount += entry.total;
       totalPaid += entry.paid;
       totalPending += entry.pending;
@@ -1041,7 +1045,7 @@ class _StatsScreenState extends ConsumerState<StatsScreen>
       );
     }
 
-    // Count by type
+    // Count by type (support multi-select types)
     final Map<String, int> typeCounts = {};
     double totalAmount = 0;
     double totalPaid = 0;
@@ -1049,7 +1053,11 @@ class _StatsScreenState extends ConsumerState<StatsScreen>
     int totalCount = 0;
 
     for (final entry in entries) {
-      typeCounts[entry.type] = (typeCounts[entry.type] ?? 0) + entry.count;
+      // Use types list if available, otherwise fallback to single type
+      final typesList = entry.types ?? [entry.type];
+      for (final type in typesList) {
+        typeCounts[type] = (typeCounts[type] ?? 0) + entry.count;
+      }
       totalAmount += entry.total;
       totalPaid += entry.paid;
       totalPending += entry.pending;
@@ -1097,7 +1105,7 @@ class _StatsScreenState extends ConsumerState<StatsScreen>
       );
     }
 
-    // Count by type
+    // Count by type (support multi-select types)
     final Map<String, int> typeCounts = {};
     double totalAmount = 0;
     double totalPaid = 0;
@@ -1105,7 +1113,11 @@ class _StatsScreenState extends ConsumerState<StatsScreen>
     int totalCount = 0;
 
     for (final entry in entries) {
-      typeCounts[entry.type] = (typeCounts[entry.type] ?? 0) + entry.count;
+      // Use types list if available, otherwise fallback to single type
+      final typesList = entry.types ?? [entry.type];
+      for (final type in typesList) {
+        typeCounts[type] = (typeCounts[type] ?? 0) + entry.count;
+      }
       totalAmount += entry.total;
       totalPaid += entry.paid;
       totalPending += entry.pending;

@@ -99,24 +99,33 @@ class SummaryRow extends ConsumerWidget {
               ),
               Row(
                 children: [
-                  Expanded(
-                    child: _FeetItem(
-                      label: '7" Depth',
-                      value:
-                          '${feetFormat.format(feetTotals['depth7inch'] ?? 0)} ft',
-                      color: Colors.blue,
+                  // For side-bore, show only total depth (no 7inch/8inch separation)
+                  if (isSideBore) ...[
+                    Expanded(
+                      child: _FeetItem(
+                        label: 'Total Depth',
+                        value:
+                            '${feetFormat.format((feetTotals['depth7inch'] ?? 0) + (feetTotals['depth8inch'] ?? 0))} ft',
+                        color: Colors.blue,
+                      ),
                     ),
-                  ),
-                  Expanded(
-                    child: _FeetItem(
-                      label: '8" Depth',
-                      value:
-                          '${feetFormat.format(feetTotals['depth8inch'] ?? 0)} ft',
-                      color: Colors.indigo,
+                  ] else ...[
+                    Expanded(
+                      child: _FeetItem(
+                        label: '7" Depth',
+                        value:
+                            '${feetFormat.format(feetTotals['depth7inch'] ?? 0)} ft',
+                        color: Colors.blue,
+                      ),
                     ),
-                  ),
-                  // Only show PVC and MS for main bore
-                  if (!isSideBore) ...[
+                    Expanded(
+                      child: _FeetItem(
+                        label: '8" Depth',
+                        value:
+                            '${feetFormat.format(feetTotals['depth8inch'] ?? 0)} ft',
+                        color: Colors.indigo,
+                      ),
+                    ),
                     Expanded(
                       child: _FeetItem(
                         label: '7" PVC',

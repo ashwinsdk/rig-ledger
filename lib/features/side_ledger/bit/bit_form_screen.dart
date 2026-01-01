@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
 import '../../../core/database/database_service.dart';
 import '../../../core/models/bit_entry.dart';
+import '../../../core/models/type_detail.dart';
 import '../../../core/providers/side_ledger_provider.dart';
 
 class BitFormScreen extends ConsumerStatefulWidget {
@@ -30,13 +31,15 @@ class _BitFormScreenState extends ConsumerState<BitFormScreen> {
 
   late TextEditingController _billNumberController;
   late TextEditingController _bitIdController;
-  late TextEditingController _countController;
-  late TextEditingController _rateController;
   late TextEditingController _paidController;
   late TextEditingController _notesController;
 
+  // Per-type controllers for count and rate
+  final Map<String, TextEditingController> _countControllers = {};
+  final Map<String, TextEditingController> _rateControllers = {};
+
   DateTime _selectedDate = DateTime.now();
-  String _selectedType = '6.5 inch';
+  Set<String> _selectedTypes = {}; // Multi-select types
   double _total = 0;
   double _pending = 0;
 
@@ -53,12 +56,6 @@ class _BitFormScreenState extends ConsumerState<BitFormScreen> {
     _bitIdController = TextEditingController(
       text: entry?.bitId ?? '',
     );
-    _countController = TextEditingController(
-      text: entry?.count.toString() ?? '',
-    );
-    _rateController = TextEditingController(
-      text: entry?.rate.toString() ?? '',
-    );
     _paidController = TextEditingController(
       text: entry?.paid.toString() ?? '0',
     );
@@ -66,15 +63,43 @@ class _BitFormScreenState extends ConsumerState<BitFormScreen> {
       text: entry?.notes ?? '',
     );
 
+    // Initialize controllers for all types
+    for (final type in bitTypes) {
+      _countControllers[type] = TextEditingController();
+      _rateControllers[type] = TextEditingController();
+      _countControllers[type]!.addListener(_recalculate);
+      _rateControllers[type]!.addListener(_recalculate);
+    }
+
     if (entry != null) {
       _selectedDate = entry.date;
-      _selectedType = entry.type;
+
+      // Load type details if available
+      final details = entry.typeDetails;
+      if (details != null && details.isNotEmpty) {
+        for (final detail in details) {
+          _selectedTypes.add(detail.type);
+          _countControllers[detail.type]?.text = detail.count.toString();
+          _rateControllers[detail.type]?.text = detail.rate.toString();
+        }
+      } else if (entry.types != null && entry.types!.isNotEmpty) {
+        // Fallback to old types with shared count/rate
+        _selectedTypes = entry.types!.toSet();
+        for (final type in _selectedTypes) {
+          _countControllers[type]?.text = entry.count.toString();
+          _rateControllers[type]?.text = entry.rate.toString();
+        }
+      } else {
+        // Single type fallback
+        _selectedTypes = {entry.type};
+        _countControllers[entry.type]?.text = entry.count.toString();
+        _rateControllers[entry.type]?.text = entry.rate.toString();
+      }
+
       _total = entry.total;
       _pending = entry.pending;
     }
 
-    _countController.addListener(_recalculate);
-    _rateController.addListener(_recalculate);
     _paidController.addListener(_recalculate);
   }
 
@@ -82,20 +107,28 @@ class _BitFormScreenState extends ConsumerState<BitFormScreen> {
   void dispose() {
     _billNumberController.dispose();
     _bitIdController.dispose();
-    _countController.dispose();
-    _rateController.dispose();
     _paidController.dispose();
     _notesController.dispose();
+    for (final controller in _countControllers.values) {
+      controller.dispose();
+    }
+    for (final controller in _rateControllers.values) {
+      controller.dispose();
+    }
     super.dispose();
   }
 
   void _recalculate() {
-    final count = int.tryParse(_countController.text) ?? 0;
-    final rate = double.tryParse(_rateController.text) ?? 0;
+    double total = 0;
+    for (final type in _selectedTypes) {
+      final count = int.tryParse(_countControllers[type]?.text ?? '') ?? 0;
+      final rate = double.tryParse(_rateControllers[type]?.text ?? '') ?? 0;
+      total += count * rate;
+    }
     final paid = double.tryParse(_paidController.text) ?? 0;
 
     setState(() {
-      _total = count * rate;
+      _total = total;
       _pending = _total - paid;
     });
   }
@@ -131,6 +164,32 @@ class _BitFormScreenState extends ConsumerState<BitFormScreen> {
   Future<void> _saveEntry() async {
     if (!_formKey.currentState!.validate()) return;
 
+    // Validate at least one type is selected
+    if (_selectedTypes.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please select at least one Bit type'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    // Validate that selected types have count and rate
+    for (final type in _selectedTypes) {
+      final count = int.tryParse(_countControllers[type]?.text ?? '') ?? 0;
+      final rate = double.tryParse(_rateControllers[type]?.text ?? '') ?? 0;
+      if (count <= 0 || rate <= 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Please enter count and rate for $type'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+    }
+
     final billNumber = _billNumberController.text.trim();
     if (!_isBillNumberUnique(billNumber)) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -143,15 +202,29 @@ class _BitFormScreenState extends ConsumerState<BitFormScreen> {
     }
 
     final now = DateTime.now();
+    final typesList = _selectedTypes.toList();
+
+    // Build type details
+    final typeDetails = <TypeDetail>[];
+    int totalCount = 0;
+    for (final type in typesList) {
+      final count = int.tryParse(_countControllers[type]?.text ?? '') ?? 0;
+      final rate = double.tryParse(_rateControllers[type]?.text ?? '') ?? 0;
+      typeDetails.add(TypeDetail(type: type, count: count, rate: rate));
+      totalCount += count;
+    }
+
     final entry = BitEntry(
       id: widget.entry?.id ?? const Uuid().v4(),
       vehicleId: DatabaseService.currentVehicleId,
       date: _selectedDate,
       billNumber: billNumber,
-      type: _selectedType,
+      type: typesList.first, // Keep first type for backward compatibility
+      types: typesList, // Store all selected types
+      typeDetailsJson: TypeDetail.encodeList(typeDetails),
       bitId: _bitIdController.text.trim(),
-      count: int.tryParse(_countController.text) ?? 0,
-      rate: double.tryParse(_rateController.text) ?? 0,
+      count: totalCount, // Total count for backward compatibility
+      rate: typeDetails.first.rate, // First rate for backward compatibility
       total: _total,
       paid: double.tryParse(_paidController.text) ?? 0,
       pending: _pending,
@@ -251,9 +324,9 @@ class _BitFormScreenState extends ConsumerState<BitFormScreen> {
             ),
             const SizedBox(height: 16),
 
-            // Bit Type selection
+            // Bit Type selection (multi-select)
             const Text(
-              'Bit Type *',
+              'Bit Type * (Select one or more)',
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
@@ -264,20 +337,29 @@ class _BitFormScreenState extends ConsumerState<BitFormScreen> {
               spacing: 8,
               runSpacing: 8,
               children: bitTypes.map((type) {
-                final isSelected = _selectedType == type;
+                final isSelected = _selectedTypes.contains(type);
                 final color = _getTypeColor(type);
-                return ChoiceChip(
+                return FilterChip(
                   label: Text(type),
                   selected: isSelected,
                   selectedColor: color.withOpacity(0.2),
+                  checkmarkColor: color,
                   labelStyle: TextStyle(
                     color: isSelected ? color : null,
                     fontWeight: isSelected ? FontWeight.bold : null,
                   ),
                   onSelected: (selected) {
-                    if (selected) {
-                      setState(() => _selectedType = type);
-                    }
+                    setState(() {
+                      if (selected) {
+                        _selectedTypes.add(type);
+                      } else {
+                        _selectedTypes.remove(type);
+                        // Clear values when deselected
+                        _countControllers[type]?.clear();
+                        _rateControllers[type]?.clear();
+                      }
+                      _recalculate();
+                    });
                   },
                 );
               }).toList(),
@@ -296,60 +378,85 @@ class _BitFormScreenState extends ConsumerState<BitFormScreen> {
             ),
             const SizedBox(height: 16),
 
-            // Count and Rate row
-            Row(
-              children: [
-                Expanded(
-                  child: TextFormField(
-                    controller: _countController,
-                    decoration: const InputDecoration(
-                      labelText: 'Count *',
-                      hintText: '0',
-                      prefixIcon: Icon(Icons.numbers),
-                      border: OutlineInputBorder(),
-                    ),
-                    keyboardType: TextInputType.number,
-                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Required';
-                      }
-                      if (int.tryParse(value) == null) {
-                        return 'Invalid';
-                      }
-                      return null;
-                    },
-                  ),
+            // Per-type count and rate inputs
+            if (_selectedTypes.isNotEmpty) ...[
+              const Text(
+                'Count & Rate per Type *',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
                 ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: TextFormField(
-                    controller: _rateController,
-                    decoration: const InputDecoration(
-                      labelText: 'Rate/pc *',
-                      hintText: '0.00',
-                      prefixIcon: Icon(Icons.currency_rupee),
-                      border: OutlineInputBorder(),
-                    ),
-                    keyboardType:
-                        const TextInputType.numberWithOptions(decimal: true),
-                    inputFormatters: [
-                      FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+              ),
+              const SizedBox(height: 8),
+              ...bitTypes.where((t) => _selectedTypes.contains(t)).map((type) {
+                final color = _getTypeColor(type);
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: color.withOpacity(0.05),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: color.withOpacity(0.3)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        type,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: color,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextFormField(
+                              controller: _countControllers[type],
+                              decoration: InputDecoration(
+                                labelText: 'Count',
+                                hintText: '0',
+                                prefixIcon: Icon(Icons.numbers, color: color),
+                                border: const OutlineInputBorder(),
+                                isDense: true,
+                              ),
+                              keyboardType: TextInputType.number,
+                              inputFormatters: [
+                                FilteringTextInputFormatter.digitsOnly
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: TextFormField(
+                              controller: _rateControllers[type],
+                              decoration: InputDecoration(
+                                labelText: 'Rate/pc',
+                                hintText: '0.00',
+                                prefixIcon:
+                                    Icon(Icons.currency_rupee, color: color),
+                                border: const OutlineInputBorder(),
+                                isDense: true,
+                              ),
+                              keyboardType:
+                                  const TextInputType.numberWithOptions(
+                                      decimal: true),
+                              inputFormatters: [
+                                FilteringTextInputFormatter.allow(
+                                    RegExp(r'^\d*\.?\d*')),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
                     ],
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Required';
-                      }
-                      if (double.tryParse(value) == null) {
-                        return 'Invalid';
-                      }
-                      return null;
-                    },
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
+                );
+              }),
+            ],
+            const SizedBox(height: 8),
 
             // Total (read-only, calculated)
             Container(

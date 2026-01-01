@@ -139,6 +139,10 @@ class _VehicleManagementScreenState
   Future<void> _switchVehicle(Vehicle vehicle) async {
     await ref.read(currentVehicleProvider.notifier).setCurrentVehicle(vehicle);
 
+    // Clear filters and search when changing vehicles
+    ref.read(searchQueryProvider.notifier).state = '';
+    ref.read(ledgerFilterProvider.notifier).state = const LedgerFilter();
+
     // Refresh all data providers for the new vehicle
     ref.read(ledgerEntriesProvider.notifier).refresh();
     ref.read(dieselEntriesProvider.notifier).refresh();

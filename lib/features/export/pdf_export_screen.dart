@@ -869,6 +869,10 @@ class _PdfExportScreenState extends ConsumerState<PdfExportScreen> {
   Future<Uint8List> _generatePdf(List<LedgerEntry> entries) async {
     final pdf = pw.Document();
 
+    // Get current vehicle name
+    final currentVehicle = DatabaseService.getCurrentVehicle();
+    final vehicleName = currentVehicle?.name ?? 'Unknown Vehicle';
+
     // Calculate totals
     double totalSum = 0;
     double receivedSum = 0;
@@ -924,12 +928,26 @@ class _PdfExportScreenState extends ConsumerState<PdfExportScreen> {
                 pw.Row(
                   mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                   children: [
-                    pw.Text(
-                      'RigLedger Report',
-                      style: pw.TextStyle(
-                        fontSize: 24,
-                        fontWeight: pw.FontWeight.bold,
-                      ),
+                    pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        pw.Text(
+                          'RigLedger Report',
+                          style: pw.TextStyle(
+                            fontSize: 24,
+                            fontWeight: pw.FontWeight.bold,
+                          ),
+                        ),
+                        pw.SizedBox(height: 4),
+                        pw.Text(
+                          'Vehicle: $vehicleName',
+                          style: pw.TextStyle(
+                            fontSize: 14,
+                            fontWeight: pw.FontWeight.bold,
+                            color: PdfColors.blue800,
+                          ),
+                        ),
+                      ],
                     ),
                     pw.Text(
                       'Page ${page + 1} of $totalPages',
@@ -1106,6 +1124,10 @@ class _PdfExportScreenState extends ConsumerState<PdfExportScreen> {
   Future<Uint8List> _generateDieselPdf(List<DieselEntry> entries) async {
     final pdf = pw.Document();
 
+    // Get current vehicle name
+    final currentVehicle = DatabaseService.getCurrentVehicle();
+    final vehicleName = currentVehicle?.name ?? 'Unknown Vehicle';
+
     double totalAmount = 0, totalPaid = 0, totalPending = 0, totalLitres = 0;
     for (final e in entries) {
       totalAmount += e.total;
@@ -1135,6 +1157,12 @@ class _PdfExportScreenState extends ConsumerState<PdfExportScreen> {
                 pw.Text('Diesel Ledger Report',
                     style: pw.TextStyle(
                         fontSize: 18, fontWeight: pw.FontWeight.bold)),
+                pw.SizedBox(height: 4),
+                pw.Text('Vehicle: $vehicleName',
+                    style: pw.TextStyle(
+                        fontSize: 12,
+                        fontWeight: pw.FontWeight.bold,
+                        color: PdfColors.blue800)),
                 pw.SizedBox(height: 4),
                 pw.Text(
                     '${_dateFormat.format(_startDate)} to ${_dateFormat.format(_endDate)}',
@@ -1202,115 +1230,205 @@ class _PdfExportScreenState extends ConsumerState<PdfExportScreen> {
   }
 
   Future<Uint8List> _generatePvcPdf(List<PvcEntry> entries) async {
+    // PVC types for columns
+    const pvcTypes = ['7 inch', '8 inch', '10 inch', 'MS'];
+
     return _generateSideLedgerPdf(
       title: 'PVC Ledger Report',
       headers: [
         'Date',
         'Bill#',
-        'Type',
-        'Count',
-        'Rate',
-        'Total',
+        ...pvcTypes, // Separate column for each type count
+        'Total Amt',
         'Paid',
         'Pending'
       ],
       entries: entries,
-      getRow: (e) => [
-        _dateFormat.format(e.date),
-        e.billNumber,
-        e.type,
-        e.count.toString(),
-        _currencyFormat.format(e.rate),
-        _currencyFormat.format(e.total),
-        _currencyFormat.format(e.paid),
-        _currencyFormat.format(e.pending),
-      ],
+      getRow: (e) {
+        // Get count for each type
+        final typeCounts = <String, int>{};
+        final details = e.typeDetails;
+        if (details != null && details.isNotEmpty) {
+          for (final detail in details) {
+            typeCounts[detail.type] = detail.count;
+          }
+        } else {
+          typeCounts[e.type] = e.count;
+        }
+
+        return [
+          _dateFormat.format(e.date),
+          e.billNumber,
+          ...pvcTypes.map((t) => typeCounts[t]?.toString() ?? '-'),
+          _currencyFormat.format(e.calculatedTotal),
+          _currencyFormat.format(e.paid),
+          _currencyFormat.format(e.pending),
+        ];
+      },
       getTotals: () {
-        int count = 0;
+        // Calculate totals per type
+        final typeTotals = <String, int>{};
+        for (final t in pvcTypes) {
+          typeTotals[t] = 0;
+        }
         double total = 0, paid = 0, pending = 0;
+
         for (final e in entries) {
-          count += e.count;
-          total += e.total;
+          final details = e.typeDetails;
+          if (details != null && details.isNotEmpty) {
+            for (final detail in details) {
+              typeTotals[detail.type] =
+                  (typeTotals[detail.type] ?? 0) + detail.count;
+            }
+          } else {
+            typeTotals[e.type] = (typeTotals[e.type] ?? 0) + e.count;
+          }
+          total += e.calculatedTotal;
           paid += e.paid;
           pending += e.pending;
         }
-        return 'Count: $count  |  Total: Rs.${_currencyFormat.format(total)}  |  Paid: Rs.${_currencyFormat.format(paid)}  |  Pending: Rs.${_currencyFormat.format(pending)}';
+
+        final typeStr =
+            pvcTypes.map((t) => '$t: ${typeTotals[t]}').join('  |  ');
+        return '$typeStr  |  Total: Rs.${_currencyFormat.format(total)}  |  Paid: Rs.${_currencyFormat.format(paid)}  |  Pending: Rs.${_currencyFormat.format(pending)}';
       },
     );
   }
 
   Future<Uint8List> _generateBitPdf(List<BitEntry> entries) async {
+    // Bit types for columns
+    const bitTypes = [
+      '6.5 inch',
+      '7.25 inch',
+      '7.5 inch',
+      '9 inch',
+      '9.5 inch'
+    ];
+
     return _generateSideLedgerPdf(
       title: 'Bit Ledger Report',
       headers: [
         'Date',
         'Bill#',
-        'Type',
-        'Count',
-        'Rate',
-        'Total',
+        ...bitTypes, // Separate column for each type count
+        'Total Amt',
         'Paid',
         'Pending'
       ],
       entries: entries,
-      getRow: (e) => [
-        _dateFormat.format(e.date),
-        e.billNumber,
-        e.type,
-        e.count.toString(),
-        _currencyFormat.format(e.rate),
-        _currencyFormat.format(e.total),
-        _currencyFormat.format(e.paid),
-        _currencyFormat.format(e.pending),
-      ],
+      getRow: (e) {
+        // Get count for each type
+        final typeCounts = <String, int>{};
+        final details = e.typeDetails;
+        if (details != null && details.isNotEmpty) {
+          for (final detail in details) {
+            typeCounts[detail.type] = detail.count;
+          }
+        } else {
+          typeCounts[e.type] = e.count;
+        }
+
+        return [
+          _dateFormat.format(e.date),
+          e.billNumber,
+          ...bitTypes.map((t) => typeCounts[t]?.toString() ?? '-'),
+          _currencyFormat.format(e.calculatedTotal),
+          _currencyFormat.format(e.paid),
+          _currencyFormat.format(e.pending),
+        ];
+      },
       getTotals: () {
-        int count = 0;
+        // Calculate totals per type
+        final typeTotals = <String, int>{};
+        for (final t in bitTypes) {
+          typeTotals[t] = 0;
+        }
         double total = 0, paid = 0, pending = 0;
+
         for (final e in entries) {
-          count += e.count;
-          total += e.total;
+          final details = e.typeDetails;
+          if (details != null && details.isNotEmpty) {
+            for (final detail in details) {
+              typeTotals[detail.type] =
+                  (typeTotals[detail.type] ?? 0) + detail.count;
+            }
+          } else {
+            typeTotals[e.type] = (typeTotals[e.type] ?? 0) + e.count;
+          }
+          total += e.calculatedTotal;
           paid += e.paid;
           pending += e.pending;
         }
-        return 'Count: $count  |  Total: Rs.${_currencyFormat.format(total)}  |  Paid: Rs.${_currencyFormat.format(paid)}  |  Pending: Rs.${_currencyFormat.format(pending)}';
+
+        final typeStr =
+            bitTypes.map((t) => '$t: ${typeTotals[t]}').join('  |  ');
+        return '$typeStr  |  Total: Rs.${_currencyFormat.format(total)}  |  Paid: Rs.${_currencyFormat.format(paid)}  |  Pending: Rs.${_currencyFormat.format(pending)}';
       },
     );
   }
 
   Future<Uint8List> _generateHammerPdf(List<HammerEntry> entries) async {
+    // Hammer types for columns
+    const hammerTypes = ['6.5 inch', '7 inch'];
+
     return _generateSideLedgerPdf(
       title: 'Hammer Ledger Report',
       headers: [
         'Date',
         'Bill#',
-        'Type',
-        'Count',
-        'Rate',
-        'Total',
+        ...hammerTypes, // Separate column for each type count
+        'Total Amt',
         'Paid',
         'Pending'
       ],
       entries: entries,
-      getRow: (e) => [
-        _dateFormat.format(e.date),
-        e.billNumber,
-        e.type,
-        e.count.toString(),
-        _currencyFormat.format(e.rate),
-        _currencyFormat.format(e.total),
-        _currencyFormat.format(e.paid),
-        _currencyFormat.format(e.pending),
-      ],
+      getRow: (e) {
+        // Get count for each type
+        final typeCounts = <String, int>{};
+        final details = e.typeDetails;
+        if (details != null && details.isNotEmpty) {
+          for (final detail in details) {
+            typeCounts[detail.type] = detail.count;
+          }
+        } else {
+          typeCounts[e.type] = e.count;
+        }
+
+        return [
+          _dateFormat.format(e.date),
+          e.billNumber,
+          ...hammerTypes.map((t) => typeCounts[t]?.toString() ?? '-'),
+          _currencyFormat.format(e.calculatedTotal),
+          _currencyFormat.format(e.paid),
+          _currencyFormat.format(e.pending),
+        ];
+      },
       getTotals: () {
-        int count = 0;
+        // Calculate totals per type
+        final typeTotals = <String, int>{};
+        for (final t in hammerTypes) {
+          typeTotals[t] = 0;
+        }
         double total = 0, paid = 0, pending = 0;
+
         for (final e in entries) {
-          count += e.count;
-          total += e.total;
+          final details = e.typeDetails;
+          if (details != null && details.isNotEmpty) {
+            for (final detail in details) {
+              typeTotals[detail.type] =
+                  (typeTotals[detail.type] ?? 0) + detail.count;
+            }
+          } else {
+            typeTotals[e.type] = (typeTotals[e.type] ?? 0) + e.count;
+          }
+          total += e.calculatedTotal;
           paid += e.paid;
           pending += e.pending;
         }
-        return 'Count: $count  |  Total: Rs.${_currencyFormat.format(total)}  |  Paid: Rs.${_currencyFormat.format(paid)}  |  Pending: Rs.${_currencyFormat.format(pending)}';
+
+        final typeStr =
+            hammerTypes.map((t) => '$t: ${typeTotals[t]}').join('  |  ');
+        return '$typeStr  |  Total: Rs.${_currencyFormat.format(total)}  |  Paid: Rs.${_currencyFormat.format(paid)}  |  Pending: Rs.${_currencyFormat.format(pending)}';
       },
     );
   }
@@ -1323,6 +1441,11 @@ class _PdfExportScreenState extends ConsumerState<PdfExportScreen> {
     required String Function() getTotals,
   }) async {
     final pdf = pw.Document();
+
+    // Get current vehicle name
+    final currentVehicle = DatabaseService.getCurrentVehicle();
+    final vehicleName = currentVehicle?.name ?? 'Unknown Vehicle';
+
     final rowsPerPage = 25;
     final totalPages = (entries.length / rowsPerPage).ceil().clamp(1, 999);
 
@@ -1343,6 +1466,12 @@ class _PdfExportScreenState extends ConsumerState<PdfExportScreen> {
                 pw.Text(title,
                     style: pw.TextStyle(
                         fontSize: 18, fontWeight: pw.FontWeight.bold)),
+                pw.SizedBox(height: 4),
+                pw.Text('Vehicle: $vehicleName',
+                    style: pw.TextStyle(
+                        fontSize: 12,
+                        fontWeight: pw.FontWeight.bold,
+                        color: PdfColors.blue800)),
                 pw.SizedBox(height: 4),
                 pw.Text(
                     '${_dateFormat.format(_startDate)} to ${_dateFormat.format(_endDate)}',

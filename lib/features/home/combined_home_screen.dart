@@ -1023,6 +1023,10 @@ class _CombinedHomeScreenState extends ConsumerState<CombinedHomeScreen>
                       await ref
                           .read(currentVehicleProvider.notifier)
                           .setCurrentVehicle(vehicle);
+                      // Clear filters and search when changing vehicles
+                      ref.read(searchQueryProvider.notifier).state = '';
+                      ref.read(ledgerFilterProvider.notifier).state =
+                          const LedgerFilter();
                       // Refresh all providers
                       ref.read(ledgerEntriesProvider.notifier).refresh();
                       ref.read(dieselEntriesProvider.notifier).refresh();

@@ -22,6 +22,8 @@ class PvcEntryAdapter extends TypeAdapter<PvcEntry> {
       date: fields[2] as DateTime,
       billNumber: fields[3] as String,
       type: fields[4] as String,
+      types: (fields[16] as List?)?.cast<String>(),
+      typeDetailsJson: fields[17] as String?,
       count: fields[5] as int,
       rate: fields[6] as double,
       total: fields[7] as double,
@@ -39,7 +41,7 @@ class PvcEntryAdapter extends TypeAdapter<PvcEntry> {
   @override
   void write(BinaryWriter writer, PvcEntry obj) {
     writer
-      ..writeByte(16)
+      ..writeByte(18)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -71,7 +73,11 @@ class PvcEntryAdapter extends TypeAdapter<PvcEntry> {
       ..writeByte(14)
       ..write(obj.createdAt)
       ..writeByte(15)
-      ..write(obj.updatedAt);
+      ..write(obj.updatedAt)
+      ..writeByte(16)
+      ..write(obj.types)
+      ..writeByte(17)
+      ..write(obj.typeDetailsJson);
   }
 
   @override

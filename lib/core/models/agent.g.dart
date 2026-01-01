@@ -23,7 +23,7 @@ class AgentAdapter extends TypeAdapter<Agent> {
       notes: fields[3] as String?,
       createdAt: fields[4] as DateTime,
       updatedAt: fields[5] as DateTime,
-      vehicleId: (fields[6] as String?) ?? 'default',
+      vehicleId: fields[6] as String,
     );
   }
 
