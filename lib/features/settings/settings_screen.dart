@@ -592,12 +592,13 @@ class _GoogleDriveBackupCardState extends State<_GoogleDriveBackupCard> {
 
   Future<void> _backupNow() async {
     setState(() => _isBackingUp = true);
-    final success = await GoogleDriveService.backup();
+    final (success, error) = await GoogleDriveService.backup();
     if (mounted) {
       setState(() => _isBackingUp = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(success ? 'Backup successful' : 'Backup failed'),
+          content:
+              Text(success ? 'Backup successful' : (error ?? 'Backup failed')),
           backgroundColor: success ? AppColors.success : AppColors.error,
         ),
       );

@@ -163,10 +163,11 @@ class GoogleDriveService {
   }
 
   // Create or update backup
-  static Future<bool> backup() async {
+  static Future<(bool, String?)> backup() async {
     if (_driveApi == null) {
-      debugPrint('Drive API not initialized');
-      return false;
+      const msg = 'Drive API not initialized';
+      debugPrint(msg);
+      return (false, msg);
     }
 
     try {
@@ -207,10 +208,11 @@ class GoogleDriveService {
       );
 
       debugPrint('Backup to Google Drive successful');
-      return true;
+      return (true, null);
     } catch (e) {
-      debugPrint('Backup to Google Drive failed: $e');
-      return false;
+      final message = 'Backup failed: ${e.toString()}';
+      debugPrint(message);
+      return (false, message);
     }
   }
 
