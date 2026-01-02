@@ -13,6 +13,8 @@ class GoogleDriveService {
     scopes: [
       drive.DriveApi.driveFileScope,
     ],
+    serverClientId:
+        '91755183896-3bi0fq8thb4pe27vlg33glce48nm9jtb.apps.googleusercontent.com',
   );
 
   static GoogleSignInAccount? _currentUser;

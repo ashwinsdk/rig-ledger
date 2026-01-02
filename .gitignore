@@ -79,3 +79,4 @@ coverage/
 
 # Temp
 temp/
+android/app/google-services.json
