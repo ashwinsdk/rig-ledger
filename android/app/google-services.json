@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "91755183896",
+    "project_id": "rig-ledger-b0765",
+    "storage_bucket": "rig-ledger-b0765.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:91755183896:android:a87c57959e56fe429ee86d",
+        "android_client_info": {
+          "package_name": "com.rigledger.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "91755183896-p889phl8nut8niv3co9m09b21m2f1jk6.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.rigledger.app",
+            "certificate_hash": "9b93b4414986633cd90e05e6574ce624eae77928"
+          }
+        },
+        {
+          "client_id": "91755183896-3bi0fq8thb4pe27vlg33glce48nm9jtb.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCGrDV7bzVe47JYTVTrTT3QKm7u8Tjh-Jw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "91755183896-3bi0fq8thb4pe27vlg33glce48nm9jtb.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
