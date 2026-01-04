@@ -3,7 +3,7 @@ import 'package:hive/hive.dart';
 part 'commission_entry.g.dart';
 
 /// Commission entry for an agent for a specific date range
-@HiveType(typeId: 7)
+@HiveType(typeId: 10)
 class CommissionEntry extends HiveObject {
   @HiveField(0)
   String id;
