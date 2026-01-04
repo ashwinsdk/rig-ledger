@@ -12,10 +12,16 @@ enum TimePeriod {
   sixMonths, // Last 6 months
   year, // Last 12 months
   all, // All time
+  custom, // Custom date range
 }
 
 /// Current time period filter
 final timePeriodProvider = StateProvider<TimePeriod>((ref) => TimePeriod.month);
+
+/// Custom date range for custom period filter
+final customDateRangeProvider = StateProvider<(DateTime?, DateTime?)>((ref) {
+  return (null, null);
+});
 
 /// Current selected month for filtering
 final selectedMonthProvider = StateProvider<DateTime>((ref) {
@@ -34,6 +40,13 @@ final isDailyViewProvider = StateProvider<bool>((ref) => true);
 /// Search query
 final searchQueryProvider = StateProvider<String>((ref) => '');
 
+/// Balance status filter
+enum BalanceStatus {
+  all, // All entries
+  paid, // Completely paid (balance = 0)
+  pending, // Has balance (balance > 0)
+}
+
 /// Filter state
 class LedgerFilter {
   final String? billNumber;
@@ -41,6 +54,7 @@ class LedgerFilter {
   final String? agentId;
   final String? depthType;
   final String? pvcType;
+  final BalanceStatus balanceStatus;
 
   const LedgerFilter({
     this.billNumber,
@@ -48,6 +62,7 @@ class LedgerFilter {
     this.agentId,
     this.depthType,
     this.pvcType,
+    this.balanceStatus = BalanceStatus.all,
   });
 
   bool get hasFilters =>
@@ -55,7 +70,8 @@ class LedgerFilter {
       address != null ||
       agentId != null ||
       depthType != null ||
-      pvcType != null;
+      pvcType != null ||
+      balanceStatus != BalanceStatus.all;
 
   LedgerFilter copyWith({
     String? billNumber,
@@ -63,11 +79,13 @@ class LedgerFilter {
     String? agentId,
     String? depthType,
     String? pvcType,
+    BalanceStatus? balanceStatus,
     bool clearBillNumber = false,
     bool clearAddress = false,
     bool clearAgentId = false,
     bool clearDepthType = false,
     bool clearPvcType = false,
+    bool clearBalanceStatus = false,
   }) {
     return LedgerFilter(
       billNumber: clearBillNumber ? null : (billNumber ?? this.billNumber),
@@ -75,6 +93,7 @@ class LedgerFilter {
       agentId: clearAgentId ? null : (agentId ?? this.agentId),
       depthType: clearDepthType ? null : (depthType ?? this.depthType),
       pvcType: clearPvcType ? null : (pvcType ?? this.pvcType),
+      balanceStatus: clearBalanceStatus ? BalanceStatus.all : (balanceStatus ?? this.balanceStatus),
     );
   }
 
@@ -136,6 +155,7 @@ final filteredLedgerEntriesProvider = Provider<List<LedgerEntry>>((ref) {
   final timePeriod = ref.watch(timePeriodProvider);
   final searchQuery = ref.watch(searchQueryProvider);
   final filter = ref.watch(ledgerFilterProvider);
+  final customDateRange = ref.watch(customDateRangeProvider);
 
   final now = DateTime.now();
 
@@ -158,6 +178,11 @@ final filteredLedgerEntriesProvider = Provider<List<LedgerEntry>>((ref) {
         return entry.date.year == selectedYear;
       case TimePeriod.all:
         return true;
+      case TimePeriod.custom:
+        final (startDate, endDate) = customDateRange;
+        if (startDate == null || endDate == null) return true;
+        final entryDate = DateTime(entry.date.year, entry.date.month, entry.date.day);
+        return !entryDate.isBefore(startDate) && !entryDate.isAfter(endDate);
     }
   }).toList();
 
@@ -201,6 +226,17 @@ final filteredLedgerEntriesProvider = Provider<List<LedgerEntry>>((ref) {
 
   if (filter.pvcType != null) {
     filtered = filtered.where((entry) => entry.pvc == filter.pvcType).toList();
+  }
+
+  // Apply balance status filter
+  if (filter.balanceStatus != BalanceStatus.all) {
+    filtered = filtered.where((entry) {
+      if (filter.balanceStatus == BalanceStatus.paid) {
+        return entry.balance <= 0;
+      } else {
+        return entry.balance > 0;
+      }
+    }).toList();
   }
 
   // Sort by date descending

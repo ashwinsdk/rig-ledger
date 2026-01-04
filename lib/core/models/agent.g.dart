@@ -23,14 +23,15 @@ class AgentAdapter extends TypeAdapter<Agent> {
       notes: fields[3] as String?,
       createdAt: fields[4] as DateTime,
       updatedAt: fields[5] as DateTime,
-      vehicleId: fields[6] as String,
+      vehicleId: fields[6] as String? ?? 'default',
+      commissionPerBill: (fields[7] as double?) ?? 0,
     );
   }
 
   @override
   void write(BinaryWriter writer, Agent obj) {
     writer
-      ..writeByte(7)
+      ..writeByte(8)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -44,7 +45,9 @@ class AgentAdapter extends TypeAdapter<Agent> {
       ..writeByte(5)
       ..write(obj.updatedAt)
       ..writeByte(6)
-      ..write(obj.vehicleId);
+      ..write(obj.vehicleId)
+      ..writeByte(7)
+      ..write(obj.commissionPerBill);
   }
 
   @override

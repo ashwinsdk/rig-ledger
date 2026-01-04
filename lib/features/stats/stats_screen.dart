@@ -6,6 +6,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/providers/ledger_provider.dart';
 import '../../core/providers/side_ledger_provider.dart';
 import '../../core/providers/vehicle_provider.dart';
+import '../../core/providers/agent_provider.dart';
 
 enum DateRangeOption {
   currentMonth,
@@ -397,6 +398,7 @@ class _StatsScreenState extends ConsumerState<StatsScreen>
     final (startDate, endDate) = _getDateRange();
     // Use provider data with watch for reactivity
     final allEntries = ref.watch(ledgerEntriesProvider);
+    final agents = ref.watch(agentsProvider);
     final entries =
         _filterByDateRange(allEntries, startDate, endDate, (e) => e.date);
 
@@ -404,10 +406,19 @@ class _StatsScreenState extends ConsumerState<StatsScreen>
     double received = 0;
     double balance = 0;
 
+    // Build agent commission rate map
+    final Map<String, double> agentCommissionRates = {};
+    for (final agent in agents) {
+      agentCommissionRates[agent.id] = agent.commissionPerBill;
+    }
+
+    // Calculate totals and commission
+    double totalCommission = 0;
     for (final entry in entries) {
       total += entry.total;
       received += entry.received;
       balance += entry.balance;
+      totalCommission += agentCommissionRates[entry.agentId] ?? 0;
     }
 
     final format = NumberFormat('#,##0.00');
@@ -457,6 +468,30 @@ class _StatsScreenState extends ConsumerState<StatsScreen>
             ),
           ],
         ),
+        if (totalCommission > 0) ...[
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _SummaryCard(
+                  title: 'Commission',
+                  value: '₹${format.format(totalCommission)}',
+                  icon: Icons.payments_outlined,
+                  color: Colors.purple,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _SummaryCard(
+                  title: 'Net Total',
+                  value: '₹${format.format(total - totalCommission)}',
+                  icon: Icons.calculate_outlined,
+                  color: Colors.teal,
+                ),
+              ),
+            ],
+          ),
+        ],
       ],
     );
   }

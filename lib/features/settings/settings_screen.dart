@@ -173,7 +173,7 @@ class SettingsScreen extends ConsumerWidget {
                     _SettingsTile(
                       icon: Icons.info_outlined,
                       title: 'RigLedger',
-                      subtitle: 'Version 1.0.5',
+                      subtitle: 'Version 1.0.6',
                       trailing: Image.asset(
                         'assets/images/logo.png',
                         width: 32,
@@ -395,7 +395,7 @@ class SettingsScreen extends ConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Version: 1.0.5'),
+            const Text('Version: 1.0.6'),
             const SizedBox(height: 8),
             const Text(
               'A fast, lightweight ledger for borewell drilling entries, income and expenses, and agent management.',

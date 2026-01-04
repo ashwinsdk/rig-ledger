@@ -17,6 +17,7 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
   String? _selectedAgentId;
   String? _selectedDepthType;
   String? _selectedPvcType;
+  BalanceStatus _selectedBalanceStatus = BalanceStatus.all;
 
   @override
   void initState() {
@@ -27,6 +28,7 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
     _selectedAgentId = filter.agentId;
     _selectedDepthType = filter.depthType;
     _selectedPvcType = filter.pvcType;
+    _selectedBalanceStatus = filter.balanceStatus;
   }
 
   @override
@@ -193,6 +195,47 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
                 });
               },
             ),
+            const SizedBox(height: 16),
+            // Balance Status Filter
+            const Text(
+              'Payment Status',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: AppColors.textSecondary,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                _buildBalanceChip(
+                  'All',
+                  BalanceStatus.all,
+                  _selectedBalanceStatus,
+                  (status) {
+                    setState(() => _selectedBalanceStatus = status);
+                  },
+                ),
+                const SizedBox(width: 8),
+                _buildBalanceChip(
+                  'Paid',
+                  BalanceStatus.paid,
+                  _selectedBalanceStatus,
+                  (status) {
+                    setState(() => _selectedBalanceStatus = status);
+                  },
+                ),
+                const SizedBox(width: 8),
+                _buildBalanceChip(
+                  'Pending',
+                  BalanceStatus.pending,
+                  _selectedBalanceStatus,
+                  (status) {
+                    setState(() => _selectedBalanceStatus = status);
+                  },
+                ),
+              ],
+            ),
             const SizedBox(height: 24),
             // Action buttons
             Row(
@@ -220,6 +263,7 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
                         agentId: _selectedAgentId,
                         depthType: _selectedDepthType,
                         pvcType: _selectedPvcType,
+                        balanceStatus: _selectedBalanceStatus,
                       );
                       Navigator.pop(context);
                     },
@@ -229,6 +273,35 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
               ],
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBalanceChip(
+    String label,
+    BalanceStatus status,
+    BalanceStatus currentStatus,
+    Function(BalanceStatus) onTap,
+  ) {
+    final isSelected = status == currentStatus;
+    return GestureDetector(
+      onTap: () => onTap(status),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.primary : AppColors.background,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected ? AppColors.primary : AppColors.border,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isSelected ? Colors.white : AppColors.textSecondary,
+            fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+          ),
         ),
       ),
     );

@@ -118,6 +118,7 @@ class AgentsScreen extends ConsumerWidget {
     final nameController = TextEditingController();
     final phoneController = TextEditingController();
     final notesController = TextEditingController();
+    final commissionController = TextEditingController(text: '0');
 
     showDialog(
       context: context,
@@ -146,6 +147,16 @@ class AgentsScreen extends ConsumerWidget {
                   prefixIcon: Icon(Icons.phone_outlined),
                 ),
                 keyboardType: TextInputType.phone,
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: commissionController,
+                decoration: const InputDecoration(
+                  labelText: 'Commission per Bill (₹)',
+                  hintText: 'Enter commission amount',
+                  prefixIcon: Icon(Icons.currency_rupee_outlined),
+                ),
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
               ),
               const SizedBox(height: 16),
               TextField(
@@ -194,6 +205,7 @@ class AgentsScreen extends ConsumerWidget {
                     notes: notesController.text.trim().isNotEmpty
                         ? notesController.text.trim()
                         : null,
+                    commissionPerBill: double.tryParse(commissionController.text.trim()) ?? 0,
                   );
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
@@ -214,6 +226,7 @@ class AgentsScreen extends ConsumerWidget {
     final nameController = TextEditingController(text: agent.name);
     final phoneController = TextEditingController(text: agent.phone ?? '');
     final notesController = TextEditingController(text: agent.notes ?? '');
+    final commissionController = TextEditingController(text: agent.commissionPerBill.toString());
 
     showDialog(
       context: context,
@@ -239,6 +252,15 @@ class AgentsScreen extends ConsumerWidget {
                   prefixIcon: Icon(Icons.phone_outlined),
                 ),
                 keyboardType: TextInputType.phone,
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: commissionController,
+                decoration: const InputDecoration(
+                  labelText: 'Commission per Bill (₹)',
+                  prefixIcon: Icon(Icons.currency_rupee_outlined),
+                ),
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
               ),
               const SizedBox(height: 16),
               TextField(
@@ -274,6 +296,7 @@ class AgentsScreen extends ConsumerWidget {
                 notes: notesController.text.trim().isNotEmpty
                     ? notesController.text.trim()
                     : null,
+                commissionPerBill: double.tryParse(commissionController.text.trim()) ?? 0,
               );
               ref.read(agentsProvider.notifier).updateAgent(updated);
               ref.read(ledgerEntriesProvider.notifier).refresh();
@@ -428,7 +451,7 @@ class AgentsScreen extends ConsumerWidget {
   }
 }
 
-class _AgentCard extends StatelessWidget {
+class _AgentCard extends ConsumerWidget {
   final Agent agent;
   final int billCount;
   final VoidCallback onEdit;
@@ -442,7 +465,10 @@ class _AgentCard extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final commissionTotals = ref.watch(agentCommissionTotalsProvider);
+    final totalCommission = commissionTotals[agent.id] ?? 0;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
@@ -527,6 +553,36 @@ class _AgentCard extends StatelessWidget {
                           ),
                         ],
                       ),
+                      if (agent.commissionPerBill > 0) ...[
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Icon(Icons.currency_rupee_outlined,
+                                size: 14, color: AppColors.primary),
+                            const SizedBox(width: 4),
+                            Text(
+                              '₹${agent.commissionPerBill.toStringAsFixed(0)}/bill',
+                              style: const TextStyle(
+                                color: AppColors.primary,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Icon(Icons.account_balance_wallet_outlined,
+                                size: 14, color: AppColors.success),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Total: ₹${totalCommission.toStringAsFixed(0)}',
+                              style: const TextStyle(
+                                color: AppColors.success,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ],
                   ),
                 ),

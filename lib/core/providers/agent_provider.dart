@@ -16,7 +16,7 @@ class AgentsNotifier extends StateNotifier<List<Agent>> {
     state = DatabaseService.getAllAgents();
   }
 
-  Future<Agent> addAgent(String name, {String? phone, String? notes}) async {
+  Future<Agent> addAgent(String name, {String? phone, String? notes, double commissionPerBill = 0}) async {
     final agent = Agent(
       id: _uuid.v4(),
       name: name,
@@ -25,6 +25,7 @@ class AgentsNotifier extends StateNotifier<List<Agent>> {
       createdAt: DateTime.now(),
       updatedAt: DateTime.now(),
       vehicleId: DatabaseService.currentVehicleId,
+      commissionPerBill: commissionPerBill,
     );
     await DatabaseService.saveAgent(agent);
     loadAgents();
@@ -93,6 +94,55 @@ final agentBillCountsProvider = Provider<Map<String, int>>((ref) {
   }
 
   return counts;
+});
+
+/// Agent commission totals - calculates commission based on bill count and commission rate
+final agentCommissionTotalsProvider = Provider<Map<String, double>>((ref) {
+  final agents = ref.watch(agentsProvider);
+  final billCounts = ref.watch(agentBillCountsProvider);
+
+  final Map<String, double> commissions = {};
+  for (final agent in agents) {
+    final billCount = billCounts[agent.id] ?? 0;
+    commissions[agent.id] = agent.commissionPerBill * billCount;
+  }
+
+  return commissions;
+});
+
+/// Total commission across all agents for current view
+final totalCommissionProvider = Provider<double>((ref) {
+  final agents = ref.watch(agentsProvider);
+  final billCounts = ref.watch(agentBillCountsProvider);
+
+  double total = 0;
+  for (final agent in agents) {
+    final billCount = billCounts[agent.id] ?? 0;
+    total += agent.commissionPerBill * billCount;
+  }
+
+  return total;
+});
+
+/// Commission for filtered entries (based on current period/filters)
+final filteredCommissionProvider = Provider<double>((ref) {
+  final filteredEntries = ref.watch(filteredLedgerEntriesProvider);
+  final agents = ref.watch(agentsProvider);
+
+  // Create a map of agent id to commission rate
+  final Map<String, double> agentCommissionRates = {};
+  for (final agent in agents) {
+    agentCommissionRates[agent.id] = agent.commissionPerBill;
+  }
+
+  // Calculate commission based on filtered entries
+  double total = 0;
+  for (final entry in filteredEntries) {
+    final rate = agentCommissionRates[entry.agentId] ?? 0;
+    total += rate;
+  }
+
+  return total;
 });
 
 /// Generate new agent ID

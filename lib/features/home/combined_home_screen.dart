@@ -253,9 +253,15 @@ class _CombinedHomeScreenState extends ConsumerState<CombinedHomeScreen>
                                       ref, 'Year', TimePeriod.year, timePeriod),
                                   _buildPeriodChip(
                                       ref, 'All', TimePeriod.all, timePeriod),
+                                  _buildPeriodChip(ref, 'Custom',
+                                      TimePeriod.custom, timePeriod),
                                 ],
                               ),
                             ),
+
+                            // Custom Date Range Picker (only show for custom view)
+                            if (timePeriod == TimePeriod.custom)
+                              _buildCustomDateRangePicker(ref),
 
                             // Month Navigation Row (only show for month view)
                             if (timePeriod == TimePeriod.month)
@@ -1071,6 +1077,17 @@ class _CombinedHomeScreenState extends ConsumerState<CombinedHomeScreen>
       child: GestureDetector(
         onTap: () {
           ref.read(timePeriodProvider.notifier).state = period;
+          // Initialize custom date range if selecting custom for the first time
+          if (period == TimePeriod.custom) {
+            final currentRange = ref.read(customDateRangeProvider);
+            if (currentRange.$1 == null || currentRange.$2 == null) {
+              final now = DateTime.now();
+              ref.read(customDateRangeProvider.notifier).state = (
+                DateTime(now.year, now.month, 1),
+                now,
+              );
+            }
+          }
         },
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
@@ -1086,6 +1103,126 @@ class _CombinedHomeScreenState extends ConsumerState<CombinedHomeScreen>
               fontSize: 12,
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCustomDateRangePicker(WidgetRef ref) {
+    final customDateRange = ref.watch(customDateRangeProvider);
+    final startDate = customDateRange.$1;
+    final endDate = customDateRange.$2;
+    final dateFormat = DateFormat('dd MMM yyyy');
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.15),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: GestureDetector(
+                onTap: () async {
+                  final picked = await showDatePicker(
+                    context: context,
+                    initialDate: startDate ?? DateTime.now(),
+                    firstDate: DateTime(2000),
+                    lastDate: DateTime(2100),
+                  );
+                  if (picked != null) {
+                    ref.read(customDateRangeProvider.notifier).state = (
+                      picked,
+                      endDate ?? picked,
+                    );
+                  }
+                },
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'From',
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.7),
+                        fontSize: 10,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Row(
+                      children: [
+                        const Icon(Icons.calendar_today,
+                            size: 14, color: Colors.white),
+                        const SizedBox(width: 6),
+                        Text(
+                          startDate != null
+                              ? dateFormat.format(startDate)
+                              : 'Select',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const Icon(Icons.arrow_forward, size: 16, color: Colors.white70),
+            Expanded(
+              child: GestureDetector(
+                onTap: () async {
+                  final picked = await showDatePicker(
+                    context: context,
+                    initialDate: endDate ?? DateTime.now(),
+                    firstDate: DateTime(2000),
+                    lastDate: DateTime(2100),
+                  );
+                  if (picked != null) {
+                    ref.read(customDateRangeProvider.notifier).state = (
+                      startDate ?? picked,
+                      picked,
+                    );
+                  }
+                },
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      'To',
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.7),
+                        fontSize: 10,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        Text(
+                          endDate != null
+                              ? dateFormat.format(endDate)
+                              : 'Select',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        const Icon(Icons.calendar_today,
+                            size: 14, color: Colors.white),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

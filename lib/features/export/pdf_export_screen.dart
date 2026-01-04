@@ -54,6 +54,12 @@ class _PdfExportScreenState extends ConsumerState<PdfExportScreen> {
   bool _isPreviewMode = false;
   PdfExportType _exportType = PdfExportType.ledger;
 
+  // Filter options for Main Ledger
+  String? _filterAgentId;
+  String? _filterDepthType;
+  String? _filterPvcType;
+  String _filterBalanceStatus = 'all'; // 'all', 'paid', 'pending'
+
   final NumberFormat _currencyFormat = NumberFormat('#,##0.00');
   final NumberFormat _feetFormat = NumberFormat('#,##0');
   final DateFormat _dateFormat = DateFormat('yyyy-MM-dd');
@@ -159,12 +165,40 @@ class _PdfExportScreenState extends ConsumerState<PdfExportScreen> {
   List<PdfColumn> get _selectedColumns =>
       _allColumns.where((c) => _selectedColumnIds.contains(c.id)).toList();
 
+  /// Get filtered ledger entries based on all filter criteria
+  List<LedgerEntry> _getFilteredLedgerEntries() {
+    var entries = DatabaseService.getLedgerEntriesByDateRange(_startDate, _endDate);
+    
+    // Apply agent filter
+    if (_filterAgentId != null) {
+      entries = entries.where((e) => e.agentId == _filterAgentId).toList();
+    }
+    
+    // Apply depth type filter
+    if (_filterDepthType != null) {
+      entries = entries.where((e) => e.depth == _filterDepthType).toList();
+    }
+    
+    // Apply PVC type filter
+    if (_filterPvcType != null) {
+      entries = entries.where((e) => e.pvc == _filterPvcType).toList();
+    }
+    
+    // Apply balance status filter
+    if (_filterBalanceStatus == 'paid') {
+      entries = entries.where((e) => e.balance <= 0).toList();
+    } else if (_filterBalanceStatus == 'pending') {
+      entries = entries.where((e) => e.balance > 0).toList();
+    }
+    
+    return entries;
+  }
+
   int _getEntriesCount() {
     final vehicleId = DatabaseService.currentVehicleId;
     switch (_exportType) {
       case PdfExportType.ledger:
-        return DatabaseService.getLedgerEntriesByDateRange(_startDate, _endDate)
-            .length;
+        return _getFilteredLedgerEntries().length;
       case PdfExportType.diesel:
         return DatabaseService.getDieselEntriesByDateRange(
                 vehicleId, _startDate, _endDate)
@@ -238,6 +272,8 @@ class _PdfExportScreenState extends ConsumerState<PdfExportScreen> {
         // Column Selection (only for ledger type)
         if (_exportType == PdfExportType.ledger) ...[
           _buildColumnSelectionCard(),
+          const SizedBox(height: 16),
+          _buildFilterCard(),
           const SizedBox(height: 16),
         ],
 
@@ -552,6 +588,176 @@ class _PdfExportScreenState extends ConsumerState<PdfExportScreen> {
     );
   }
 
+  Widget _buildFilterCard() {
+    final agents = DatabaseService.getAllAgents();
+    
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.shadow.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Filters',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              if (_filterAgentId != null || 
+                  _filterDepthType != null || 
+                  _filterPvcType != null || 
+                  _filterBalanceStatus != 'all')
+                TextButton(
+                  onPressed: () {
+                    setState(() {
+                      _filterAgentId = null;
+                      _filterDepthType = null;
+                      _filterPvcType = null;
+                      _filterBalanceStatus = 'all';
+                    });
+                  },
+                  child: const Text('Clear'),
+                ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          // Agent filter
+          DropdownButtonFormField<String>(
+            value: _filterAgentId,
+            decoration: const InputDecoration(
+              labelText: 'Agent',
+              prefixIcon: Icon(Icons.person_outlined),
+              isDense: true,
+            ),
+            items: [
+              const DropdownMenuItem<String>(
+                value: null,
+                child: Text('All Agents'),
+              ),
+              ...agents.map((agent) => DropdownMenuItem<String>(
+                    value: agent.id,
+                    child: Text(agent.name),
+                  )),
+            ],
+            onChanged: (value) {
+              setState(() {
+                _filterAgentId = value;
+              });
+            },
+          ),
+          const SizedBox(height: 12),
+          // Depth Type and PVC Type in a row
+          Row(
+            children: [
+              Expanded(
+                child: DropdownButtonFormField<String>(
+                  value: _filterDepthType,
+                  decoration: const InputDecoration(
+                    labelText: 'Depth Type',
+                    isDense: true,
+                  ),
+                  items: const [
+                    DropdownMenuItem<String>(value: null, child: Text('All')),
+                    DropdownMenuItem<String>(value: '7inch', child: Text('7"')),
+                    DropdownMenuItem<String>(value: '8inch', child: Text('8"')),
+                  ],
+                  onChanged: (value) {
+                    setState(() {
+                      _filterDepthType = value;
+                    });
+                  },
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: DropdownButtonFormField<String>(
+                  value: _filterPvcType,
+                  decoration: const InputDecoration(
+                    labelText: 'PVC Type',
+                    isDense: true,
+                  ),
+                  items: const [
+                    DropdownMenuItem<String>(value: null, child: Text('All')),
+                    DropdownMenuItem<String>(value: '7inch', child: Text('7"')),
+                    DropdownMenuItem<String>(value: '8inch', child: Text('8"')),
+                  ],
+                  onChanged: (value) {
+                    setState(() {
+                      _filterPvcType = value;
+                    });
+                  },
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          // Balance status filter
+          const Text(
+            'Payment Status',
+            style: TextStyle(
+              fontSize: 12,
+              color: AppColors.textSecondary,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              _buildBalanceFilterChip('All', 'all'),
+              const SizedBox(width: 8),
+              _buildBalanceFilterChip('Paid', 'paid'),
+              const SizedBox(width: 8),
+              _buildBalanceFilterChip('Pending', 'pending'),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBalanceFilterChip(String label, String value) {
+    final isSelected = _filterBalanceStatus == value;
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _filterBalanceStatus = value;
+        });
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.primary : AppColors.background,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected ? AppColors.primary : AppColors.border,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isSelected ? Colors.white : AppColors.textSecondary,
+            fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+            fontSize: 12,
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildSummaryCard() {
     final vehicleId = DatabaseService.currentVehicleId;
 
@@ -570,8 +776,7 @@ class _PdfExportScreenState extends ConsumerState<PdfExportScreen> {
   }
 
   Widget _buildLedgerSummaryCard() {
-    final entries =
-        DatabaseService.getLedgerEntriesByDateRange(_startDate, _endDate);
+    final entries = _getFilteredLedgerEntries();
 
     // Calculate totals
     double totalSum = 0;
@@ -1099,8 +1304,7 @@ class _PdfExportScreenState extends ConsumerState<PdfExportScreen> {
 
     switch (_exportType) {
       case PdfExportType.ledger:
-        final entries =
-            DatabaseService.getLedgerEntriesByDateRange(_startDate, _endDate);
+        final entries = _getFilteredLedgerEntries();
         return _generatePdf(entries);
       case PdfExportType.diesel:
         final entries = DatabaseService.getDieselEntriesByDateRange(

@@ -8,6 +8,7 @@ import '../../../core/providers/ledger_provider.dart';
 import '../../../core/providers/vehicle_provider.dart';
 import '../../ledger_form/ledger_form_screen.dart';
 import '../../ledger_form/side_bore_form_screen.dart';
+import '../../export/invoice_screen.dart';
 
 class LedgerList extends ConsumerWidget {
   const LedgerList({super.key});
@@ -138,6 +139,7 @@ class _LedgerEntryCard extends ConsumerWidget {
         color: Colors.transparent,
         child: InkWell(
           onTap: () => _openEditForm(context, ref),
+          onLongPress: () => _showEntryOptions(context, ref),
           borderRadius: BorderRadius.circular(16),
           child: Padding(
             padding: const EdgeInsets.all(16),
@@ -180,7 +182,7 @@ class _LedgerEntryCard extends ConsumerWidget {
                   ],
                 ),
                 const SizedBox(height: 12),
-                // Second row: Depth, PVC
+                // Second row: Depth, PVC with length
                 Row(
                   children: [
                     _InfoChip(
@@ -192,8 +194,19 @@ class _LedgerEntryCard extends ConsumerWidget {
                     _InfoChip(
                       icon: Icons.format_paint_outlined,
                       label: 'PVC',
-                      value: entry.pvc,
+                      value: entry.pvcInFeet > 0
+                          ? '${entry.pvcInFeet}ft (${entry.pvc})'
+                          : entry.pvc,
                     ),
+                    // MS Pipe - only show if length > 0
+                    if (entry.msPipeInFeet > 0) ...[
+                      const SizedBox(width: 12),
+                      _InfoChip(
+                        icon: Icons.plumbing,
+                        label: 'MS',
+                        value: '${entry.msPipeInFeet}ft',
+                      ),
+                    ],
                   ],
                 ),
                 const SizedBox(height: 12),
@@ -244,6 +257,129 @@ class _LedgerEntryCard extends ConsumerWidget {
         builder: (context) => isSideBore
             ? SideBoreFormScreen(entry: entry)
             : LedgerFormScreen(entry: entry),
+      ),
+    );
+  }
+
+  void _showEntryOptions(BuildContext context, WidgetRef ref) {
+    final currentVehicle = ref.read(currentVehicleProvider);
+    final isSideBore = currentVehicle?.vehicleType == VehicleType.sideBore;
+
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetContext) => Container(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Handle bar
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.border,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              'Entry #${entry.billNumber}',
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 20),
+            ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.edit_outlined, color: AppColors.primary),
+              ),
+              title: const Text('Edit Entry'),
+              subtitle: const Text('Modify this ledger entry'),
+              onTap: () {
+                Navigator.pop(sheetContext);
+                _openEditForm(context, ref);
+              },
+            ),
+            if (!isSideBore)
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: AppColors.accent.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.receipt_long_outlined, color: AppColors.accent),
+                ),
+                title: const Text('Generate Invoice'),
+                subtitle: const Text('Create a PDF invoice for this entry'),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => InvoiceScreen(entry: entry),
+                    ),
+                  );
+                },
+              ),
+            ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: AppColors.error.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.delete_outline, color: AppColors.error),
+              ),
+              title: const Text('Delete Entry'),
+              subtitle: const Text('Remove this entry permanently'),
+              onTap: () {
+                Navigator.pop(sheetContext);
+                _showDeleteConfirmation(context, ref);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showDeleteConfirmation(BuildContext context, WidgetRef ref) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Delete Entry'),
+        content: Text('Are you sure you want to delete entry #${entry.billNumber}? This action cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              ref.read(ledgerEntriesProvider.notifier).deleteEntry(entry.id);
+              Navigator.pop(dialogContext);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Entry deleted'),
+                  backgroundColor: AppColors.error,
+                ),
+              );
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
+            child: const Text('Delete'),
+          ),
+        ],
       ),
     );
   }

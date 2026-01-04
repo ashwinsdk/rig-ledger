@@ -25,6 +25,10 @@ class Agent extends HiveObject {
   @HiveField(6)
   String vehicleId; // Vehicle this agent belongs to
 
+  /// Commission rate per bill (fixed amount per entry)
+  @HiveField(7)
+  double commissionPerBill;
+
   Agent({
     required this.id,
     required this.name,
@@ -33,6 +37,7 @@ class Agent extends HiveObject {
     required this.createdAt,
     required this.updatedAt,
     this.vehicleId = 'default',
+    this.commissionPerBill = 0,
   });
 
   Agent copyWith({
@@ -43,6 +48,7 @@ class Agent extends HiveObject {
     DateTime? createdAt,
     DateTime? updatedAt,
     String? vehicleId,
+    double? commissionPerBill,
   }) {
     return Agent(
       id: id ?? this.id,
@@ -52,6 +58,7 @@ class Agent extends HiveObject {
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       vehicleId: vehicleId ?? this.vehicleId,
+      commissionPerBill: commissionPerBill ?? this.commissionPerBill,
     );
   }
 
@@ -62,6 +69,7 @@ class Agent extends HiveObject {
       'name': name,
       'phone': phone,
       'notes': notes,
+      'commissionPerBill': commissionPerBill,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
     };
@@ -74,6 +82,7 @@ class Agent extends HiveObject {
       name: map['name'] as String,
       phone: map['phone'] as String?,
       notes: map['notes'] as String?,
+      commissionPerBill: (map['commissionPerBill'] as num?)?.toDouble() ?? 0,
       createdAt: DateTime.parse(map['createdAt'] as String),
       updatedAt: DateTime.parse(map['updatedAt'] as String),
     );
