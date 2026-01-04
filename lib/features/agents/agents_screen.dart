@@ -4,6 +4,8 @@ import '../../core/theme/app_colors.dart';
 import '../../core/models/agent.dart';
 import '../../core/providers/agent_provider.dart';
 import '../../core/providers/ledger_provider.dart';
+import '../../core/providers/commission_provider.dart';
+import 'agent_commission_screen.dart';
 
 class AgentsScreen extends ConsumerWidget {
   const AgentsScreen({super.key});
@@ -118,7 +120,6 @@ class AgentsScreen extends ConsumerWidget {
     final nameController = TextEditingController();
     final phoneController = TextEditingController();
     final notesController = TextEditingController();
-    final commissionController = TextEditingController(text: '0');
 
     showDialog(
       context: context,
@@ -147,16 +148,6 @@ class AgentsScreen extends ConsumerWidget {
                   prefixIcon: Icon(Icons.phone_outlined),
                 ),
                 keyboardType: TextInputType.phone,
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: commissionController,
-                decoration: const InputDecoration(
-                  labelText: 'Commission per Bill (₹)',
-                  hintText: 'Enter commission amount',
-                  prefixIcon: Icon(Icons.currency_rupee_outlined),
-                ),
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
               ),
               const SizedBox(height: 16),
               TextField(
@@ -205,7 +196,6 @@ class AgentsScreen extends ConsumerWidget {
                     notes: notesController.text.trim().isNotEmpty
                         ? notesController.text.trim()
                         : null,
-                    commissionPerBill: double.tryParse(commissionController.text.trim()) ?? 0,
                   );
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
@@ -226,7 +216,6 @@ class AgentsScreen extends ConsumerWidget {
     final nameController = TextEditingController(text: agent.name);
     final phoneController = TextEditingController(text: agent.phone ?? '');
     final notesController = TextEditingController(text: agent.notes ?? '');
-    final commissionController = TextEditingController(text: agent.commissionPerBill.toString());
 
     showDialog(
       context: context,
@@ -252,15 +241,6 @@ class AgentsScreen extends ConsumerWidget {
                   prefixIcon: Icon(Icons.phone_outlined),
                 ),
                 keyboardType: TextInputType.phone,
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: commissionController,
-                decoration: const InputDecoration(
-                  labelText: 'Commission per Bill (₹)',
-                  prefixIcon: Icon(Icons.currency_rupee_outlined),
-                ),
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
               ),
               const SizedBox(height: 16),
               TextField(
@@ -296,7 +276,6 @@ class AgentsScreen extends ConsumerWidget {
                 notes: notesController.text.trim().isNotEmpty
                     ? notesController.text.trim()
                     : null,
-                commissionPerBill: double.tryParse(commissionController.text.trim()) ?? 0,
               );
               ref.read(agentsProvider.notifier).updateAgent(updated);
               ref.read(ledgerEntriesProvider.notifier).refresh();
@@ -466,8 +445,8 @@ class _AgentCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final commissionTotals = ref.watch(agentCommissionTotalsProvider);
-    final totalCommission = commissionTotals[agent.id] ?? 0;
+    final totalCommission = ref.watch(agentTotalCommissionProvider(agent.id));
+    final pendingCommission = ref.watch(agentPendingCommissionProvider(agent.id));
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -476,7 +455,7 @@ class _AgentCard extends ConsumerWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: AppColors.shadow.withOpacity(0.05),
+            color: AppColors.shadow.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -553,36 +532,69 @@ class _AgentCard extends ConsumerWidget {
                           ),
                         ],
                       ),
-                      if (agent.commissionPerBill > 0) ...[
-                        const SizedBox(height: 4),
-                        Row(
-                          children: [
-                            Icon(Icons.currency_rupee_outlined,
-                                size: 14, color: AppColors.primary),
-                            const SizedBox(width: 4),
-                            Text(
-                              '₹${agent.commissionPerBill.toStringAsFixed(0)}/bill',
-                              style: const TextStyle(
-                                color: AppColors.primary,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
-                              ),
+                      // Commission row - always show button to access commission screen
+                      const SizedBox(height: 8),
+                      InkWell(
+                        onTap: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => AgentCommissionScreen(agent: agent),
                             ),
-                            const SizedBox(width: 12),
-                            Icon(Icons.account_balance_wallet_outlined,
-                                size: 14, color: AppColors.success),
-                            const SizedBox(width: 4),
-                            Text(
-                              'Total: ₹${totalCommission.toStringAsFixed(0)}',
-                              style: const TextStyle(
-                                color: AppColors.success,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
+                          );
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: totalCommission > 0 
+                                ? AppColors.primary.withValues(alpha: 0.1)
+                                : AppColors.border.withValues(alpha: 0.3),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.payments_outlined,
+                                size: 14,
+                                color: totalCommission > 0 ? AppColors.primary : AppColors.textSecondary,
                               ),
-                            ),
-                          ],
+                              const SizedBox(width: 6),
+                              if (totalCommission > 0) ...[
+                                Text(
+                                  '₹${totalCommission.toStringAsFixed(0)}',
+                                  style: const TextStyle(
+                                    color: AppColors.primary,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                if (pendingCommission > 0) ...[
+                                  Text(
+                                    ' (₹${pendingCommission.toStringAsFixed(0)} pending)',
+                                    style: TextStyle(
+                                      color: AppColors.warning,
+                                      fontSize: 11,
+                                    ),
+                                  ),
+                                ],
+                              ] else
+                                Text(
+                                  'Add Commission',
+                                  style: TextStyle(
+                                    color: AppColors.textSecondary,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              const SizedBox(width: 4),
+                              Icon(
+                                Icons.chevron_right,
+                                size: 16,
+                                color: totalCommission > 0 ? AppColors.primary : AppColors.textSecondary,
+                              ),
+                            ],
+                          ),
                         ),
-                      ],
+                      ),
                     ],
                   ),
                 ),

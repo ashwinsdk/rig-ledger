@@ -7,6 +7,7 @@ import '../models/pvc_entry.dart';
 import '../models/bit_entry.dart';
 import '../models/hammer_entry.dart';
 import '../models/mini_ledger_entry.dart';
+import '../models/commission_entry.dart';
 
 class DatabaseService {
   static const String ledgerBoxName = 'ledger_entries';
@@ -18,6 +19,7 @@ class DatabaseService {
   static const String bitBoxName = 'bit_entries';
   static const String hammerBoxName = 'hammer_entries';
   static const String miniLedgerBoxName = 'mini_ledger_entries';
+  static const String commissionBoxName = 'commission_entries';
   static const int schemaVersion = 2;
 
   static late Box<LedgerEntry> _ledgerBox;
@@ -29,6 +31,7 @@ class DatabaseService {
   static late Box<BitEntry> _bitBox;
   static late Box<HammerEntry> _hammerBox;
   static late Box<MiniLedgerEntry> _miniLedgerBox;
+  static late Box<CommissionEntry> _commissionBox;
 
   static Box<LedgerEntry> get ledgerBox => _ledgerBox;
   static Box<Agent> get agentBox => _agentBox;
@@ -39,6 +42,7 @@ class DatabaseService {
   static Box<BitEntry> get bitBox => _bitBox;
   static Box<HammerEntry> get hammerBox => _hammerBox;
   static Box<MiniLedgerEntry> get miniLedgerBox => _miniLedgerBox;
+  static Box<CommissionEntry> get commissionBox => _commissionBox;
 
   static Future<void> initialize() async {
     // Register adapters
@@ -50,6 +54,7 @@ class DatabaseService {
     Hive.registerAdapter(BitEntryAdapter());
     Hive.registerAdapter(HammerEntryAdapter());
     Hive.registerAdapter(MiniLedgerEntryAdapter());
+    Hive.registerAdapter(CommissionEntryAdapter());
 
     // Open boxes
     _ledgerBox = await Hive.openBox<LedgerEntry>(ledgerBoxName);
@@ -61,6 +66,7 @@ class DatabaseService {
     _bitBox = await Hive.openBox<BitEntry>(bitBoxName);
     _hammerBox = await Hive.openBox<HammerEntry>(hammerBoxName);
     _miniLedgerBox = await Hive.openBox<MiniLedgerEntry>(miniLedgerBoxName);
+    _commissionBox = await Hive.openBox<CommissionEntry>(commissionBoxName);
 
     // Check and perform migrations
     await _performMigrations();
@@ -294,6 +300,8 @@ class DatabaseService {
     final hammerEntries = _hammerBox.values.map((e) => e.toJson()).toList();
     final miniLedgerEntries =
         _miniLedgerBox.values.map((e) => e.toJson()).toList();
+    final commissionEntries =
+        _commissionBox.values.map((e) => e.toMap()).toList();
 
     // Also save current vehicle selection
     final currentVehicle = currentVehicleId;
@@ -310,6 +318,7 @@ class DatabaseService {
       'bitEntries': bitEntries,
       'hammerEntries': hammerEntries,
       'miniLedgerEntries': miniLedgerEntries,
+      'commissionEntries': commissionEntries,
     };
   }
 
@@ -374,6 +383,14 @@ class DatabaseService {
       await saveMiniLedgerEntry(entry);
     }
 
+    // Restore commission entries
+    final commissionData = backup['commissionEntries'] as List<dynamic>? ?? [];
+    for (final entryMap in commissionData) {
+      final entry =
+          CommissionEntry.fromMap(Map<String, dynamic>.from(entryMap));
+      await saveCommissionEntry(entry);
+    }
+
     // Ensure default vehicle exists
     await _ensureDefaultVehicle();
 
@@ -394,6 +411,7 @@ class DatabaseService {
     await _bitBox.clear();
     await _hammerBox.clear();
     await _miniLedgerBox.clear();
+    await _commissionBox.clear();
     await _settingsBox.delete('currentVehicleId');
     // Recreate default vehicle after clearing (for normal clear, not restore)
     await _ensureDefaultVehicle();
@@ -409,6 +427,7 @@ class DatabaseService {
     await _bitBox.clear();
     await _hammerBox.clear();
     await _miniLedgerBox.clear();
+    await _commissionBox.clear();
     await _settingsBox.delete('currentVehicleId');
   }
 
@@ -623,5 +642,78 @@ class DatabaseService {
           (agentTotals[entry.agentName] ?? 0) + entry.total;
     }
     return agentTotals;
+  }
+
+  // ==================== Commission Entry Operations ====================
+
+  static List<CommissionEntry> getAllCommissionEntries() {
+    final vehicleId = currentVehicleId;
+    return _commissionBox.values
+        .where((entry) => entry.vehicleId == vehicleId)
+        .toList()
+      ..sort((a, b) => b.startDate.compareTo(a.startDate));
+  }
+
+  static List<CommissionEntry> getCommissionEntriesByAgent(String agentId) {
+    final vehicleId = currentVehicleId;
+    return _commissionBox.values
+        .where((entry) => entry.vehicleId == vehicleId && entry.agentId == agentId)
+        .toList()
+      ..sort((a, b) => b.startDate.compareTo(a.startDate));
+  }
+
+  static List<CommissionEntry> getCommissionEntriesByDateRange(DateTime startDate, DateTime endDate) {
+    final vehicleId = currentVehicleId;
+    return _commissionBox.values.where((entry) {
+      if (entry.vehicleId != vehicleId) return false;
+      // Commission entry overlaps with date range if:
+      // entry.startDate <= endDate AND entry.endDate >= startDate
+      return !entry.startDate.isAfter(endDate) && !entry.endDate.isBefore(startDate);
+    }).toList()
+      ..sort((a, b) => b.startDate.compareTo(a.startDate));
+  }
+
+  static CommissionEntry? getCommissionEntry(String id) {
+    return _commissionBox.get(id);
+  }
+
+  static Future<void> saveCommissionEntry(CommissionEntry entry) async {
+    await _commissionBox.put(entry.id, entry);
+  }
+
+  static Future<void> deleteCommissionEntry(String id) async {
+    await _commissionBox.delete(id);
+  }
+
+  static Future<void> deleteCommissionEntriesByAgent(String agentId) async {
+    final entries = getCommissionEntriesByAgent(agentId);
+    for (final entry in entries) {
+      await deleteCommissionEntry(entry.id);
+    }
+  }
+
+  static double getTotalCommissionByAgent(String agentId) {
+    final entries = getCommissionEntriesByAgent(agentId);
+    return entries.fold<double>(0, (sum, entry) => sum + entry.amount);
+  }
+
+  static double getPaidCommissionByAgent(String agentId) {
+    final entries = getCommissionEntriesByAgent(agentId);
+    return entries.where((e) => e.isPaid).fold<double>(0, (sum, entry) => sum + entry.amount);
+  }
+
+  static double getPendingCommissionByAgent(String agentId) {
+    final entries = getCommissionEntriesByAgent(agentId);
+    return entries.where((e) => !e.isPaid).fold<double>(0, (sum, entry) => sum + entry.amount);
+  }
+
+  /// Get bill count for an agent in a date range
+  static int getAgentBillCountInRange(String agentId, DateTime startDate, DateTime endDate) {
+    final vehicleId = currentVehicleId;
+    return _ledgerBox.values.where((entry) {
+      if (entry.vehicleId != vehicleId) return false;
+      if (entry.agentId != agentId) return false;
+      return !entry.date.isBefore(startDate) && !entry.date.isAfter(endDate);
+    }).length;
   }
 }

@@ -6,7 +6,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/providers/ledger_provider.dart';
 import '../../core/providers/side_ledger_provider.dart';
 import '../../core/providers/vehicle_provider.dart';
-import '../../core/providers/agent_provider.dart';
+import '../../core/providers/commission_provider.dart';
 
 enum DateRangeOption {
   currentMonth,
@@ -398,7 +398,7 @@ class _StatsScreenState extends ConsumerState<StatsScreen>
     final (startDate, endDate) = _getDateRange();
     // Use provider data with watch for reactivity
     final allEntries = ref.watch(ledgerEntriesProvider);
-    final agents = ref.watch(agentsProvider);
+    final allCommissions = ref.watch(commissionEntriesProvider);
     final entries =
         _filterByDateRange(allEntries, startDate, endDate, (e) => e.date);
 
@@ -406,22 +406,23 @@ class _StatsScreenState extends ConsumerState<StatsScreen>
     double received = 0;
     double balance = 0;
 
-    // Build agent commission rate map
-    final Map<String, double> agentCommissionRates = {};
-    for (final agent in agents) {
-      agentCommissionRates[agent.id] = agent.commissionPerBill;
-    }
-
-    // Calculate totals and commission
-    double totalCommission = 0;
+    // Calculate totals
     for (final entry in entries) {
       total += entry.total;
       received += entry.received;
       balance += entry.balance;
-      totalCommission += agentCommissionRates[entry.agentId] ?? 0;
     }
 
-    final format = NumberFormat('#,##0.00');
+    // Calculate commission from commission entries in date range
+    double totalCommission = 0;
+    for (final comm in allCommissions) {
+      // Check if commission entry overlaps with date range
+      if (!comm.startDate.isAfter(endDate) && !comm.endDate.isBefore(startDate)) {
+        totalCommission += comm.amount;
+      }
+    }
+
+    final format = NumberFormat('#,##0');
 
     return Column(
       children: [

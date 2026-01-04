@@ -4,7 +4,7 @@ import 'package:intl/intl.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/providers/ledger_provider.dart';
 import '../../../core/providers/vehicle_provider.dart';
-import '../../../core/providers/agent_provider.dart';
+import '../../../core/providers/commission_provider.dart';
 import '../../../core/models/vehicle.dart';
 
 class SummaryRow extends ConsumerWidget {
@@ -15,9 +15,9 @@ class SummaryRow extends ConsumerWidget {
     final stats = ref.watch(monthlyStatsProvider);
     final feetTotals = ref.watch(feetTotalsProvider);
     final currentVehicle = ref.watch(currentVehicleProvider);
-    final filteredCommission = ref.watch(filteredCommissionProvider);
+    final totalCommission = ref.watch(totalPendingCommissionProvider);
     final isSideBore = currentVehicle?.vehicleType == VehicleType.sideBore;
-    final currencyFormat = NumberFormat('#,##0.00');
+    final currencyFormat = NumberFormat('#,##0');
     final feetFormat = NumberFormat('#,##0');
 
     return Column(
@@ -73,7 +73,7 @@ class SummaryRow extends ConsumerWidget {
                   icon: Icons.pending_outlined,
                 ),
               ),
-              if (filteredCommission > 0) ...[
+              if (totalCommission > 0) ...[
                 Container(
                   width: 1,
                   height: 40,
@@ -81,8 +81,8 @@ class SummaryRow extends ConsumerWidget {
                 ),
                 Expanded(
                   child: _SummaryItem(
-                    label: 'Commission',
-                    value: '₹${currencyFormat.format(filteredCommission)}',
+                    label: 'Comm.',
+                    value: '₹${currencyFormat.format(totalCommission)}',
                     color: Colors.purple,
                     icon: Icons.payments_outlined,
                   ),
