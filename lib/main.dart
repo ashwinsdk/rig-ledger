@@ -6,25 +6,48 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:device_info_plus/device_info_plus.dart';
+import 'package:window_manager/window_manager.dart';
 
 import 'core/theme/app_theme.dart';
 import 'core/database/database_service.dart';
 import 'core/services/google_drive_service.dart';
+import 'core/services/sync_service.dart';
+import 'core/providers/sync_provider.dart';
+import 'core/utils/platform_helper.dart';
 import 'features/navigation/main_navigation.dart';
+import 'features/navigation/desktop_shell.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Set preferred orientations
-  await SystemChrome.setPreferredOrientations([
-    DeviceOrientation.portraitUp,
-    DeviceOrientation.portraitDown,
-  ]);
+  if (PlatformHelper.isMobile) {
+    // Mobile-only: orientation lock and immersive mode
+    await SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+    ]);
+    await SystemChrome.setEnabledSystemUIMode(
+      SystemUiMode.immersiveSticky,
+    );
+  }
 
-  // Hide system navigation bars for immersive experience
-  await SystemChrome.setEnabledSystemUIMode(
-    SystemUiMode.immersiveSticky,
-  );
+  if (PlatformHelper.isDesktop) {
+    // Desktop: window manager setup
+    await windowManager.ensureInitialized();
+    const windowOptions = WindowOptions(
+      size: Size(1280, 820),
+      minimumSize: Size(900, 600),
+      center: true,
+      backgroundColor: Colors.transparent,
+      skipTaskbar: false,
+      titleBarStyle: TitleBarStyle.hidden,
+      title: 'RigLedger',
+    );
+    await windowManager.waitUntilReadyToShow(windowOptions, () async {
+      await windowManager.show();
+      await windowManager.focus();
+    });
+  }
 
   // Initialize Hive
   await Hive.initFlutter();
@@ -32,14 +55,16 @@ void main() async {
   // Initialize database
   await DatabaseService.initialize();
 
-  // Request storage permissions
-  await _requestPermissions();
+  // Request storage permissions (Android only)
+  if (PlatformHelper.isAndroid) {
+    await _requestPermissions();
+  }
+
+  // Initialize sync state (load last sync time from storage)
+  SyncService.initialize();
 
   // Initialize Google Drive (try silent sign-in)
   await GoogleDriveService.initialize();
-
-  // Perform auto-backup if enabled
-  await GoogleDriveService.performAutoBackupIfEnabled();
 
   runApp(
     const ProviderScope(
@@ -52,30 +77,24 @@ Future<void> _requestPermissions() async {
   if (!Platform.isAndroid) return;
 
   try {
-    // Get Android SDK version
     final androidInfo = await DeviceInfoPlugin().androidInfo;
     final sdkInt = androidInfo.version.sdkInt;
 
     if (sdkInt >= 33) {
-      // Android 13+ (API 33+): Use granular media permissions
-      // For documents/files, no runtime permission needed - uses SAF
       debugPrint(
           'Android 13+: Using scoped storage, no broad permissions needed');
     } else if (sdkInt >= 30) {
-      // Android 11-12 (API 30-32): Request MANAGE_EXTERNAL_STORAGE
       final manageStatus = await Permission.manageExternalStorage.status;
       if (!manageStatus.isGranted) {
         await Permission.manageExternalStorage.request();
       }
     } else {
-      // Android 10 and below: Request legacy storage permission
       final storageStatus = await Permission.storage.status;
       if (!storageStatus.isGranted) {
         await Permission.storage.request();
       }
     }
   } catch (e) {
-    // Fallback: Try requesting storage permission the old way
     debugPrint('Error detecting SDK version: $e');
     try {
       final storageStatus = await Permission.storage.status;
@@ -88,8 +107,45 @@ Future<void> _requestPermissions() async {
   }
 }
 
-class RigLedgerApp extends StatelessWidget {
+class RigLedgerApp extends ConsumerStatefulWidget {
   const RigLedgerApp({super.key});
+
+  @override
+  ConsumerState<RigLedgerApp> createState() => _RigLedgerAppState();
+}
+
+class _RigLedgerAppState extends ConsumerState<RigLedgerApp>
+    with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    // Sync immediately on launch, then every 5 minutes
+    _triggerSync();
+    ref.read(syncProvider.notifier).startPeriodicSync(
+          interval: const Duration(minutes: 5),
+        );
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    ref.read(syncProvider.notifier).stopPeriodicSync();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Sync whenever the app comes back to foreground
+    if (state == AppLifecycleState.resumed) {
+      _triggerSync();
+    }
+  }
+
+  void _triggerSync() {
+    if (!GoogleDriveService.isSignedIn) return;
+    ref.read(syncProvider.notifier).syncNow();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -97,7 +153,9 @@ class RigLedgerApp extends StatelessWidget {
       title: 'RigLedger',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
-      home: const MainNavigation(),
+      home: PlatformHelper.isDesktop
+          ? const DesktopShell()
+          : const MainNavigation(),
     );
   }
 }

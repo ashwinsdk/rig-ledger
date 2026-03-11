@@ -4,6 +4,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/models/agent.dart';
 import '../../core/providers/agent_provider.dart';
 import '../../core/providers/ledger_provider.dart';
+import '../../core/widgets/adaptive_header.dart';
 
 class AgentsScreen extends ConsumerWidget {
   const AgentsScreen({super.key});
@@ -17,35 +18,20 @@ class AgentsScreen extends ConsumerWidget {
       backgroundColor: AppColors.background,
       body: Column(
         children: [
-          // Gradient Header
-          Container(
-            decoration: const BoxDecoration(
-              gradient: AppColors.appBarGradient,
-            ),
-            child: SafeArea(
-              bottom: false,
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  children: [
-                    const Expanded(
-                      child: Text(
-                        'Agent Management',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 20,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.add, color: Colors.white),
-                      onPressed: () => _showAddAgentDialog(context, ref),
-                    ),
-                  ],
+          // Header — slim on desktop, gradient on mobile
+          AdaptiveHeader(
+            title: 'Agent Management',
+            actions: [
+              IconButton(
+                icon: Icon(
+                  Icons.add,
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? AppColors.textPrimary
+                      : Colors.white,
                 ),
+                onPressed: () => _showAddAgentDialog(context, ref),
               ),
-            ),
+            ],
           ),
 
           // Content

@@ -9,6 +9,7 @@ import '../../core/models/agent.dart';
 import '../../core/database/database_service.dart';
 import '../../core/providers/ledger_provider.dart';
 import '../../core/providers/agent_provider.dart';
+import '../../core/widgets/adaptive_header.dart';
 
 class LedgerFormScreen extends ConsumerStatefulWidget {
   final LedgerEntry? entry;
@@ -478,560 +479,573 @@ class _LedgerFormScreenState extends ConsumerState<LedgerFormScreen> {
             ),
         ],
       ),
-      body: Form(
-        key: _formKey,
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            // Date picker
-            _buildSectionTitle('Date'),
-            InkWell(
-              onTap: _selectDate,
-              borderRadius: BorderRadius.circular(12),
-              child: Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.border),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.calendar_today, color: AppColors.primary),
-                    const SizedBox(width: 12),
-                    Text(
-                      dateFormat.format(_date),
-                      style: const TextStyle(
-                        fontSize: 16,
-                        color: AppColors.textPrimary,
-                      ),
-                    ),
-                    const Spacer(),
-                    const Icon(Icons.edit,
-                        size: 18, color: AppColors.textSecondary),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Bill Number
-            _buildSectionTitle('Bill Number'),
-            TextFormField(
-              controller: _billNumberController,
-              keyboardType: TextInputType.text,
-              decoration: InputDecoration(
-                hintText: 'Enter bill number',
-                prefixIcon: const Icon(Icons.receipt_outlined),
-                suffixIcon: _isBillNumberDuplicate
-                    ? const Icon(Icons.warning_amber_rounded,
-                        color: Colors.orange)
-                    : null,
-              ),
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) {
-                  return 'Bill number is required';
-                }
-                if (_isBillNumberDuplicate) {
-                  return 'Bill number already exists';
-                }
-                return null;
-              },
-            ),
-            if (_isBillNumberDuplicate)
-              Container(
-                margin: const EdgeInsets.only(top: 8),
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.orange.shade50,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.orange.shade200),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.info_outline,
-                        color: Colors.orange.shade700, size: 20),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'This bill number already exists. Please use a unique bill number.',
-                        style: TextStyle(
-                          color: Colors.orange.shade800,
-                          fontSize: 13,
+      body: AdaptiveContent(
+        maxWidth: 700,
+        child: Form(
+          key: _formKey,
+          child: ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              // Date picker
+              _buildSectionTitle('Date'),
+              InkWell(
+                onTap: _selectDate,
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.calendar_today,
+                          color: AppColors.primary),
+                      const SizedBox(width: 12),
+                      Text(
+                        dateFormat.format(_date),
+                        style: const TextStyle(
+                          fontSize: 16,
+                          color: AppColors.textPrimary,
                         ),
                       ),
-                    ),
-                  ],
+                      const Spacer(),
+                      const Icon(Icons.edit,
+                          size: 18, color: AppColors.textSecondary),
+                    ],
+                  ),
                 ),
               ),
-            const SizedBox(height: 16),
+              const SizedBox(height: 16),
 
-            // Agent
-            _buildSectionTitle('Agent'),
-            Row(
-              children: [
-                Expanded(
-                  child: DropdownButtonFormField<Agent>(
-                    value: _selectedAgent,
-                    decoration: const InputDecoration(
-                      hintText: 'Select agent',
-                      prefixIcon: Icon(Icons.person_outlined),
+              // Bill Number
+              _buildSectionTitle('Bill Number'),
+              TextFormField(
+                controller: _billNumberController,
+                keyboardType: TextInputType.text,
+                decoration: InputDecoration(
+                  hintText: 'Enter bill number',
+                  prefixIcon: const Icon(Icons.receipt_outlined),
+                  suffixIcon: _isBillNumberDuplicate
+                      ? const Icon(Icons.warning_amber_rounded,
+                          color: Colors.orange)
+                      : null,
+                ),
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Bill number is required';
+                  }
+                  if (_isBillNumberDuplicate) {
+                    return 'Bill number already exists';
+                  }
+                  return null;
+                },
+              ),
+              if (_isBillNumberDuplicate)
+                Container(
+                  margin: const EdgeInsets.only(top: 8),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.orange.shade200),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.info_outline,
+                          color: Colors.orange.shade700, size: 20),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'This bill number already exists. Please use a unique bill number.',
+                          style: TextStyle(
+                            color: Colors.orange.shade800,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              const SizedBox(height: 16),
+
+              // Agent
+              _buildSectionTitle('Agent'),
+              Row(
+                children: [
+                  Expanded(
+                    child: DropdownButtonFormField<Agent>(
+                      value: _selectedAgent,
+                      decoration: const InputDecoration(
+                        hintText: 'Select agent',
+                        prefixIcon: Icon(Icons.person_outlined),
+                      ),
+                      items: agents
+                          .map((agent) => DropdownMenuItem(
+                                value: agent,
+                                child: Text(agent.name),
+                              ))
+                          .toList(),
+                      onChanged: (agent) {
+                        setState(() {
+                          _selectedAgent = agent;
+                        });
+                      },
+                      validator: (value) {
+                        if (value == null) {
+                          return 'Please select an agent';
+                        }
+                        return null;
+                      },
                     ),
-                    items: agents
-                        .map((agent) => DropdownMenuItem(
-                              value: agent,
-                              child: Text(agent.name),
-                            ))
-                        .toList(),
-                    onChanged: (agent) {
-                      setState(() {
-                        _selectedAgent = agent;
-                      });
-                    },
+                  ),
+                  const SizedBox(width: 8),
+                  IconButton(
+                    onPressed: _showAddAgentDialog,
+                    icon: const Icon(Icons.add_circle_outline),
+                    color: AppColors.primary,
+                    tooltip: 'Add new agent',
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+
+              // Address
+              _buildSectionTitle('Address (City)'),
+              Autocomplete<String>(
+                initialValue: TextEditingValue(text: _addressController.text),
+                optionsBuilder: (TextEditingValue textEditingValue) {
+                  if (textEditingValue.text.isEmpty) {
+                    return const Iterable<String>.empty();
+                  }
+                  final addresses = DatabaseService.getUniqueAddresses();
+                  return addresses.where((address) => address
+                      .toLowerCase()
+                      .contains(textEditingValue.text.toLowerCase()));
+                },
+                onSelected: (String selection) {
+                  _addressController.text = selection;
+                },
+                fieldViewBuilder: (context, textEditingController, focusNode,
+                    onFieldSubmitted) {
+                  // Sync the autocomplete controller with our controller
+                  textEditingController.text = _addressController.text;
+                  textEditingController.addListener(() {
+                    _addressController.text = textEditingController.text;
+                  });
+                  return TextFormField(
+                    controller: textEditingController,
+                    focusNode: focusNode,
+                    decoration: const InputDecoration(
+                      hintText: 'Enter city/address',
+                      prefixIcon: Icon(Icons.location_on_outlined),
+                    ),
                     validator: (value) {
-                      if (value == null) {
-                        return 'Please select an agent';
+                      if (value == null || value.trim().isEmpty) {
+                        return 'Address is required';
                       }
                       return null;
                     },
-                  ),
-                ),
-                const SizedBox(width: 8),
-                IconButton(
-                  onPressed: _showAddAgentDialog,
-                  icon: const Icon(Icons.add_circle_outline),
-                  color: AppColors.primary,
-                  tooltip: 'Add new agent',
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
+                  );
+                },
+                optionsViewBuilder: (context, onSelected, options) {
+                  return Align(
+                    alignment: Alignment.topLeft,
+                    child: Material(
+                      elevation: 4,
+                      borderRadius: BorderRadius.circular(8),
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxHeight: 200),
+                        child: ListView.builder(
+                          padding: EdgeInsets.zero,
+                          shrinkWrap: true,
+                          itemCount: options.length,
+                          itemBuilder: (context, index) {
+                            final option = options.elementAt(index);
+                            return ListTile(
+                              leading: const Icon(Icons.location_on_outlined,
+                                  size: 20, color: AppColors.textSecondary),
+                              title: Text(option),
+                              dense: true,
+                              onTap: () => onSelected(option),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 24),
 
-            // Address
-            _buildSectionTitle('Address (City)'),
-            Autocomplete<String>(
-              initialValue: TextEditingValue(text: _addressController.text),
-              optionsBuilder: (TextEditingValue textEditingValue) {
-                if (textEditingValue.text.isEmpty) {
-                  return const Iterable<String>.empty();
-                }
-                final addresses = DatabaseService.getUniqueAddresses();
-                return addresses.where((address) => address
-                    .toLowerCase()
-                    .contains(textEditingValue.text.toLowerCase()));
-              },
-              onSelected: (String selection) {
-                _addressController.text = selection;
-              },
-              fieldViewBuilder: (context, textEditingController, focusNode,
-                  onFieldSubmitted) {
-                // Sync the autocomplete controller with our controller
-                textEditingController.text = _addressController.text;
-                textEditingController.addListener(() {
-                  _addressController.text = textEditingController.text;
-                });
-                return TextFormField(
-                  controller: textEditingController,
-                  focusNode: focusNode,
-                  decoration: const InputDecoration(
-                    hintText: 'Enter city/address',
-                    prefixIcon: Icon(Icons.location_on_outlined),
+              // Depth Section
+              _buildSectionTitle('Depth Details'),
+              Row(
+                children: [
+                  Expanded(
+                    child: DropdownButtonFormField<String>(
+                      value: _depth,
+                      decoration: const InputDecoration(
+                        labelText: 'Depth Type',
+                      ),
+                      items: ['7inch', '8inch']
+                          .map(
+                              (d) => DropdownMenuItem(value: d, child: Text(d)))
+                          .toList(),
+                      onChanged: (value) {
+                        if (value != null) {
+                          setState(() {
+                            _depth = value;
+                          });
+                          _updateStepRate();
+                        }
+                      },
+                    ),
                   ),
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Address is required';
-                    }
-                    return null;
-                  },
-                );
-              },
-              optionsViewBuilder: (context, onSelected, options) {
-                return Align(
-                  alignment: Alignment.topLeft,
-                  child: Material(
-                    elevation: 4,
-                    borderRadius: BorderRadius.circular(8),
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxHeight: 200),
-                      child: ListView.builder(
-                        padding: EdgeInsets.zero,
-                        shrinkWrap: true,
-                        itemCount: options.length,
-                        itemBuilder: (context, index) {
-                          final option = options.elementAt(index);
-                          return ListTile(
-                            leading: const Icon(Icons.location_on_outlined,
-                                size: 20, color: AppColors.textSecondary),
-                            title: Text(option),
-                            dense: true,
-                            onTap: () => onSelected(option),
-                          );
-                        },
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: TextFormField(
+                      controller: _depthInFeetController,
+                      keyboardType:
+                          const TextInputType.numberWithOptions(decimal: true),
+                      inputFormatters: [
+                        FilteringTextInputFormatter.allow(
+                            RegExp(r'^\d*\.?\d*')),
+                      ],
+                      decoration: const InputDecoration(
+                        labelText: 'Depth (feet)',
                       ),
                     ),
                   ),
-                );
-              },
-            ),
-            const SizedBox(height: 24),
-
-            // Depth Section
-            _buildSectionTitle('Depth Details'),
-            Row(
-              children: [
-                Expanded(
-                  child: DropdownButtonFormField<String>(
-                    value: _depth,
-                    decoration: const InputDecoration(
-                      labelText: 'Depth Type',
-                    ),
-                    items: ['7inch', '8inch']
-                        .map((d) => DropdownMenuItem(value: d, child: Text(d)))
-                        .toList(),
-                    onChanged: (value) {
-                      if (value != null) {
-                        setState(() {
-                          _depth = value;
-                        });
-                        _updateStepRate();
-                      }
-                    },
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: TextFormField(
-                    controller: _depthInFeetController,
-                    keyboardType:
-                        const TextInputType.numberWithOptions(decimal: true),
-                    inputFormatters: [
-                      FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
-                    ],
-                    decoration: const InputDecoration(
-                      labelText: 'Depth (feet)',
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      controller: _depthPerFeetRateController,
+                      keyboardType:
+                          const TextInputType.numberWithOptions(decimal: true),
+                      inputFormatters: [
+                        FilteringTextInputFormatter.allow(
+                            RegExp(r'^\d*\.?\d*')),
+                      ],
+                      decoration: const InputDecoration(
+                        labelText: 'Rate per feet (₹)',
+                        prefixIcon: Icon(Icons.currency_rupee),
+                      ),
                     ),
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: TextFormField(
-                    controller: _depthPerFeetRateController,
-                    keyboardType:
-                        const TextInputType.numberWithOptions(decimal: true),
-                    inputFormatters: [
-                      FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
-                    ],
-                    decoration: const InputDecoration(
-                      labelText: 'Rate per feet (₹)',
-                      prefixIcon: Icon(Icons.currency_rupee),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: TextFormField(
-                          controller: _stepRateController,
-                          keyboardType: const TextInputType.numberWithOptions(
-                              decimal: true),
-                          inputFormatters: [
-                            FilteringTextInputFormatter.allow(
-                                RegExp(r'^\d*\.?\d*')),
-                          ],
-                          decoration: InputDecoration(
-                            labelText: 'Step Rate (₹)',
-                            prefixIcon: const Icon(Icons.trending_up),
-                            suffixIcon: _isStepRateManuallyEdited
-                                ? const Tooltip(
-                                    message: 'Manually edited',
-                                    child: Icon(Icons.edit,
-                                        color: AppColors.warning, size: 18),
-                                  )
-                                : null,
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: TextFormField(
+                            controller: _stepRateController,
+                            keyboardType: const TextInputType.numberWithOptions(
+                                decimal: true),
+                            inputFormatters: [
+                              FilteringTextInputFormatter.allow(
+                                  RegExp(r'^\d*\.?\d*')),
+                            ],
+                            decoration: InputDecoration(
+                              labelText: 'Step Rate (₹)',
+                              prefixIcon: const Icon(Icons.trending_up),
+                              suffixIcon: _isStepRateManuallyEdited
+                                  ? const Tooltip(
+                                      message: 'Manually edited',
+                                      child: Icon(Icons.edit,
+                                          color: AppColors.warning, size: 18),
+                                    )
+                                  : null,
+                            ),
+                            onChanged: (value) {
+                              if (!_isStepRateManuallyEdited) {
+                                setState(() {
+                                  _isStepRateManuallyEdited = true;
+                                });
+                              }
+                            },
                           ),
-                          onChanged: (value) {
-                            if (!_isStepRateManuallyEdited) {
+                        ),
+                        if (_isStepRateManuallyEdited)
+                          IconButton(
+                            onPressed: () {
                               setState(() {
-                                _isStepRateManuallyEdited = true;
+                                _isStepRateManuallyEdited = false;
                               });
-                            }
-                          },
-                        ),
+                              _updateStepRate();
+                            },
+                            icon: const Icon(Icons.refresh, size: 20),
+                            tooltip: 'Auto calculate',
+                            color: AppColors.primary,
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+
+              // PVC Section
+              _buildSectionTitle('PVC Details'),
+              Row(
+                children: [
+                  Expanded(
+                    child: DropdownButtonFormField<String>(
+                      value: _pvc,
+                      decoration: const InputDecoration(
+                        labelText: 'PVC Type',
                       ),
-                      if (_isStepRateManuallyEdited)
-                        IconButton(
-                          onPressed: () {
-                            setState(() {
-                              _isStepRateManuallyEdited = false;
-                            });
-                            _updateStepRate();
-                          },
-                          icon: const Icon(Icons.refresh, size: 20),
-                          tooltip: 'Auto calculate',
-                          color: AppColors.primary,
-                        ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-
-            // PVC Section
-            _buildSectionTitle('PVC Details'),
-            Row(
-              children: [
-                Expanded(
-                  child: DropdownButtonFormField<String>(
-                    value: _pvc,
-                    decoration: const InputDecoration(
-                      labelText: 'PVC Type',
+                      items: ['7inch', '8inch']
+                          .map(
+                              (p) => DropdownMenuItem(value: p, child: Text(p)))
+                          .toList(),
+                      onChanged: (value) {
+                        if (value != null) {
+                          setState(() {
+                            _pvc = value;
+                          });
+                        }
+                      },
                     ),
-                    items: ['7inch', '8inch']
-                        .map((p) => DropdownMenuItem(value: p, child: Text(p)))
-                        .toList(),
-                    onChanged: (value) {
-                      if (value != null) {
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: TextFormField(
+                      controller: _pvcInFeetController,
+                      keyboardType:
+                          const TextInputType.numberWithOptions(decimal: true),
+                      inputFormatters: [
+                        FilteringTextInputFormatter.allow(
+                            RegExp(r'^\d*\.?\d*')),
+                      ],
+                      decoration: const InputDecoration(
+                        labelText: 'PVC (feet)',
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _pvcPerFeetRateController,
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+                ],
+                decoration: const InputDecoration(
+                  labelText: 'PVC Rate per feet (₹)',
+                  prefixIcon: Icon(Icons.currency_rupee),
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              // MS Pipe Section
+              _buildSectionTitle('MS Pipe Details'),
+              Row(
+                children: [
+                  Expanded(
+                    child: DropdownButtonFormField<String>(
+                      value: _msPipe,
+                      decoration: const InputDecoration(
+                        labelText: 'MS Pipe Type',
+                      ),
+                      items: ['6inch']
+                          .map(
+                              (m) => DropdownMenuItem(value: m, child: Text(m)))
+                          .toList(),
+                      onChanged: (value) {
+                        if (value != null) {
+                          setState(() {
+                            _msPipe = value;
+                          });
+                        }
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: TextFormField(
+                      controller: _msPipeInFeetController,
+                      keyboardType:
+                          const TextInputType.numberWithOptions(decimal: true),
+                      inputFormatters: [
+                        FilteringTextInputFormatter.allow(
+                            RegExp(r'^\d*\.?\d*')),
+                      ],
+                      decoration: const InputDecoration(
+                        labelText: 'MS Pipe (feet)',
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _msPipePerFeetRateController,
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+                ],
+                decoration: const InputDecoration(
+                  labelText: 'MS Pipe Rate per feet (₹)',
+                  prefixIcon: Icon(Icons.currency_rupee),
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Extra Charges
+              TextFormField(
+                controller: _extraChargesController,
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+                ],
+                decoration: const InputDecoration(
+                  labelText: 'Extra Charges (₹)',
+                  prefixIcon: Icon(Icons.add_circle_outline),
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              // Calculation Preview
+              _buildCalculationPreview(),
+              const SizedBox(height: 24),
+
+              // Total (with manual override)
+              _buildSectionTitle('Total'),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      controller: _totalController,
+                      keyboardType:
+                          const TextInputType.numberWithOptions(decimal: true),
+                      inputFormatters: [
+                        FilteringTextInputFormatter.allow(
+                            RegExp(r'^\d*\.?\d*')),
+                      ],
+                      decoration: InputDecoration(
+                        prefixIcon: const Icon(Icons.currency_rupee),
+                        suffixIcon: _isTotalManuallyEdited
+                            ? const Tooltip(
+                                message: 'Manually edited',
+                                child:
+                                    Icon(Icons.edit, color: AppColors.warning),
+                              )
+                            : null,
+                      ),
+                      onChanged: (value) {
+                        if (!_isTotalManuallyEdited) {
+                          setState(() {
+                            _isTotalManuallyEdited = true;
+                          });
+                        }
+                        _updateBalance();
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  if (_isTotalManuallyEdited)
+                    TextButton(
+                      onPressed: () {
                         setState(() {
-                          _pvc = value;
+                          _isTotalManuallyEdited = false;
                         });
-                      }
-                    },
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: TextFormField(
-                    controller: _pvcInFeetController,
-                    keyboardType:
-                        const TextInputType.numberWithOptions(decimal: true),
-                    inputFormatters: [
-                      FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
-                    ],
-                    decoration: const InputDecoration(
-                      labelText: 'PVC (feet)',
+                        _updateCalculatedTotal();
+                      },
+                      child: const Text('Auto'),
                     ),
-                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+
+              // Payment Section Header
+              _buildSectionTitle('Payment'),
+
+              // Cash Amount
+              TextFormField(
+                controller: _cashController,
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+                ],
+                decoration: InputDecoration(
+                  labelText: 'Cash Received (₹)',
+                  prefixIcon: const Icon(Icons.money, color: AppColors.success),
+                  filled: true,
+                  fillColor: AppColors.success.withOpacity(0.05),
                 ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _pvcPerFeetRateController,
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
-              inputFormatters: [
-                FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
-              ],
-              decoration: const InputDecoration(
-                labelText: 'PVC Rate per feet (₹)',
-                prefixIcon: Icon(Icons.currency_rupee),
               ),
-            ),
-            const SizedBox(height: 24),
+              const SizedBox(height: 16),
 
-            // MS Pipe Section
-            _buildSectionTitle('MS Pipe Details'),
-            Row(
-              children: [
-                Expanded(
-                  child: DropdownButtonFormField<String>(
-                    value: _msPipe,
-                    decoration: const InputDecoration(
-                      labelText: 'MS Pipe Type',
-                    ),
-                    items: ['6inch']
-                        .map((m) => DropdownMenuItem(value: m, child: Text(m)))
-                        .toList(),
-                    onChanged: (value) {
-                      if (value != null) {
-                        setState(() {
-                          _msPipe = value;
-                        });
-                      }
-                    },
-                  ),
+              // Less (Discounts)
+              TextFormField(
+                controller: _lessController,
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+                ],
+                decoration: const InputDecoration(
+                  labelText: 'Less (Discounts/Deductions) (₹)',
+                  prefixIcon: Icon(Icons.remove_circle_outline),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: TextFormField(
-                    controller: _msPipeInFeetController,
-                    keyboardType:
-                        const TextInputType.numberWithOptions(decimal: true),
-                    inputFormatters: [
-                      FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
-                    ],
-                    decoration: const InputDecoration(
-                      labelText: 'MS Pipe (feet)',
-                    ),
-                  ),
+              ),
+              const SizedBox(height: 16),
+
+              // Balance
+              TextFormField(
+                controller: _balanceController,
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+                ],
+                decoration: const InputDecoration(
+                  labelText: 'Balance (₹)',
+                  prefixIcon: Icon(Icons.account_balance_wallet_outlined),
                 ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _msPipePerFeetRateController,
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
-              inputFormatters: [
-                FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
-              ],
-              decoration: const InputDecoration(
-                labelText: 'MS Pipe Rate per feet (₹)',
-                prefixIcon: Icon(Icons.currency_rupee),
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Extra Charges
-            TextFormField(
-              controller: _extraChargesController,
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
-              inputFormatters: [
-                FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
-              ],
-              decoration: const InputDecoration(
-                labelText: 'Extra Charges (₹)',
-                prefixIcon: Icon(Icons.add_circle_outline),
-              ),
-            ),
-            const SizedBox(height: 24),
-
-            // Calculation Preview
-            _buildCalculationPreview(),
-            const SizedBox(height: 24),
-
-            // Total (with manual override)
-            _buildSectionTitle('Total'),
-            Row(
-              children: [
-                Expanded(
-                  child: TextFormField(
-                    controller: _totalController,
-                    keyboardType:
-                        const TextInputType.numberWithOptions(decimal: true),
-                    inputFormatters: [
-                      FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
-                    ],
-                    decoration: InputDecoration(
-                      prefixIcon: const Icon(Icons.currency_rupee),
-                      suffixIcon: _isTotalManuallyEdited
-                          ? const Tooltip(
-                              message: 'Manually edited',
-                              child: Icon(Icons.edit, color: AppColors.warning),
-                            )
-                          : null,
-                    ),
-                    onChanged: (value) {
-                      if (!_isTotalManuallyEdited) {
-                        setState(() {
-                          _isTotalManuallyEdited = true;
-                        });
-                      }
-                      _updateBalance();
-                    },
-                  ),
+                readOnly: true,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.primary,
                 ),
-                const SizedBox(width: 8),
-                if (_isTotalManuallyEdited)
-                  TextButton(
-                    onPressed: () {
-                      setState(() {
-                        _isTotalManuallyEdited = false;
-                      });
-                      _updateCalculatedTotal();
-                    },
-                    child: const Text('Auto'),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 16),
-
-            // Payment Section Header
-            _buildSectionTitle('Payment'),
-
-            // Cash Amount
-            TextFormField(
-              controller: _cashController,
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
-              inputFormatters: [
-                FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
-              ],
-              decoration: InputDecoration(
-                labelText: 'Cash Received (₹)',
-                prefixIcon: const Icon(Icons.money, color: AppColors.success),
-                filled: true,
-                fillColor: AppColors.success.withOpacity(0.05),
               ),
-            ),
-            const SizedBox(height: 16),
+              const SizedBox(height: 16),
 
-            // Less (Discounts)
-            TextFormField(
-              controller: _lessController,
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
-              inputFormatters: [
-                FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
-              ],
-              decoration: const InputDecoration(
-                labelText: 'Less (Discounts/Deductions) (₹)',
-                prefixIcon: Icon(Icons.remove_circle_outline),
+              // Notes
+              TextFormField(
+                controller: _notesController,
+                maxLines: 3,
+                decoration: const InputDecoration(
+                  labelText: 'Notes (Optional)',
+                  hintText: 'Add any additional notes...',
+                  prefixIcon: Icon(Icons.notes_outlined),
+                  alignLabelWithHint: true,
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
+              const SizedBox(height: 32),
 
-            // Balance
-            TextFormField(
-              controller: _balanceController,
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
-              inputFormatters: [
-                FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
-              ],
-              decoration: const InputDecoration(
-                labelText: 'Balance (₹)',
-                prefixIcon: Icon(Icons.account_balance_wallet_outlined),
+              // Save Button
+              SizedBox(
+                height: 50,
+                child: ElevatedButton(
+                  onPressed: _saveEntry,
+                  child: Text(isEditing ? 'Update Entry' : 'Save Entry'),
+                ),
               ),
-              readOnly: true,
-              style: const TextStyle(
-                fontWeight: FontWeight.w600,
-                color: AppColors.primary,
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Notes
-            TextFormField(
-              controller: _notesController,
-              maxLines: 3,
-              decoration: const InputDecoration(
-                labelText: 'Notes (Optional)',
-                hintText: 'Add any additional notes...',
-                prefixIcon: Icon(Icons.notes_outlined),
-                alignLabelWithHint: true,
-              ),
-            ),
-            const SizedBox(height: 32),
-
-            // Save Button
-            SizedBox(
-              height: 50,
-              child: ElevatedButton(
-                onPressed: _saveEntry,
-                child: Text(isEditing ? 'Update Entry' : 'Save Entry'),
-              ),
-            ),
-            const SizedBox(height: 32),
-          ],
+              const SizedBox(height: 32),
+            ],
+          ),
         ),
       ),
     );

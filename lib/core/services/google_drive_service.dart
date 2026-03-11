@@ -1,20 +1,28 @@
 import 'dart:convert';
+import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:googleapis/drive/v3.dart' as drive;
 import 'package:extension_google_sign_in_as_googleapis_auth/extension_google_sign_in_as_googleapis_auth.dart';
 import '../database/database_service.dart';
+import 'desktop_auth_service.dart';
 
 class GoogleDriveService {
   static const String _backupFileName = 'rigledger_backup.json';
   static const String _backupFolderName = 'RigLedger Backups';
 
+  /// Whether the current platform requires the browser-based desktop auth flow.
+  /// macOS uses the native google_sign_in iOS/macOS plugin instead.
+  static bool get _isDesktop => Platform.isWindows || Platform.isLinux;
+
   static final GoogleSignIn _googleSignIn = GoogleSignIn(
     scopes: [
-      drive.DriveApi.driveFileScope,
+      drive.DriveApi.driveScope,
     ],
-    serverClientId:
-        '91755183896-3bi0fq8thb4pe27vlg33glce48nm9jtb.apps.googleusercontent.com',
+    // macOS native client from GoogleService-Info.plist (enables proper access token flow)
+    clientId: Platform.isMacOS
+        ? '91755183896-9t5a37e2ophh00dfcjsvohhj1rrscl6h.apps.googleusercontent.com'
+        : null,
   );
 
   static GoogleSignInAccount? _currentUser;
@@ -23,10 +31,12 @@ class GoogleDriveService {
   static String? _backupFileId;
 
   // Check if user is signed in
-  static bool get isSignedIn => _currentUser != null;
+  static bool get isSignedIn =>
+      _isDesktop ? DesktopAuthService.isSignedIn : _currentUser != null;
 
   // Get current user email
-  static String? get userEmail => _currentUser?.email;
+  static String? get userEmail =>
+      _isDesktop ? DesktopAuthService.userEmail : _currentUser?.email;
 
   // Get last backup time from settings
   static DateTime? get lastBackupTime {
@@ -49,6 +59,14 @@ class GoogleDriveService {
   // Initialize - try silent sign in
   static Future<bool> initialize() async {
     try {
+      if (_isDesktop) {
+        final success = await DesktopAuthService.trySignInSilently();
+        if (success) {
+          await _initializeDriveApi();
+          return true;
+        }
+        return false;
+      }
       _currentUser = await _googleSignIn.signInSilently();
       if (_currentUser != null) {
         await _initializeDriveApi();
@@ -64,6 +82,15 @@ class GoogleDriveService {
   // Sign in - returns (success, errorMessage)
   static Future<(bool, String?)> signIn() async {
     try {
+      if (_isDesktop) {
+        final (success, error) = await DesktopAuthService.signIn();
+        if (success) {
+          await _initializeDriveApi();
+          return (true, null);
+        }
+        return (false, error ?? 'Sign-in was cancelled');
+      }
+
       _currentUser = await _googleSignIn.signIn();
       if (_currentUser != null) {
         await _initializeDriveApi();
@@ -96,7 +123,11 @@ class GoogleDriveService {
 
   // Sign out
   static Future<void> signOut() async {
-    await _googleSignIn.signOut();
+    if (_isDesktop) {
+      await DesktopAuthService.signOut();
+    } else {
+      await _googleSignIn.signOut();
+    }
     _currentUser = null;
     _driveApi = null;
     _backupFolderId = null;
@@ -107,11 +138,20 @@ class GoogleDriveService {
 
   // Initialize Drive API
   static Future<void> _initializeDriveApi() async {
-    final httpClient = await _googleSignIn.authenticatedClient();
-    if (httpClient != null) {
-      _driveApi = drive.DriveApi(httpClient);
-      await _findOrCreateBackupFolder();
-      await _findBackupFile();
+    if (_isDesktop) {
+      final client = DesktopAuthService.httpClient;
+      if (client != null) {
+        _driveApi = drive.DriveApi(client);
+        await _findOrCreateBackupFolder();
+        await _findBackupFile();
+      }
+    } else {
+      final httpClient = await _googleSignIn.authenticatedClient();
+      if (httpClient != null) {
+        _driveApi = drive.DriveApi(httpClient);
+        await _findOrCreateBackupFolder();
+        await _findBackupFile();
+      }
     }
   }
 
@@ -171,6 +211,17 @@ class GoogleDriveService {
     }
 
     try {
+      // Re-initialize Drive API if needed (handles stale sessions)
+      if (_driveApi == null && _currentUser != null) {
+        await _initializeDriveApi();
+      }
+      if (_driveApi == null) {
+        return (
+          false,
+          'Drive API not initialized. Please reconnect Google Drive.'
+        );
+      }
+
       // Get backup data
       final backupData = await DatabaseService.createBackup();
       final jsonString = const JsonEncoder.withIndent('  ').convert(backupData);
@@ -210,7 +261,17 @@ class GoogleDriveService {
       debugPrint('Backup to Google Drive successful');
       return (true, null);
     } catch (e) {
-      final message = 'Backup failed: ${e.toString()}';
+      final errStr = e.toString();
+      String message;
+      if (errStr.contains('insufficient_scope') ||
+          errStr.contains('Access was denied')) {
+        // Stale token without Drive scope — sign out so user can reconnect cleanly
+        await signOut();
+        message =
+            'Google Drive permission expired. Please reconnect Google Drive.';
+      } else {
+        message = 'Backup failed: $errStr';
+      }
       debugPrint(message);
       return (false, message);
     }
@@ -218,6 +279,10 @@ class GoogleDriveService {
 
   // Restore from backup
   static Future<Map<String, dynamic>?> restore() async {
+    // Re-initialize Drive API if needed (handles stale sessions)
+    if (_driveApi == null && _currentUser != null) {
+      await _initializeDriveApi();
+    }
     if (_driveApi == null || _backupFileId == null) {
       debugPrint('No backup file found');
       return null;

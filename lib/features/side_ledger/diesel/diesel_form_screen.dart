@@ -6,6 +6,7 @@ import 'package:uuid/uuid.dart';
 import '../../../core/database/database_service.dart';
 import '../../../core/models/diesel_entry.dart';
 import '../../../core/providers/side_ledger_provider.dart';
+import '../../../core/widgets/adaptive_header.dart';
 
 class DieselFormScreen extends ConsumerStatefulWidget {
   final DieselEntry? entry;
@@ -207,246 +208,253 @@ class _DieselFormScreenState extends ConsumerState<DieselFormScreen> {
         foregroundColor: Colors.white,
         elevation: 0,
       ),
-      body: Form(
-        key: _formKey,
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            // Date picker
-            Card(
-              child: ListTile(
-                leading: const Icon(Icons.calendar_today, color: Colors.orange),
-                title: const Text('Date'),
-                subtitle: Text(_dateFormat.format(_selectedDate)),
-                onTap: _selectDate,
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Bill number
-            TextFormField(
-              controller: _billNumberController,
-              decoration: const InputDecoration(
-                labelText: 'Bill Number *',
-                hintText: 'Enter bill number (numeric only)',
-                prefixIcon: Icon(Icons.receipt),
-                border: OutlineInputBorder(),
-              ),
-              keyboardType: TextInputType.number,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please enter a bill number';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 16),
-
-            // Litre and Rate row
-            Row(
-              children: [
-                Expanded(
-                  child: TextFormField(
-                    controller: _litreController,
-                    decoration: const InputDecoration(
-                      labelText: 'Litres *',
-                      hintText: '0.0',
-                      prefixIcon: Icon(Icons.local_gas_station),
-                      border: OutlineInputBorder(),
-                    ),
-                    keyboardType:
-                        const TextInputType.numberWithOptions(decimal: true),
-                    inputFormatters: [
-                      FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
-                    ],
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Required';
-                      }
-                      if (double.tryParse(value) == null) {
-                        return 'Invalid';
-                      }
-                      return null;
-                    },
-                  ),
+      body: AdaptiveContent(
+        maxWidth: 700,
+        child: Form(
+          key: _formKey,
+          child: ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              // Date picker
+              Card(
+                child: ListTile(
+                  leading:
+                      const Icon(Icons.calendar_today, color: Colors.orange),
+                  title: const Text('Date'),
+                  subtitle: Text(_dateFormat.format(_selectedDate)),
+                  onTap: _selectDate,
                 ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: TextFormField(
-                    controller: _rateController,
-                    decoration: const InputDecoration(
-                      labelText: 'Rate/L *',
-                      hintText: '0.00',
-                      prefixIcon: Icon(Icons.currency_rupee),
-                      border: OutlineInputBorder(),
-                    ),
-                    keyboardType:
-                        const TextInputType.numberWithOptions(decimal: true),
-                    inputFormatters: [
-                      FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
-                    ],
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Required';
-                      }
-                      if (double.tryParse(value) == null) {
-                        return 'Invalid';
-                      }
-                      return null;
-                    },
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-
-            // Total (read-only, calculated)
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.green.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.green.withOpacity(0.3)),
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              const SizedBox(height: 16),
+
+              // Bill number
+              TextFormField(
+                controller: _billNumberController,
+                decoration: const InputDecoration(
+                  labelText: 'Bill Number *',
+                  hintText: 'Enter bill number (numeric only)',
+                  prefixIcon: Icon(Icons.receipt),
+                  border: OutlineInputBorder(),
+                ),
+                keyboardType: TextInputType.number,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter a bill number';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+
+              // Litre and Rate row
+              Row(
                 children: [
-                  const Text(
-                    'Total Amount',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
+                  Expanded(
+                    child: TextFormField(
+                      controller: _litreController,
+                      decoration: const InputDecoration(
+                        labelText: 'Litres *',
+                        hintText: '0.0',
+                        prefixIcon: Icon(Icons.local_gas_station),
+                        border: OutlineInputBorder(),
+                      ),
+                      keyboardType:
+                          const TextInputType.numberWithOptions(decimal: true),
+                      inputFormatters: [
+                        FilteringTextInputFormatter.allow(
+                            RegExp(r'^\d*\.?\d*')),
+                      ],
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Required';
+                        }
+                        if (double.tryParse(value) == null) {
+                          return 'Invalid';
+                        }
+                        return null;
+                      },
                     ),
                   ),
-                  Text(
-                    currencyFormat.format(_total),
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.green,
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: TextFormField(
+                      controller: _rateController,
+                      decoration: const InputDecoration(
+                        labelText: 'Rate/L *',
+                        hintText: '0.00',
+                        prefixIcon: Icon(Icons.currency_rupee),
+                        border: OutlineInputBorder(),
+                      ),
+                      keyboardType:
+                          const TextInputType.numberWithOptions(decimal: true),
+                      inputFormatters: [
+                        FilteringTextInputFormatter.allow(
+                            RegExp(r'^\d*\.?\d*')),
+                      ],
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Required';
+                        }
+                        if (double.tryParse(value) == null) {
+                          return 'Invalid';
+                        }
+                        return null;
+                      },
                     ),
                   ),
                 ],
               ),
-            ),
-            const SizedBox(height: 16),
+              const SizedBox(height: 16),
 
-            // Paid amount
-            TextFormField(
-              controller: _paidController,
-              decoration: const InputDecoration(
-                labelText: 'Paid Amount',
-                hintText: '0',
-                prefixIcon: Icon(Icons.payments),
-                border: OutlineInputBorder(),
+              // Total (read-only, calculated)
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.green.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.green.withOpacity(0.3)),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Total Amount',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    Text(
+                      currencyFormat.format(_total),
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.green,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
-              inputFormatters: [
-                FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
-              ],
-            ),
-            const SizedBox(height: 16),
+              const SizedBox(height: 16),
 
-            // Pending/Balance display
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: _pending > 0
-                    ? Colors.red.withOpacity(0.1)
-                    : Colors.blue.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
+              // Paid amount
+              TextFormField(
+                controller: _paidController,
+                decoration: const InputDecoration(
+                  labelText: 'Paid Amount',
+                  hintText: '0',
+                  prefixIcon: Icon(Icons.payments),
+                  border: OutlineInputBorder(),
+                ),
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+                ],
+              ),
+              const SizedBox(height: 16),
+
+              // Pending/Balance display
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
                   color: _pending > 0
-                      ? Colors.red.withOpacity(0.3)
-                      : Colors.blue.withOpacity(0.3),
+                      ? Colors.red.withOpacity(0.1)
+                      : Colors.blue.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: _pending > 0
+                        ? Colors.red.withOpacity(0.3)
+                        : Colors.blue.withOpacity(0.3),
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      _pending > 0 ? 'Pending' : 'Balance (Advance)',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    Text(
+                      currencyFormat
+                          .format(_pending > 0 ? _pending : _balance.abs()),
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: _pending > 0 ? Colors.red : Colors.blue,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    _pending > 0 ? 'Pending' : 'Balance (Advance)',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  Text(
-                    currencyFormat
-                        .format(_pending > 0 ? _pending : _balance.abs()),
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: _pending > 0 ? Colors.red : Colors.blue,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
+              const SizedBox(height: 16),
 
-            // Paid date
-            Card(
-              child: ListTile(
-                leading: const Icon(Icons.event_available, color: Colors.green),
-                title: const Text('Paid Date (Optional)'),
-                subtitle: Text(
-                  _paidDate != null
-                      ? _dateFormat.format(_paidDate!)
-                      : 'Not set',
+              // Paid date
+              Card(
+                child: ListTile(
+                  leading:
+                      const Icon(Icons.event_available, color: Colors.green),
+                  title: const Text('Paid Date (Optional)'),
+                  subtitle: Text(
+                    _paidDate != null
+                        ? _dateFormat.format(_paidDate!)
+                        : 'Not set',
+                  ),
+                  trailing: _paidDate != null
+                      ? IconButton(
+                          icon: const Icon(Icons.clear),
+                          onPressed: () => setState(() => _paidDate = null),
+                        )
+                      : null,
+                  onTap: _selectPaidDate,
                 ),
-                trailing: _paidDate != null
-                    ? IconButton(
-                        icon: const Icon(Icons.clear),
-                        onPressed: () => setState(() => _paidDate = null),
-                      )
-                    : null,
-                onTap: _selectPaidDate,
               ),
-            ),
-            const SizedBox(height: 16),
+              const SizedBox(height: 16),
 
-            // Bunk details
-            TextFormField(
-              controller: _bunkController,
-              decoration: const InputDecoration(
-                labelText: 'Bunk Details',
-                hintText: 'Enter bunk name or location',
-                prefixIcon: Icon(Icons.location_on),
-                border: OutlineInputBorder(),
+              // Bunk details
+              TextFormField(
+                controller: _bunkController,
+                decoration: const InputDecoration(
+                  labelText: 'Bunk Details',
+                  hintText: 'Enter bunk name or location',
+                  prefixIcon: Icon(Icons.location_on),
+                  border: OutlineInputBorder(),
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
+              const SizedBox(height: 16),
 
-            // Notes
-            TextFormField(
-              controller: _notesController,
-              decoration: const InputDecoration(
-                labelText: 'Notes',
-                hintText: 'Add any additional notes...',
-                prefixIcon: Icon(Icons.notes),
-                border: OutlineInputBorder(),
+              // Notes
+              TextFormField(
+                controller: _notesController,
+                decoration: const InputDecoration(
+                  labelText: 'Notes',
+                  hintText: 'Add any additional notes...',
+                  prefixIcon: Icon(Icons.notes),
+                  border: OutlineInputBorder(),
+                ),
+                maxLines: 3,
               ),
-              maxLines: 3,
-            ),
-            const SizedBox(height: 24),
+              const SizedBox(height: 24),
 
-            // Save button
-            ElevatedButton(
-              onPressed: _saveEntry,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.orange,
-                padding: const EdgeInsets.symmetric(vertical: 16),
+              // Save button
+              ElevatedButton(
+                onPressed: _saveEntry,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.orange,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                ),
+                child: Text(
+                  isEditing ? 'Update Entry' : 'Save Entry',
+                  style: const TextStyle(fontSize: 16),
+                ),
               ),
-              child: Text(
-                isEditing ? 'Update Entry' : 'Save Entry',
-                style: const TextStyle(fontSize: 16),
-              ),
-            ),
-            const SizedBox(height: 16),
-          ],
+              const SizedBox(height: 16),
+            ],
+          ),
         ),
       ),
     );

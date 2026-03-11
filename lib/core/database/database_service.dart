@@ -7,6 +7,7 @@ import '../models/pvc_entry.dart';
 import '../models/bit_entry.dart';
 import '../models/hammer_entry.dart';
 import '../models/mini_ledger_entry.dart';
+import '../models/tombstone.dart';
 
 class DatabaseService {
   static const String ledgerBoxName = 'ledger_entries';
@@ -18,7 +19,8 @@ class DatabaseService {
   static const String bitBoxName = 'bit_entries';
   static const String hammerBoxName = 'hammer_entries';
   static const String miniLedgerBoxName = 'mini_ledger_entries';
-  static const int schemaVersion = 2;
+  static const String tombstoneBoxName = 'tombstones';
+  static const int schemaVersion = 3;
 
   static late Box<LedgerEntry> _ledgerBox;
   static late Box<Agent> _agentBox;
@@ -29,6 +31,7 @@ class DatabaseService {
   static late Box<BitEntry> _bitBox;
   static late Box<HammerEntry> _hammerBox;
   static late Box<MiniLedgerEntry> _miniLedgerBox;
+  static late Box<Tombstone> _tombstoneBox;
 
   static Box<LedgerEntry> get ledgerBox => _ledgerBox;
   static Box<Agent> get agentBox => _agentBox;
@@ -39,6 +42,7 @@ class DatabaseService {
   static Box<BitEntry> get bitBox => _bitBox;
   static Box<HammerEntry> get hammerBox => _hammerBox;
   static Box<MiniLedgerEntry> get miniLedgerBox => _miniLedgerBox;
+  static Box<Tombstone> get tombstoneBox => _tombstoneBox;
 
   static Future<void> initialize() async {
     // Register adapters
@@ -50,6 +54,7 @@ class DatabaseService {
     Hive.registerAdapter(BitEntryAdapter());
     Hive.registerAdapter(HammerEntryAdapter());
     Hive.registerAdapter(MiniLedgerEntryAdapter());
+    Hive.registerAdapter(TombstoneAdapter());
 
     // Open boxes
     _ledgerBox = await Hive.openBox<LedgerEntry>(ledgerBoxName);
@@ -61,6 +66,7 @@ class DatabaseService {
     _bitBox = await Hive.openBox<BitEntry>(bitBoxName);
     _hammerBox = await Hive.openBox<HammerEntry>(hammerBoxName);
     _miniLedgerBox = await Hive.openBox<MiniLedgerEntry>(miniLedgerBoxName);
+    _tombstoneBox = await Hive.openBox<Tombstone>(tombstoneBoxName);
 
     // Check and perform migrations
     await _performMigrations();
@@ -121,6 +127,7 @@ class DatabaseService {
     // Delete all associated data
     await _deleteSideLedgerByVehicle(id);
     await _deleteMiniLedgerByVehicle(id);
+    await recordTombstone(id, vehicleBoxName);
     await _vehicleBox.delete(id);
 
     // If deleting current vehicle, switch to first available
@@ -145,6 +152,7 @@ class DatabaseService {
   }
 
   static Future<void> deleteLedgerEntry(String id) async {
+    await recordTombstone(id, ledgerBoxName);
     await _ledgerBox.delete(id);
   }
 
@@ -218,6 +226,7 @@ class DatabaseService {
   }
 
   static Future<void> deleteAgent(String id) async {
+    await recordTombstone(id, agentBoxName);
     await _agentBox.delete(id);
   }
 
@@ -310,6 +319,7 @@ class DatabaseService {
       'bitEntries': bitEntries,
       'hammerEntries': hammerEntries,
       'miniLedgerEntries': miniLedgerEntries,
+      'tombstones': _tombstoneBox.values.map((t) => t.toJson()).toList(),
     };
   }
 
@@ -374,6 +384,14 @@ class DatabaseService {
       await saveMiniLedgerEntry(entry);
     }
 
+    // Restore tombstones
+    final tombstonesData = backup['tombstones'] as List<dynamic>? ?? [];
+    for (final tombstoneMap in tombstonesData) {
+      final tombstone =
+          Tombstone.fromJson(Map<String, dynamic>.from(tombstoneMap));
+      await _tombstoneBox.put(tombstone.entityId, tombstone);
+    }
+
     // Ensure default vehicle exists
     await _ensureDefaultVehicle();
 
@@ -394,6 +412,7 @@ class DatabaseService {
     await _bitBox.clear();
     await _hammerBox.clear();
     await _miniLedgerBox.clear();
+    await _tombstoneBox.clear();
     await _settingsBox.delete('currentVehicleId');
     // Recreate default vehicle after clearing (for normal clear, not restore)
     await _ensureDefaultVehicle();
@@ -409,6 +428,7 @@ class DatabaseService {
     await _bitBox.clear();
     await _hammerBox.clear();
     await _miniLedgerBox.clear();
+    await _tombstoneBox.clear();
     await _settingsBox.delete('currentVehicleId');
   }
 
@@ -418,6 +438,7 @@ class DatabaseService {
   }
 
   static Future<void> deleteDieselEntry(String id) async {
+    await recordTombstone(id, dieselBoxName);
     await _dieselBox.delete(id);
   }
 
@@ -447,6 +468,7 @@ class DatabaseService {
   }
 
   static Future<void> deletePvcEntry(String id) async {
+    await recordTombstone(id, pvcBoxName);
     await _pvcBox.delete(id);
   }
 
@@ -476,6 +498,7 @@ class DatabaseService {
   }
 
   static Future<void> deleteBitEntry(String id) async {
+    await recordTombstone(id, bitBoxName);
     await _bitBox.delete(id);
   }
 
@@ -505,6 +528,7 @@ class DatabaseService {
   }
 
   static Future<void> deleteHammerEntry(String id) async {
+    await recordTombstone(id, hammerBoxName);
     await _hammerBox.delete(id);
   }
 
@@ -534,6 +558,7 @@ class DatabaseService {
   }
 
   static Future<void> deleteMiniLedgerEntry(String id) async {
+    await recordTombstone(id, miniLedgerBoxName);
     await _miniLedgerBox.delete(id);
   }
 
@@ -623,5 +648,46 @@ class DatabaseService {
           (agentTotals[entry.agentName] ?? 0) + entry.total;
     }
     return agentTotals;
+  }
+
+  // ============ TOMBSTONE OPERATIONS ============
+
+  /// Record a tombstone when an entity is deleted (for sync)
+  static Future<void> recordTombstone(
+      String entityId, String collection) async {
+    final tombstone = Tombstone(
+      entityId: entityId,
+      collection: collection,
+      deletedAt: DateTime.now(),
+    );
+    await _tombstoneBox.put(entityId, tombstone);
+  }
+
+  /// Get all tombstones
+  static List<Tombstone> getAllTombstones() {
+    return _tombstoneBox.values.toList();
+  }
+
+  /// Check if an entity ID has been tombstoned
+  static bool isTombstoned(String entityId) {
+    return _tombstoneBox.containsKey(entityId);
+  }
+
+  /// Clear tombstones older than a given duration (e.g., 30 days)
+  static Future<void> pruneTombstones(
+      {Duration maxAge = const Duration(days: 30)}) async {
+    final cutoff = DateTime.now().subtract(maxAge);
+    final toRemove = _tombstoneBox.values
+        .where((t) => t.deletedAt.isBefore(cutoff))
+        .map((t) => t.entityId)
+        .toList();
+    for (final id in toRemove) {
+      await _tombstoneBox.delete(id);
+    }
+  }
+
+  /// Clear all tombstones
+  static Future<void> clearTombstones() async {
+    await _tombstoneBox.clear();
   }
 }

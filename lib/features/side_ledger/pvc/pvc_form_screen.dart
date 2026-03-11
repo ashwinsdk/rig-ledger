@@ -7,6 +7,7 @@ import '../../../core/database/database_service.dart';
 import '../../../core/models/pvc_entry.dart';
 import '../../../core/models/type_detail.dart';
 import '../../../core/providers/side_ledger_provider.dart';
+import '../../../core/widgets/adaptive_header.dart';
 
 class PvcFormScreen extends ConsumerStatefulWidget {
   final PvcEntry? entry;
@@ -280,283 +281,288 @@ class _PvcFormScreenState extends ConsumerState<PvcFormScreen> {
         foregroundColor: Colors.white,
         elevation: 0,
       ),
-      body: Form(
-        key: _formKey,
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            // Date picker
-            Card(
-              child: ListTile(
-                leading: const Icon(Icons.calendar_today, color: Colors.blue),
-                title: const Text('Date'),
-                subtitle: Text(_dateFormat.format(_selectedDate)),
-                onTap: _selectDate,
+      body: AdaptiveContent(
+        maxWidth: 700,
+        child: Form(
+          key: _formKey,
+          child: ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              // Date picker
+              Card(
+                child: ListTile(
+                  leading: const Icon(Icons.calendar_today, color: Colors.blue),
+                  title: const Text('Date'),
+                  subtitle: Text(_dateFormat.format(_selectedDate)),
+                  onTap: _selectDate,
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
+              const SizedBox(height: 16),
 
-            // Bill number
-            TextFormField(
-              controller: _billNumberController,
-              decoration: const InputDecoration(
-                labelText: 'Bill Number *',
-                hintText: 'Enter bill number (numeric only)',
-                prefixIcon: Icon(Icons.receipt),
-                border: OutlineInputBorder(),
+              // Bill number
+              TextFormField(
+                controller: _billNumberController,
+                decoration: const InputDecoration(
+                  labelText: 'Bill Number *',
+                  hintText: 'Enter bill number (numeric only)',
+                  prefixIcon: Icon(Icons.receipt),
+                  border: OutlineInputBorder(),
+                ),
+                keyboardType: TextInputType.number,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter a bill number';
+                  }
+                  return null;
+                },
               ),
-              keyboardType: TextInputType.number,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please enter a bill number';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 16),
+              const SizedBox(height: 16),
 
-            // PVC Type selection (multi-select)
-            const Text(
-              'PVC Type * (Select one or more)',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: pvcTypes.map((type) {
-                final isSelected = _selectedTypes.contains(type);
-                final color = _getTypeColor(type);
-                return FilterChip(
-                  label: Text(type),
-                  selected: isSelected,
-                  selectedColor: color.withOpacity(0.2),
-                  checkmarkColor: color,
-                  labelStyle: TextStyle(
-                    color: isSelected ? color : null,
-                    fontWeight: isSelected ? FontWeight.bold : null,
-                  ),
-                  onSelected: (selected) {
-                    setState(() {
-                      if (selected) {
-                        _selectedTypes.add(type);
-                      } else {
-                        _selectedTypes.remove(type);
-                        // Clear values when deselected
-                        _countControllers[type]?.clear();
-                        _rateControllers[type]?.clear();
-                      }
-                      _recalculate();
-                    });
-                  },
-                );
-              }).toList(),
-            ),
-            const SizedBox(height: 16),
-
-            // Per-type count and rate inputs
-            if (_selectedTypes.isNotEmpty) ...[
+              // PVC Type selection (multi-select)
               const Text(
-                'Count & Rate per Type *',
+                'PVC Type * (Select one or more)',
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w500,
                 ),
               ),
               const SizedBox(height: 8),
-              ...pvcTypes.where((t) => _selectedTypes.contains(t)).map((type) {
-                final color = _getTypeColor(type);
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: color.withOpacity(0.05),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: color.withOpacity(0.3)),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: pvcTypes.map((type) {
+                  final isSelected = _selectedTypes.contains(type);
+                  final color = _getTypeColor(type);
+                  return FilterChip(
+                    label: Text(type),
+                    selected: isSelected,
+                    selectedColor: color.withOpacity(0.2),
+                    checkmarkColor: color,
+                    labelStyle: TextStyle(
+                      color: isSelected ? color : null,
+                      fontWeight: isSelected ? FontWeight.bold : null,
+                    ),
+                    onSelected: (selected) {
+                      setState(() {
+                        if (selected) {
+                          _selectedTypes.add(type);
+                        } else {
+                          _selectedTypes.remove(type);
+                          // Clear values when deselected
+                          _countControllers[type]?.clear();
+                          _rateControllers[type]?.clear();
+                        }
+                        _recalculate();
+                      });
+                    },
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 16),
+
+              // Per-type count and rate inputs
+              if (_selectedTypes.isNotEmpty) ...[
+                const Text(
+                  'Count & Rate per Type *',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        type,
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: color,
+                ),
+                const SizedBox(height: 8),
+                ...pvcTypes
+                    .where((t) => _selectedTypes.contains(t))
+                    .map((type) {
+                  final color = _getTypeColor(type);
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: color.withOpacity(0.05),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: color.withOpacity(0.3)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          type,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: color,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: TextFormField(
-                              controller: _countControllers[type],
-                              decoration: InputDecoration(
-                                labelText: 'Count',
-                                hintText: '0',
-                                prefixIcon: Icon(Icons.numbers, color: color),
-                                border: const OutlineInputBorder(),
-                                isDense: true,
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: TextFormField(
+                                controller: _countControllers[type],
+                                decoration: InputDecoration(
+                                  labelText: 'Count',
+                                  hintText: '0',
+                                  prefixIcon: Icon(Icons.numbers, color: color),
+                                  border: const OutlineInputBorder(),
+                                  isDense: true,
+                                ),
+                                keyboardType: TextInputType.number,
+                                inputFormatters: [
+                                  FilteringTextInputFormatter.digitsOnly
+                                ],
                               ),
-                              keyboardType: TextInputType.number,
-                              inputFormatters: [
-                                FilteringTextInputFormatter.digitsOnly
-                              ],
                             ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: TextFormField(
-                              controller: _rateControllers[type],
-                              decoration: InputDecoration(
-                                labelText: 'Rate/pc',
-                                hintText: '0.00',
-                                prefixIcon:
-                                    Icon(Icons.currency_rupee, color: color),
-                                border: const OutlineInputBorder(),
-                                isDense: true,
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: TextFormField(
+                                controller: _rateControllers[type],
+                                decoration: InputDecoration(
+                                  labelText: 'Rate/pc',
+                                  hintText: '0.00',
+                                  prefixIcon:
+                                      Icon(Icons.currency_rupee, color: color),
+                                  border: const OutlineInputBorder(),
+                                  isDense: true,
+                                ),
+                                keyboardType:
+                                    const TextInputType.numberWithOptions(
+                                        decimal: true),
+                                inputFormatters: [
+                                  FilteringTextInputFormatter.allow(
+                                      RegExp(r'^\d*\.?\d*')),
+                                ],
                               ),
-                              keyboardType:
-                                  const TextInputType.numberWithOptions(
-                                      decimal: true),
-                              inputFormatters: [
-                                FilteringTextInputFormatter.allow(
-                                    RegExp(r'^\d*\.?\d*')),
-                              ],
                             ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                );
-              }),
-            ],
-            const SizedBox(height: 8),
-
-            // Total (read-only, calculated)
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.green.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.green.withOpacity(0.3)),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    'Total Amount',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
+                          ],
+                        ),
+                      ],
                     ),
-                  ),
-                  Text(
-                    currencyFormat.format(_total),
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.green,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Paid amount
-            TextFormField(
-              controller: _paidController,
-              decoration: const InputDecoration(
-                labelText: 'Paid Amount',
-                hintText: '0',
-                prefixIcon: Icon(Icons.payments),
-                border: OutlineInputBorder(),
-              ),
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
-              inputFormatters: [
-                FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+                  );
+                }),
               ],
-            ),
-            const SizedBox(height: 16),
+              const SizedBox(height: 8),
 
-            // Pending display
-            if (_pending > 0)
+              // Total (read-only, calculated)
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.red.withOpacity(0.1),
+                  color: Colors.green.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.red.withOpacity(0.3)),
+                  border: Border.all(color: Colors.green.withOpacity(0.3)),
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     const Text(
-                      'Pending',
+                      'Total Amount',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
                     Text(
-                      currencyFormat.format(_pending),
+                      currencyFormat.format(_total),
                       style: const TextStyle(
-                        fontSize: 18,
+                        fontSize: 20,
                         fontWeight: FontWeight.bold,
-                        color: Colors.red,
+                        color: Colors.green,
                       ),
                     ),
                   ],
                 ),
               ),
-            const SizedBox(height: 16),
+              const SizedBox(height: 16),
 
-            // Storage place
-            TextFormField(
-              controller: _storagePlaceController,
-              decoration: const InputDecoration(
-                labelText: 'Storage Place',
-                hintText: 'Where is it stored?',
-                prefixIcon: Icon(Icons.warehouse),
-                border: OutlineInputBorder(),
+              // Paid amount
+              TextFormField(
+                controller: _paidController,
+                decoration: const InputDecoration(
+                  labelText: 'Paid Amount',
+                  hintText: '0',
+                  prefixIcon: Icon(Icons.payments),
+                  border: OutlineInputBorder(),
+                ),
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+                ],
               ),
-            ),
-            const SizedBox(height: 16),
+              const SizedBox(height: 16),
 
-            // Notes
-            TextFormField(
-              controller: _notesController,
-              decoration: const InputDecoration(
-                labelText: 'Notes',
-                hintText: 'Add any additional notes...',
-                prefixIcon: Icon(Icons.notes),
-                border: OutlineInputBorder(),
-              ),
-              maxLines: 3,
-            ),
-            const SizedBox(height: 24),
+              // Pending display
+              if (_pending > 0)
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.red.withOpacity(0.3)),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Pending',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      Text(
+                        currencyFormat.format(_pending),
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.red,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              const SizedBox(height: 16),
 
-            // Save button
-            ElevatedButton(
-              onPressed: _saveEntry,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue,
-                padding: const EdgeInsets.symmetric(vertical: 16),
+              // Storage place
+              TextFormField(
+                controller: _storagePlaceController,
+                decoration: const InputDecoration(
+                  labelText: 'Storage Place',
+                  hintText: 'Where is it stored?',
+                  prefixIcon: Icon(Icons.warehouse),
+                  border: OutlineInputBorder(),
+                ),
               ),
-              child: Text(
-                isEditing ? 'Update Entry' : 'Save Entry',
-                style: const TextStyle(fontSize: 16),
+              const SizedBox(height: 16),
+
+              // Notes
+              TextFormField(
+                controller: _notesController,
+                decoration: const InputDecoration(
+                  labelText: 'Notes',
+                  hintText: 'Add any additional notes...',
+                  prefixIcon: Icon(Icons.notes),
+                  border: OutlineInputBorder(),
+                ),
+                maxLines: 3,
               ),
-            ),
-            const SizedBox(height: 16),
-          ],
+              const SizedBox(height: 24),
+
+              // Save button
+              ElevatedButton(
+                onPressed: _saveEntry,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                ),
+                child: Text(
+                  isEditing ? 'Update Entry' : 'Save Entry',
+                  style: const TextStyle(fontSize: 16),
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+          ),
         ),
       ),
     );

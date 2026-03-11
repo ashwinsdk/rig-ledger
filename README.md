@@ -1,6 +1,50 @@
 # RigLedger
 
-A fast, lightweight, production-ready native Android Flutter application for borewell drilling business management. Supports multiple vehicles (rigs), ledger entries, agent management, side ledger tracking (diesel, PVC, bit, hammer), and comprehensive reporting. 100% offline operation - all data stored locally on device.
+A fast, lightweight, production-ready Flutter application for borewell drilling business management. Available on **Android** and **macOS**. Supports multiple vehicles (rigs), ledger entries, agent management, side ledger tracking (diesel, PVC, bit, hammer), comprehensive reporting, and cross-device sync via Google Drive. 100% offline operation — all data stored locally on device with optional cloud sync.
+
+## Platforms
+
+| Platform | Status | Notes |
+|----------|--------|-------|
+| Android  | ✅ Production | APK / App Bundle |
+| macOS    | ✅ Production | Native .app bundle |
+
+### macOS Desktop App
+
+The macOS companion app is a full-featured desktop version of RigLedger with:
+
+- **Sidebar navigation** — four sections: Ledger, Statistics, Agents, Settings
+- **Custom title bar** with vehicle switcher dropdown and sync status indicator
+- **Keyboard shortcuts** — Cmd+1–4 (tabs), Cmd+N (new entry), Cmd+S (sync), Cmd+F (search)
+- **Native macOS menu bar** — File, View, Window menus with standard Mac conventions
+- **Width-constrained forms** — form screens center at 700px max for comfortable editing
+- **Adaptive headers** — slim section headers on desktop vs gradient headers on mobile
+- **Google Drive sync** — bi-directional sync with tombstone-based conflict resolution
+- **Window management** — 1280×820 default, 900×600 minimum, hidden native title bar
+
+### Cross-Device Sync
+
+RigLedger syncs data between Android and macOS via Google Drive:
+
+1. **Bi-directional merge** — changes from both devices are merged, not overwritten
+2. **Tombstone tracking** — deletions propagate correctly across devices
+3. **Conflict resolution** — newest `updatedAt` timestamp wins; tombstones override stale data
+4. **Periodic sync** — auto-syncs every 10 minutes on desktop; manual trigger via Cmd+S
+5. **Sync indicator** — real-time status (idle / syncing / success / error) in the title bar
+
+#### Sync Architecture
+
+```
+   Android                 Google Drive                macOS
+  ┌────────┐   backup()   ┌──────────┐   sync()    ┌────────┐
+  │  Hive  │─────────────▶│ JSON file│◀────────────▶│  Hive  │
+  │  local │◀─────────────│ (Drive)  │─────────────▶│  local │
+  └────────┘  restore()   └──────────┘   merge()    └────────┘
+```
+
+- Snapshot = all 8 collections + tombstones serialized to JSON
+- Merge algorithm: for each entity, compare `updatedAt` timestamps, check tombstones
+- Tombstones auto-prune after 30 days
 
 ## Version
 
@@ -193,6 +237,12 @@ Google Drive Backup:
 - amount: Total cost
 - vehicleId: Associated vehicle
 
+### Tombstone
+- entityId: ID of the deleted entity
+- collection: Which Hive box the entity belonged to
+- deletedAt: Timestamp of deletion
+- Auto-pruned after 30 days
+
 ## Calculations
 
 ### Main Bore Total
@@ -231,45 +281,57 @@ Balance = Total - Received - Less
 - Flutter: 3.38.3 (stable channel)
 - Dart: 3.10.1
 - State Management: Riverpod
-- Local Database: Hive
+- Local Database: Hive (10 model types, schema v3)
 - Charts: fl_chart
 - PDF Generation: pdf, printing packages
 - File Operations: file_picker, share_plus, path_provider
-- Google Sign-In: google_sign_in, googleapis
+- Google Sign-In: google_sign_in (Android), googleapis_auth (macOS desktop OAuth)
+- Google Drive API: googleapis
 - CSV Handling: csv package
+- Desktop: window_manager (macOS window control)
+- Desktop Auth: googleapis_auth (installed-app OAuth flow)
 
 ## UI Theme
 
 - Light theme only
 - Gradient colors: linear-gradient(90deg, #252B49, #315D9A, #618DCE)
+- Desktop: slim headers with border-bottom; sidebar + title bar chrome
+- Mobile: full gradient headers with SafeArea
 - Category colors:
   - Diesel: Amber/Orange
   - PVC: Blue
   - Bit: Green
   - Hammer: Brown (#8B4513)
 - Material Design 3 components
-- Responsive design for all Android screen sizes
+- Responsive design for all screen sizes (mobile and desktop)
 
 ## Project Structure
 
 ```
 lib/
   core/
-    models/           # Data models (LedgerEntry, Agent, Vehicle, etc.)
-    providers/        # Riverpod providers for state management
-    services/         # Database service, backup service
+    database/         # DatabaseService (Hive), schema migrations
+    models/           # Data models (LedgerEntry, Agent, Vehicle, Tombstone, etc.)
+    providers/        # Riverpod providers (ledger, agent, vehicle, sync)
+    services/         # Google Drive, sync, file save, desktop auth
     theme/            # App theme and colors
+    utils/            # Platform helpers
+    widgets/          # Adaptive header, content wrappers
   features/
-    home/             # Home screen with vehicle selection
-      widgets/        # Ledger list, stats cards
+    navigation/       # MainNavigation (mobile), DesktopShell (macOS)
+    home/             # CombinedHomeScreen with vehicle selection
+      widgets/        # Ledger list, stats cards, calendar, search/filter
     ledger_form/      # Main bore and side bore entry forms
     agents/           # Agent management screens
-    statistics/       # Charts and statistics
+    stats/            # Charts and statistics
     side_ledger/      # Diesel, PVC, Bit, Hammer modules
-    settings/         # Settings and data operations
-    import/           # CSV import functionality
-    export/           # CSV and PDF export
-    backup/           # Backup and restore
+    settings/         # Settings, vehicle management
+    export/           # CSV and PDF export, CSV import
+macos/
+  Runner/
+    Configs/          # AppInfo.xcconfig (bundle ID, product name)
+    DebugProfile.entitlements  # Sandbox + network + file access
+    Release.entitlements       # Sandbox + network + file access
 ```
 
 ## Build
@@ -277,19 +339,19 @@ lib/
 Requirements:
 - Flutter 3.38.3 or higher
 - Dart 3.10.1 or higher
-- Android SDK 36.1.0
-- Java 17 (for Gradle)
+- Android SDK 36.1.0 (for Android)
+- Java 17 (for Gradle / Android)
+- Xcode 15+ (for macOS)
+- macOS 10.15+ deployment target
 
-Build commands:
+### Android
+
 ```bash
 # Set Java 17 for Gradle
 export JAVA_HOME=/Library/Java/JavaVirtualMachines/zulu-17.jdk/Contents/Home
 
 # Get dependencies
 flutter pub get
-
-# Generate Hive adapters
-flutter pub run build_runner build --delete-conflicting-outputs
 
 # Build APK
 flutter build apk --release
@@ -298,11 +360,42 @@ flutter build apk --release
 flutter build appbundle --release
 ```
 
+### macOS
+
+```bash
+# Get dependencies
+flutter pub get
+
+# Build debug
+flutter build macos --debug
+
+# Build release
+flutter build macos --release
+
+# Output: build/macos/Build/Products/Release/RigLedger.app
+```
+
+### macOS Google Drive Setup
+
+To enable Google Drive sync on macOS:
+
+1. Go to [Google Cloud Console](https://console.cloud.google.com/) → APIs & Services → Credentials
+2. Create an **OAuth 2.0 Client ID** of type **Desktop application**
+3. Copy the Client ID and Client Secret
+4. Edit `lib/core/services/desktop_auth_service.dart`:
+   - Replace `_clientId` with your Desktop client ID
+   - Replace `_clientSecret` with your Desktop client secret
+5. Ensure the **Drive API** is enabled for your Google Cloud project
+6. Rebuild the macOS app
+
 ## Development
 
 ```bash
-# Run in debug mode
+# Run on Android
 flutter run
+
+# Run on macOS
+flutter run -d macos
 
 # Run with specific device
 flutter run -d <device_id>

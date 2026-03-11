@@ -43,6 +43,11 @@ dependencies:
   googleapis: ^15.0.0
   http: ^1.4.0
   extension_google_sign_in_as_googleapis_auth: ^2.0.12
+  
+  # Desktop (macOS)
+  window_manager: ^0.4.3
+  url_launcher: ^6.2.5
+  googleapis_auth: ^2.0.0
 
 dev_dependencies:
   flutter_test:
@@ -62,6 +67,9 @@ flutter:
 flutter_launcher_icons:
   android: true
   ios: false
+  macos:
+    generate: true
+    image_path: "assets/icons/app-icon.png"
   image_path: "assets/icons/app-icon.png"
   min_sdk_android: 21
   adaptive_icon_background: "#315D9A"

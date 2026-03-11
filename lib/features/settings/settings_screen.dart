@@ -12,6 +12,8 @@ import '../../core/providers/vehicle_provider.dart';
 import '../../core/providers/side_ledger_provider.dart';
 import '../../core/services/file_save_service.dart';
 import '../../core/services/google_drive_service.dart';
+import '../../core/utils/platform_helper.dart';
+import '../../core/widgets/adaptive_header.dart';
 import '../export/csv_export_screen.dart';
 import '../export/csv_import_screen.dart';
 import '../export/pdf_export_screen.dart';
@@ -26,28 +28,8 @@ class SettingsScreen extends ConsumerWidget {
       backgroundColor: AppColors.background,
       body: Column(
         children: [
-          // Gradient Header
-          Container(
-            decoration: const BoxDecoration(
-              gradient: AppColors.appBarGradient,
-            ),
-            child: const SafeArea(
-              bottom: false,
-              child: Padding(
-                padding: EdgeInsets.all(16),
-                child: Center(
-                  child: Text(
-                    'Settings',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 20,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
+          // Header — slim on desktop, gradient on mobile
+          const AdaptiveHeader(title: 'Settings'),
 
           // Content
           Expanded(
@@ -530,7 +512,11 @@ class _GoogleDriveBackupCardState extends State<_GoogleDriveBackupCard> {
   @override
   void initState() {
     super.initState();
-    _initializeGoogleDrive();
+    // On Windows/Linux the native plugin isn't available; skip init there.
+    // macOS and mobile both use the native google_sign_in plugin.
+    if (!PlatformHelper.isDesktop || PlatformHelper.isMacOS) {
+      _initializeGoogleDrive();
+    }
   }
 
   Future<void> _initializeGoogleDrive() async {
@@ -690,6 +676,55 @@ class _GoogleDriveBackupCardState extends State<_GoogleDriveBackupCard> {
 
   @override
   Widget build(BuildContext context) {
+    // On Windows/Linux the Drive backup card is replaced with a sync hint.
+    // macOS, Android and iOS all use the native google_sign_in flow.
+    if (PlatformHelper.isDesktop && !PlatformHelper.isMacOS) {
+      return Container(
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.shadow.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              const Icon(Icons.sync, color: AppColors.primary, size: 28),
+              const SizedBox(width: 16),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Google Drive Backup',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    SizedBox(height: 4),
+                    Text(
+                      'Backup is managed on your Android device. Use Cmd+S or the sync button in the title bar to sync data across devices.',
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     if (_isLoading) {
       return Container(
         padding: const EdgeInsets.all(24),
