@@ -48,9 +48,17 @@ RigLedger syncs data between Android and macOS via Google Drive:
 
 ## Version
 
-Current: 1.0.5
+Current: 1.0.7
 
 ### Changelog
+
+v1.0.7
+- Create dedicated macos application
+- Bug fixes
+
+v1.0.6
+- Add custom time period on ledger and side-ledger
+- Bug fixes
 
 v1.0.5
 - Fixed UI being hidden by mobile navigation bars with edge-to-edge display

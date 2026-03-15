@@ -11,6 +11,7 @@ enum TimePeriod {
   threeMonths, // Last 3 months
   sixMonths, // Last 6 months
   year, // Last 12 months
+  custom, // Custom date range
   all, // All time
 }
 
@@ -26,6 +27,17 @@ final selectedMonthProvider = StateProvider<DateTime>((ref) {
 /// Current selected year for year view filtering
 final selectedYearProvider = StateProvider<int>((ref) {
   return DateTime.now().year;
+});
+
+/// Custom start date for time filtering
+final customStartDateProvider = StateProvider<DateTime>((ref) {
+  final now = DateTime.now();
+  return DateTime(now.year, now.month, 1);
+});
+
+/// Custom end date for time filtering
+final customEndDateProvider = StateProvider<DateTime>((ref) {
+  return DateTime.now();
 });
 
 /// View mode: true = daily view, false = calendar view
@@ -133,6 +145,8 @@ final filteredLedgerEntriesProvider = Provider<List<LedgerEntry>>((ref) {
   final entries = ref.watch(ledgerEntriesProvider);
   final selectedMonth = ref.watch(selectedMonthProvider);
   final selectedYear = ref.watch(selectedYearProvider);
+  final customStartDate = ref.watch(customStartDateProvider);
+  final customEndDate = ref.watch(customEndDateProvider);
   final timePeriod = ref.watch(timePeriodProvider);
   final searchQuery = ref.watch(searchQueryProvider);
   final filter = ref.watch(ledgerFilterProvider);
@@ -156,6 +170,22 @@ final filteredLedgerEntriesProvider = Provider<List<LedgerEntry>>((ref) {
       case TimePeriod.year:
         // Filter by selected year
         return entry.date.year == selectedYear;
+      case TimePeriod.custom:
+        final start = DateTime(
+          customStartDate.year,
+          customStartDate.month,
+          customStartDate.day,
+        );
+        final end = DateTime(
+          customEndDate.year,
+          customEndDate.month,
+          customEndDate.day,
+          23,
+          59,
+          59,
+          999,
+        );
+        return !entry.date.isBefore(start) && !entry.date.isAfter(end);
       case TimePeriod.all:
         return true;
     }

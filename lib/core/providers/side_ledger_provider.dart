@@ -291,6 +291,7 @@ enum SideLedgerTimePeriod {
   threeMonths,
   sixMonths,
   year,
+  custom,
   all,
 }
 
@@ -303,4 +304,15 @@ final sideLedgerSelectedMonthProvider = StateProvider<DateTime>((ref) {
 /// Selected year for side ledger
 final sideLedgerSelectedYearProvider = StateProvider<int>((ref) {
   return DateTime.now().year;
+});
+
+/// Custom start date for side ledger filters
+final sideLedgerCustomStartDateProvider = StateProvider<DateTime>((ref) {
+  final now = DateTime.now();
+  return DateTime(now.year, now.month, 1);
+});
+
+/// Custom end date for side ledger filters
+final sideLedgerCustomEndDateProvider = StateProvider<DateTime>((ref) {
+  return DateTime.now();
 });

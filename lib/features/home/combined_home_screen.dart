@@ -57,6 +57,8 @@ class _CombinedHomeScreenState extends ConsumerState<CombinedHomeScreen>
   Widget build(BuildContext context) {
     final selectedMonth = ref.watch(selectedMonthProvider);
     final selectedYear = ref.watch(selectedYearProvider);
+    final customStartDate = ref.watch(customStartDateProvider);
+    final customEndDate = ref.watch(customEndDateProvider);
     final isDailyView = ref.watch(isDailyViewProvider);
     final searchQuery = ref.watch(searchQueryProvider);
     final filter = ref.watch(ledgerFilterProvider);
@@ -243,19 +245,54 @@ class _CombinedHomeScreenState extends ConsumerState<CombinedHomeScreen>
                                   horizontal: 12, vertical: 4),
                               child: Row(
                                 children: [
-                                  _buildPeriodChip(ref, 'Month',
+                                  _buildPeriodChip(context, ref, 'Month',
                                       TimePeriod.month, timePeriod),
-                                  _buildPeriodChip(ref, '3 Mo',
+                                  _buildPeriodChip(context, ref, '3 Mo',
                                       TimePeriod.threeMonths, timePeriod),
-                                  _buildPeriodChip(ref, '6 Mo',
+                                  _buildPeriodChip(context, ref, '6 Mo',
                                       TimePeriod.sixMonths, timePeriod),
-                                  _buildPeriodChip(
-                                      ref, 'Year', TimePeriod.year, timePeriod),
-                                  _buildPeriodChip(
-                                      ref, 'All', TimePeriod.all, timePeriod),
+                                  _buildPeriodChip(context, ref, 'Year',
+                                      TimePeriod.year, timePeriod),
+                                  _buildPeriodChip(context, ref, 'Custom',
+                                      TimePeriod.custom, timePeriod),
+                                  _buildPeriodChip(context, ref, 'All',
+                                      TimePeriod.all, timePeriod),
                                 ],
                               ),
                             ),
+
+                            if (timePeriod == TimePeriod.custom)
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 16, vertical: 4),
+                                child: Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      '${DateFormat('dd MMM yyyy').format(customStartDate)} - '
+                                      '${DateFormat('dd MMM yyyy').format(customEndDate)}',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                    TextButton.icon(
+                                      onPressed: () async {
+                                        await _pickMainLedgerDateRange(
+                                            context, ref);
+                                      },
+                                      icon: const Icon(Icons.edit_calendar,
+                                          size: 16, color: Colors.white),
+                                      label: const Text(
+                                        'Edit',
+                                        style: TextStyle(color: Colors.white),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
 
                             // Month Navigation Row (only show for month view)
                             if (timePeriod == TimePeriod.month)
@@ -458,6 +495,9 @@ class _CombinedHomeScreenState extends ConsumerState<CombinedHomeScreen>
     final sideLedgerTimePeriod = ref.watch(sideLedgerTimePeriodProvider);
     final sideLedgerSelectedMonth = ref.watch(sideLedgerSelectedMonthProvider);
     final sideLedgerSelectedYear = ref.watch(sideLedgerSelectedYearProvider);
+    final sideLedgerCustomStartDate =
+        ref.watch(sideLedgerCustomStartDateProvider);
+    final sideLedgerCustomEndDate = ref.watch(sideLedgerCustomEndDateProvider);
 
     // Get all entries
     final allDieselEntries = ref.watch(dieselEntriesProvider);
@@ -466,14 +506,34 @@ class _CombinedHomeScreenState extends ConsumerState<CombinedHomeScreen>
     final allHammerEntries = ref.watch(hammerEntriesProvider);
 
     // Filter entries based on time period
-    final dieselEntries = _filterByTimePeriod(allDieselEntries,
-        sideLedgerTimePeriod, sideLedgerSelectedMonth, sideLedgerSelectedYear);
-    final pvcEntries = _filterByTimePeriod(allPvcEntries, sideLedgerTimePeriod,
-        sideLedgerSelectedMonth, sideLedgerSelectedYear);
-    final bitEntries = _filterByTimePeriod(allBitEntries, sideLedgerTimePeriod,
-        sideLedgerSelectedMonth, sideLedgerSelectedYear);
-    final hammerEntries = _filterByTimePeriod(allHammerEntries,
-        sideLedgerTimePeriod, sideLedgerSelectedMonth, sideLedgerSelectedYear);
+    final dieselEntries = _filterByTimePeriod(
+        allDieselEntries,
+        sideLedgerTimePeriod,
+        sideLedgerSelectedMonth,
+        sideLedgerSelectedYear,
+        sideLedgerCustomStartDate,
+        sideLedgerCustomEndDate);
+    final pvcEntries = _filterByTimePeriod(
+        allPvcEntries,
+        sideLedgerTimePeriod,
+        sideLedgerSelectedMonth,
+        sideLedgerSelectedYear,
+        sideLedgerCustomStartDate,
+        sideLedgerCustomEndDate);
+    final bitEntries = _filterByTimePeriod(
+        allBitEntries,
+        sideLedgerTimePeriod,
+        sideLedgerSelectedMonth,
+        sideLedgerSelectedYear,
+        sideLedgerCustomStartDate,
+        sideLedgerCustomEndDate);
+    final hammerEntries = _filterByTimePeriod(
+        allHammerEntries,
+        sideLedgerTimePeriod,
+        sideLedgerSelectedMonth,
+        sideLedgerSelectedYear,
+        sideLedgerCustomStartDate,
+        sideLedgerCustomEndDate);
 
     // Calculate totals
     final format = NumberFormat('#,##0.00');
@@ -526,20 +586,47 @@ class _CombinedHomeScreenState extends ConsumerState<CombinedHomeScreen>
               scrollDirection: Axis.horizontal,
               child: Row(
                 children: [
-                  _buildSideLedgerPeriodChip(ref, 'Month',
+                  _buildSideLedgerPeriodChip(context, ref, 'Month',
                       SideLedgerTimePeriod.month, sideLedgerTimePeriod),
-                  _buildSideLedgerPeriodChip(ref, '3 Mo',
+                  _buildSideLedgerPeriodChip(context, ref, '3 Mo',
                       SideLedgerTimePeriod.threeMonths, sideLedgerTimePeriod),
-                  _buildSideLedgerPeriodChip(ref, '6 Mo',
+                  _buildSideLedgerPeriodChip(context, ref, '6 Mo',
                       SideLedgerTimePeriod.sixMonths, sideLedgerTimePeriod),
-                  _buildSideLedgerPeriodChip(ref, 'Year',
+                  _buildSideLedgerPeriodChip(context, ref, 'Year',
                       SideLedgerTimePeriod.year, sideLedgerTimePeriod),
-                  _buildSideLedgerPeriodChip(ref, 'All',
+                  _buildSideLedgerPeriodChip(context, ref, 'Custom',
+                      SideLedgerTimePeriod.custom, sideLedgerTimePeriod),
+                  _buildSideLedgerPeriodChip(context, ref, 'All',
                       SideLedgerTimePeriod.all, sideLedgerTimePeriod),
                 ],
               ),
             ),
           ),
+
+          if (sideLedgerTimePeriod == SideLedgerTimePeriod.custom)
+            Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    '${DateFormat('dd MMM yyyy').format(sideLedgerCustomStartDate)} - '
+                    '${DateFormat('dd MMM yyyy').format(sideLedgerCustomEndDate)}',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  TextButton.icon(
+                    onPressed: () async {
+                      await _pickSideLedgerDateRange(context, ref);
+                    },
+                    icon: const Icon(Icons.edit_calendar, size: 16),
+                    label: const Text('Edit'),
+                  ),
+                ],
+              ),
+            ),
 
           // Month/Year Navigation
           if (sideLedgerTimePeriod == SideLedgerTimePeriod.month)
@@ -767,13 +854,21 @@ class _CombinedHomeScreenState extends ConsumerState<CombinedHomeScreen>
     );
   }
 
-  Widget _buildSideLedgerPeriodChip(WidgetRef ref, String label,
-      SideLedgerTimePeriod period, SideLedgerTimePeriod currentPeriod) {
+  Widget _buildSideLedgerPeriodChip(
+      BuildContext context,
+      WidgetRef ref,
+      String label,
+      SideLedgerTimePeriod period,
+      SideLedgerTimePeriod currentPeriod) {
     final isSelected = period == currentPeriod;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 4),
       child: GestureDetector(
-        onTap: () {
+        onTap: () async {
+          if (period == SideLedgerTimePeriod.custom) {
+            await _pickSideLedgerDateRange(context, ref);
+            return;
+          }
           ref.read(sideLedgerTimePeriodProvider.notifier).state = period;
         },
         child: Container(
@@ -798,8 +893,38 @@ class _CombinedHomeScreenState extends ConsumerState<CombinedHomeScreen>
     );
   }
 
-  List<T> _filterByTimePeriod<T>(List<T> entries, SideLedgerTimePeriod period,
-      DateTime selectedMonth, int selectedYear) {
+  Future<void> _pickSideLedgerDateRange(
+      BuildContext context, WidgetRef ref) async {
+    final start = ref.read(sideLedgerCustomStartDateProvider);
+    final end = ref.read(sideLedgerCustomEndDateProvider);
+    final initialRange = DateTimeRange(
+      start: start.isAfter(end) ? end : start,
+      end: end.isBefore(start) ? start : end,
+    );
+
+    final range = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime(2000),
+      lastDate: DateTime.now(),
+      initialDateRange: initialRange,
+      helpText: 'Select Side Ledger Date Range',
+    );
+
+    if (range == null) return;
+    ref.read(sideLedgerCustomStartDateProvider.notifier).state = range.start;
+    ref.read(sideLedgerCustomEndDateProvider.notifier).state = range.end;
+    ref.read(sideLedgerTimePeriodProvider.notifier).state =
+        SideLedgerTimePeriod.custom;
+  }
+
+  List<T> _filterByTimePeriod<T>(
+    List<T> entries,
+    SideLedgerTimePeriod period,
+    DateTime selectedMonth,
+    int selectedYear,
+    DateTime customStartDate,
+    DateTime customEndDate,
+  ) {
     if (period == SideLedgerTimePeriod.all) return entries;
 
     final now = DateTime.now();
@@ -823,6 +948,22 @@ class _CombinedHomeScreenState extends ConsumerState<CombinedHomeScreen>
       case SideLedgerTimePeriod.year:
         startDate = DateTime(selectedYear, 1, 1);
         endDate = DateTime(selectedYear, 12, 31, 23, 59, 59);
+        break;
+      case SideLedgerTimePeriod.custom:
+        startDate = DateTime(
+          customStartDate.year,
+          customStartDate.month,
+          customStartDate.day,
+        );
+        endDate = DateTime(
+          customEndDate.year,
+          customEndDate.month,
+          customEndDate.day,
+          23,
+          59,
+          59,
+          999,
+        );
         break;
       case SideLedgerTimePeriod.all:
         return entries;
@@ -1063,13 +1204,40 @@ class _CombinedHomeScreenState extends ConsumerState<CombinedHomeScreen>
     );
   }
 
-  Widget _buildPeriodChip(WidgetRef ref, String label, TimePeriod period,
-      TimePeriod currentPeriod) {
+  Future<void> _pickMainLedgerDateRange(
+      BuildContext context, WidgetRef ref) async {
+    final start = ref.read(customStartDateProvider);
+    final end = ref.read(customEndDateProvider);
+    final initialRange = DateTimeRange(
+      start: start.isAfter(end) ? end : start,
+      end: end.isBefore(start) ? start : end,
+    );
+
+    final range = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime(2000),
+      lastDate: DateTime.now(),
+      initialDateRange: initialRange,
+      helpText: 'Select Ledger Date Range',
+    );
+
+    if (range == null) return;
+    ref.read(customStartDateProvider.notifier).state = range.start;
+    ref.read(customEndDateProvider.notifier).state = range.end;
+    ref.read(timePeriodProvider.notifier).state = TimePeriod.custom;
+  }
+
+  Widget _buildPeriodChip(BuildContext context, WidgetRef ref, String label,
+      TimePeriod period, TimePeriod currentPeriod) {
     final isSelected = period == currentPeriod;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 4),
       child: GestureDetector(
-        onTap: () {
+        onTap: () async {
+          if (period == TimePeriod.custom) {
+            await _pickMainLedgerDateRange(context, ref);
+            return;
+          }
           ref.read(timePeriodProvider.notifier).state = period;
         },
         child: Container(
