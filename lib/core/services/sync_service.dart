@@ -38,6 +38,9 @@ enum SyncResult {
 ///      - Entities not present on either side are simply added.
 ///   3. Push the merged snapshot back to Google Drive.
 ///   4. Refresh all Riverpod providers.
+///
+/// A remote snapshot with a higher `version` than this build is refused (all
+/// devices must run the same major version).
 class SyncService {
   SyncService._();
 
@@ -74,6 +77,17 @@ class SyncService {
         // First sync ever — just push local data
         mergedSnapshot = localSnapshot;
       } else {
+        // A snapshot written by a newer app version may contain data this
+        // build cannot merge; pushing over it would lose that data.
+        final remoteVersion = remoteSnapshot['version'];
+        if (remoteVersion is int &&
+            remoteVersion > DatabaseService.schemaVersion) {
+          return (
+            SyncResult.error,
+            'Cloud backup was created by a newer RigLedger version. '
+                'Update the app on this device to sync.'
+          );
+        }
         // 3. Merge
         mergedSnapshot = _merge(localSnapshot, remoteSnapshot);
       }
@@ -222,6 +236,27 @@ class SyncService {
       'miniLedgerEntries': _mergeCollection(
         localItems: local['miniLedgerEntries'] ?? [],
         remoteItems: remote['miniLedgerEntries'] ?? [],
+        tombstones: tombstoneMap,
+        getId: (m) => m['id'] as String,
+        getUpdatedAt: (m) => DateTime.parse(m['updatedAt'] as String),
+      ),
+      'cashBooks': _mergeCollection(
+        localItems: local['cashBooks'] ?? [],
+        remoteItems: remote['cashBooks'] ?? [],
+        tombstones: tombstoneMap,
+        getId: (m) => m['id'] as String,
+        getUpdatedAt: (m) => DateTime.parse(m['updatedAt'] as String),
+      ),
+      'cashEntries': _mergeCollection(
+        localItems: local['cashEntries'] ?? [],
+        remoteItems: remote['cashEntries'] ?? [],
+        tombstones: tombstoneMap,
+        getId: (m) => m['id'] as String,
+        getUpdatedAt: (m) => DateTime.parse(m['updatedAt'] as String),
+      ),
+      'cashNotes': _mergeCollection(
+        localItems: local['cashNotes'] ?? [],
+        remoteItems: remote['cashNotes'] ?? [],
         tombstones: tombstoneMap,
         getId: (m) => m['id'] as String,
         getUpdatedAt: (m) => DateTime.parse(m['updatedAt'] as String),

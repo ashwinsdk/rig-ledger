@@ -29,12 +29,12 @@ Depends: T-CB01
 Resume notes: adapters registered, 3 boxes, CRUD, trash (30 day purge at startup), default book id default_cash_book (timestamps 2000 so sync never resurrects it), schemaVersion 4, backup/restore keys null-safe.
 Commit: Add cashbook boxes, CRUD, trash purge and schema 4
 
-## T-CB03 SyncService merge for cash collections [PENDING]
+## T-CB03 SyncService merge for cash collections [DONE]
 Goal: merge cashBooks, cashEntries, cashNotes; tolerate missing keys; refuse to overwrite a remote snapshot with a higher version (all devices must update).
 Files: lib/core/services/sync_service.dart
 Depends: T-CB02
-Resume notes: add new refresh calls to the refresh pattern docs.
-Commit:
+Resume notes: merge covers cashBooks, cashEntries, cashNotes (missing keys tolerated); remote snapshot with higher version is refused. Provider refresh calls are added in T-CB05.
+Commit: Merge cashbook collections in sync and refuse newer snapshots
 
 ## T-CB04 Calculator utility and unit tests [PENDING]
 Goal: running balance, previous balance, period ranges, grouping, rounding, number formatting (Rs. prefix).
