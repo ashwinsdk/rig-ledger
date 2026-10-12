@@ -22,12 +22,12 @@ Depends: typeId re-grep (done: 2, 3, 11 free)
 Resume notes: models written, build_runner run (generated .g.dart present), flutter analyze clean for new files (only pre-existing test/widget_test.dart error remains), MODELS.md updated. Adapters are NOT registered yet (T-CB02). Committed.
 Commit: Add cashbook Hive models (CashBook, CashEntry, CashNote)
 
-## T-CB02 DatabaseService boxes, CRUD, trash, schema 4 [PENDING]
+## T-CB02 DatabaseService boxes, CRUD, trash, schema 4 [DONE]
 Goal: register adapters, open cash_books/cash_entries/cash_notes boxes, CRUD with tombstones, trash helpers with 30 day auto-purge, schemaVersion 4, backup/restore keys with null-safe reads.
 Files: lib/core/database/database_service.dart
 Depends: T-CB01
-Resume notes:
-Commit:
+Resume notes: adapters registered, 3 boxes, CRUD, trash (30 day purge at startup), default book id default_cash_book (timestamps 2000 so sync never resurrects it), schemaVersion 4, backup/restore keys null-safe.
+Commit: Add cashbook boxes, CRUD, trash purge and schema 4
 
 ## T-CB03 SyncService merge for cash collections [PENDING]
 Goal: merge cashBooks, cashEntries, cashNotes; tolerate missing keys; refuse to overwrite a remote snapshot with a higher version (all devices must update).

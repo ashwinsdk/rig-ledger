@@ -8,6 +8,9 @@ import '../models/bit_entry.dart';
 import '../models/hammer_entry.dart';
 import '../models/mini_ledger_entry.dart';
 import '../models/tombstone.dart';
+import '../models/cash_book.dart';
+import '../models/cash_entry.dart';
+import '../models/cash_note.dart';
 
 class DatabaseService {
   static const String ledgerBoxName = 'ledger_entries';
@@ -20,7 +23,12 @@ class DatabaseService {
   static const String hammerBoxName = 'hammer_entries';
   static const String miniLedgerBoxName = 'mini_ledger_entries';
   static const String tombstoneBoxName = 'tombstones';
-  static const int schemaVersion = 3;
+  static const String cashBookBoxName = 'cash_books';
+  static const String cashEntryBoxName = 'cash_entries';
+  static const String cashNoteBoxName = 'cash_notes';
+  static const String defaultCashBookId = 'default_cash_book';
+  static const Duration cashTrashRetention = Duration(days: 30);
+  static const int schemaVersion = 4;
 
   static late Box<LedgerEntry> _ledgerBox;
   static late Box<Agent> _agentBox;
@@ -32,6 +40,9 @@ class DatabaseService {
   static late Box<HammerEntry> _hammerBox;
   static late Box<MiniLedgerEntry> _miniLedgerBox;
   static late Box<Tombstone> _tombstoneBox;
+  static late Box<CashBook> _cashBookBox;
+  static late Box<CashEntry> _cashEntryBox;
+  static late Box<CashNote> _cashNoteBox;
 
   static Box<LedgerEntry> get ledgerBox => _ledgerBox;
   static Box<Agent> get agentBox => _agentBox;
@@ -43,6 +54,9 @@ class DatabaseService {
   static Box<HammerEntry> get hammerBox => _hammerBox;
   static Box<MiniLedgerEntry> get miniLedgerBox => _miniLedgerBox;
   static Box<Tombstone> get tombstoneBox => _tombstoneBox;
+  static Box<CashBook> get cashBookBox => _cashBookBox;
+  static Box<CashEntry> get cashEntryBox => _cashEntryBox;
+  static Box<CashNote> get cashNoteBox => _cashNoteBox;
 
   static Future<void> initialize() async {
     // Register adapters
@@ -55,6 +69,9 @@ class DatabaseService {
     Hive.registerAdapter(HammerEntryAdapter());
     Hive.registerAdapter(MiniLedgerEntryAdapter());
     Hive.registerAdapter(TombstoneAdapter());
+    Hive.registerAdapter(CashBookAdapter());
+    Hive.registerAdapter(CashEntryAdapter());
+    Hive.registerAdapter(CashNoteAdapter());
 
     // Open boxes
     _ledgerBox = await Hive.openBox<LedgerEntry>(ledgerBoxName);
@@ -67,12 +84,19 @@ class DatabaseService {
     _hammerBox = await Hive.openBox<HammerEntry>(hammerBoxName);
     _miniLedgerBox = await Hive.openBox<MiniLedgerEntry>(miniLedgerBoxName);
     _tombstoneBox = await Hive.openBox<Tombstone>(tombstoneBoxName);
+    _cashBookBox = await Hive.openBox<CashBook>(cashBookBoxName);
+    _cashEntryBox = await Hive.openBox<CashEntry>(cashEntryBoxName);
+    _cashNoteBox = await Hive.openBox<CashNote>(cashNoteBoxName);
 
     // Check and perform migrations
     await _performMigrations();
 
     // Ensure at least one default vehicle exists
     await _ensureDefaultVehicle();
+
+    // Account Ledger: default book and 30 day trash purge
+    await _ensureDefaultCashBook();
+    await purgeExpiredCashTrash();
   }
 
   static Future<void> _performMigrations() async {
@@ -82,6 +106,8 @@ class DatabaseService {
     if (currentVersion < schemaVersion) {
       // Perform migrations based on version
       // Version 2: Added vehicles and side-ledger
+      // Version 4: Added Account Ledger boxes (cash_books, cash_entries,
+      // cash_notes). New boxes start empty, so no data transform is needed.
 
       await _settingsBox.put('schemaVersion', schemaVersion);
     }
@@ -304,6 +330,10 @@ class DatabaseService {
     final miniLedgerEntries =
         _miniLedgerBox.values.map((e) => e.toJson()).toList();
 
+    final cashBooks = _cashBookBox.values.map((b) => b.toJson()).toList();
+    final cashEntries = _cashEntryBox.values.map((e) => e.toJson()).toList();
+    final cashNotes = _cashNoteBox.values.map((n) => n.toJson()).toList();
+
     // Also save current vehicle selection
     final currentVehicle = currentVehicleId;
 
@@ -319,6 +349,9 @@ class DatabaseService {
       'bitEntries': bitEntries,
       'hammerEntries': hammerEntries,
       'miniLedgerEntries': miniLedgerEntries,
+      'cashBooks': cashBooks,
+      'cashEntries': cashEntries,
+      'cashNotes': cashNotes,
       'tombstones': _tombstoneBox.values.map((t) => t.toJson()).toList(),
     };
   }
@@ -384,6 +417,23 @@ class DatabaseService {
       await saveMiniLedgerEntry(entry);
     }
 
+    // Restore Account Ledger (keys are absent in backups from older versions)
+    final cashBooksData = backup['cashBooks'] as List<dynamic>? ?? [];
+    for (final map in cashBooksData) {
+      final book = CashBook.fromJson(Map<String, dynamic>.from(map));
+      await _cashBookBox.put(book.id, book);
+    }
+    final cashEntriesData = backup['cashEntries'] as List<dynamic>? ?? [];
+    for (final map in cashEntriesData) {
+      final entry = CashEntry.fromJson(Map<String, dynamic>.from(map));
+      await _cashEntryBox.put(entry.id, entry);
+    }
+    final cashNotesData = backup['cashNotes'] as List<dynamic>? ?? [];
+    for (final map in cashNotesData) {
+      final note = CashNote.fromJson(Map<String, dynamic>.from(map));
+      await _cashNoteBox.put(note.id, note);
+    }
+
     // Restore tombstones
     final tombstonesData = backup['tombstones'] as List<dynamic>? ?? [];
     for (final tombstoneMap in tombstonesData) {
@@ -394,6 +444,7 @@ class DatabaseService {
 
     // Ensure default vehicle exists
     await _ensureDefaultVehicle();
+    await _ensureDefaultCashBook();
 
     // Restore the current vehicle selection if it exists in the backup
     final savedCurrentVehicle = backup['currentVehicleId'] as String?;
@@ -412,10 +463,14 @@ class DatabaseService {
     await _bitBox.clear();
     await _hammerBox.clear();
     await _miniLedgerBox.clear();
+    await _cashBookBox.clear();
+    await _cashEntryBox.clear();
+    await _cashNoteBox.clear();
     await _tombstoneBox.clear();
     await _settingsBox.delete('currentVehicleId');
     // Recreate default vehicle after clearing (for normal clear, not restore)
     await _ensureDefaultVehicle();
+    await _ensureDefaultCashBook();
   }
 
   /// Clear all data without creating default vehicle (used during restore)
@@ -428,6 +483,9 @@ class DatabaseService {
     await _bitBox.clear();
     await _hammerBox.clear();
     await _miniLedgerBox.clear();
+    await _cashBookBox.clear();
+    await _cashEntryBox.clear();
+    await _cashNoteBox.clear();
     await _tombstoneBox.clear();
     await _settingsBox.delete('currentVehicleId');
   }
@@ -580,6 +638,164 @@ class DatabaseService {
             !e.date.isAfter(end))
         .toList()
       ..sort((a, b) => b.date.compareTo(a.date));
+  }
+
+  // ============ ACCOUNT LEDGER (CASH BOOK) OPERATIONS ============
+
+  /// Creates the default "Cash Book" when no book exists. The fixed id and the
+  /// old timestamps make an existing tombstone or any edit on another device
+  /// win during sync, so the default book is never resurrected by a merge.
+  static Future<void> _ensureDefaultCashBook() async {
+    if (_cashBookBox.isEmpty) {
+      final old = DateTime(2000);
+      final book = CashBook(
+        id: defaultCashBookId,
+        name: 'Cash Book',
+        createdAt: old,
+        updatedAt: old,
+      );
+      await _cashBookBox.put(book.id, book);
+    }
+  }
+
+  static List<CashBook> getAllCashBooks() {
+    return _cashBookBox.values.toList()
+      ..sort((a, b) {
+        final c = a.sortOrder.compareTo(b.sortOrder);
+        return c != 0 ? c : a.createdAt.compareTo(b.createdAt);
+      });
+  }
+
+  static CashBook? getCashBook(String id) => _cashBookBox.get(id);
+
+  static Future<void> saveCashBook(CashBook book) async {
+    await _cashBookBox.put(book.id, book);
+  }
+
+  /// Deletes a book. Its entries move to the trash (soft delete) keeping the
+  /// book name, so they can be restored into another book.
+  static Future<void> deleteCashBook(String id) async {
+    final book = _cashBookBox.get(id);
+    if (book == null) return;
+    final now = DateTime.now();
+    final updated = <String, CashEntry>{};
+    for (final entry in _cashEntryBox.values.where((e) => e.bookId == id)) {
+      if (entry.isDeleted) {
+        updated[entry.id] = entry.copyWith(
+          bookNameSnapshot: entry.bookNameSnapshot ?? book.name,
+          updatedAt: now,
+        );
+      } else {
+        updated[entry.id] = entry.copyWith(
+          isDeleted: true,
+          deletedAt: now,
+          bookNameSnapshot: book.name,
+          updatedAt: now,
+        );
+      }
+    }
+    await _cashEntryBox.putAll(updated);
+    await recordTombstone(id, cashBookBoxName);
+    await _cashBookBox.delete(id);
+  }
+
+  /// All entries, optionally limited to one book. Trashed entries are
+  /// excluded unless [includeDeleted] is true.
+  static List<CashEntry> getCashEntries(
+      {String? bookId, bool includeDeleted = false}) {
+    return _cashEntryBox.values
+        .where((e) =>
+            (bookId == null || e.bookId == bookId) &&
+            (includeDeleted || !e.isDeleted))
+        .toList()
+      ..sort((a, b) => b.date.compareTo(a.date));
+  }
+
+  static List<CashEntry> getCashTrash() {
+    return _cashEntryBox.values.where((e) => e.isDeleted).toList()
+      ..sort(
+          (a, b) => (b.deletedAt ?? b.date).compareTo(a.deletedAt ?? a.date));
+  }
+
+  static CashEntry? getCashEntry(String id) => _cashEntryBox.get(id);
+
+  static Future<void> saveCashEntry(CashEntry entry) async {
+    await _cashEntryBox.put(entry.id, entry);
+  }
+
+  /// Saves several entries in one write (used by transfers and import).
+  static Future<void> saveCashEntries(List<CashEntry> entries) async {
+    await _cashEntryBox.putAll({for (final e in entries) e.id: e});
+  }
+
+  static Future<void> moveCashEntryToTrash(String id) async {
+    final entry = _cashEntryBox.get(id);
+    if (entry == null || entry.isDeleted) return;
+    final now = DateTime.now();
+    await _cashEntryBox.put(
+      id,
+      entry.copyWith(
+        isDeleted: true,
+        deletedAt: now,
+        bookNameSnapshot: _cashBookBox.get(entry.bookId)?.name,
+        updatedAt: now,
+      ),
+    );
+  }
+
+  /// Restores a trashed entry, optionally into a different book.
+  static Future<void> restoreCashEntry(String id, {String? toBookId}) async {
+    final entry = _cashEntryBox.get(id);
+    if (entry == null || !entry.isDeleted) return;
+    final restored = entry.copyWith(
+      bookId: toBookId ?? entry.bookId,
+      isDeleted: false,
+      updatedAt: DateTime.now(),
+    );
+    // copyWith cannot clear nullable fields, so rebuild the trash markers.
+    restored.deletedAt = null;
+    restored.bookNameSnapshot = null;
+    await _cashEntryBox.put(id, restored);
+  }
+
+  /// Permanently removes an entry (tombstone first, as for every delete).
+  static Future<void> purgeCashEntry(String id) async {
+    if (!_cashEntryBox.containsKey(id)) return;
+    await recordTombstone(id, cashEntryBoxName);
+    await _cashEntryBox.delete(id);
+  }
+
+  static Future<void> emptyCashTrash() async {
+    for (final id in getCashTrash().map((e) => e.id).toList()) {
+      await purgeCashEntry(id);
+    }
+  }
+
+  /// Removes trashed entries older than [cashTrashRetention].
+  static Future<void> purgeExpiredCashTrash({Duration? maxAge}) async {
+    final cutoff = DateTime.now().subtract(maxAge ?? cashTrashRetention);
+    final expired = _cashEntryBox.values
+        .where((e) =>
+            e.isDeleted && e.deletedAt != null && e.deletedAt!.isBefore(cutoff))
+        .map((e) => e.id)
+        .toList();
+    for (final id in expired) {
+      await purgeCashEntry(id);
+    }
+  }
+
+  static List<CashNote> getAllCashNotes() {
+    return _cashNoteBox.values.toList()
+      ..sort((a, b) => b.date.compareTo(a.date));
+  }
+
+  static Future<void> saveCashNote(CashNote note) async {
+    await _cashNoteBox.put(note.id, note);
+  }
+
+  static Future<void> deleteCashNote(String id) async {
+    await recordTombstone(id, cashNoteBoxName);
+    await _cashNoteBox.delete(id);
   }
 
   // ============ HELPER METHODS ============
