@@ -36,12 +36,12 @@ Depends: T-CB02
 Resume notes: merge covers cashBooks, cashEntries, cashNotes (missing keys tolerated); remote snapshot with higher version is refused. Provider refresh calls are added in T-CB05.
 Commit: Merge cashbook collections in sync and refuse newer snapshots
 
-## T-CB04 Calculator utility and unit tests [PENDING]
+## T-CB04 Calculator utility and unit tests [DONE]
 Goal: running balance, previous balance, period ranges, grouping, rounding, number formatting (Rs. prefix).
 Files: lib/core/utils/cashbook_calculator.dart, test/cashbook_calculator_test.dart
 Depends: T-CB01
-Resume notes: cover PARITY-020, 033, 034, 037, 038.
-Commit:
+Resume notes: 10 tests pass. Rule found in the reference app: running balance restarts from the period previous balance and accumulates over the rows shown only (searches and filters get their own running balance). Weeks start Sunday (assumption).
+Commit: Add cashbook calculator utility with unit tests
 
 ## T-CB05 Providers [PENDING]
 Goal: CashBooksNotifier, CashEntriesNotifier, CashNotesNotifier, view-config and derived providers, settings provider.
