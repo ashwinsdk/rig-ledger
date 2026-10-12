@@ -14,15 +14,18 @@ model change checklist in `.claude/context/PLAYBOOKS.md`.
   verify the regenerated `.g.dart` reflects the change.
 - After adding a package to `pubspec.yaml`: run `flutter pub get`.
 - After a sub-task: update `.claude/tasks/CURRENT.md` (mark DONE) and
-  `MEMORY.md`, then tell the developer it's ready to commit. Wait for
-  confirmation before starting the next sub-task.
+  `MEMORY.md`, then `git add` the exact files changed and `git commit`
+  (imperative message, <=72 chars, no `Co-Authored-By` trailer). Never
+  `git push`.
 - After a full session: update `MEMORY.md` with a session summary and
   `.claude/tasks/CURRENT.md` with final status of all tasks touched.
 
 ## Never run without explicit instruction
 
-`.claude/hooks/guard_bash.sh` blocks `git commit`, `git push`,
-`git reset --hard`, `git checkout --`, `git stash drop`, `flutter clean`,
-and `rm -rf` automatically. It does not cover every destructive command --
-still avoid anything that modifies `android/app/google-services.json`,
-`android/key.properties`, or anything in `temp/`.
+`.claude/hooks/guard_bash.sh` blocks `git push`, `git commit --amend`,
+`--no-verify`, `--no-gpg-sign`, `git reset --hard`, `git checkout --`,
+`git stash drop`, `flutter clean`, and `rm -rf` automatically. Plain
+`git commit` is allowed -- see `CLAUDE.md` Task workflow. The hook does not
+cover every destructive command -- still avoid anything that modifies
+`android/app/google-services.json`, `android/key.properties`, or anything
+in `temp/`.

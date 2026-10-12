@@ -23,7 +23,7 @@ No iOS. No web. No flavors. No named routes. No l10n. English only. No emojis. N
 1. Update `MEMORY.md` with what was done, what was left incomplete, and any decisions made.
 2. Update `.claude/tasks/CURRENT.md` -- mark completed items, add new items if the session created them.
 3. Run `flutter analyze` and confirm zero errors before ending.
-4. Do NOT run `git commit` or `git push` -- the developer does that.
+4. Commit any finished sub-task (see Task workflow). Never run `git push` -- only the developer does that.
 
 ## Task workflow (per sub-task)
 
@@ -32,16 +32,16 @@ When working through a feature list from the developer:
 2. Mark one sub-task IN_PROGRESS at a time.
 3. Implement and verify it with `flutter analyze`.
 4. Mark it DONE in `CURRENT.md`.
-5. The developer commits it individually before you move to the next sub-task.
-6. Repeat.
+5. `git add` the exact files changed and `git commit` with an imperative, <=72 char message. No `Co-Authored-By` trailer. Never amend, never `--no-verify`/`--no-gpg-sign`.
+6. Move to the next sub-task.
 
-Do not start the next sub-task until the developer confirms the current one is committed.
+Never run `git push`. Pushing is the developer's decision alone.
 
 ## What NOT to do
 
 - Never read: `build/`, `.dart_tool/`, `android/.gradle/`, `lib/core/models/*.g.dart` (unless explicitly told to).
 - Never read or print: `temp/`, `android/key.properties`, `android/app/google-services.json`.
-- Never run: `git commit`, `git push`, `rm`, `flutter clean` without explicit instruction.
+- Never run: `git push`, `rm`, `flutter clean` without explicit instruction. `git commit` is expected after each finished sub-task (see Task workflow above) -- never add a `Co-Authored-By` trailer, never amend.
 - Never edit generated files: `*.g.dart` -- run `flutter pub run build_runner build --delete-conflicting-outputs` instead.
 - See `.claude/hooks/pre_read.md` for full list of files to avoid.
 
