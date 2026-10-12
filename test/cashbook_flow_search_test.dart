@@ -5,7 +5,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
 import 'package:rig_ledger/core/database/database_service.dart';
 import 'package:rig_ledger/features/cashbook/cashbook_hub_screen.dart';
-import 'package:rig_ledger/features/cashbook/cashbook_trash_screen.dart';
 
 /// Drives the real Account Ledger screens with a real Hive database.
 void main() {
