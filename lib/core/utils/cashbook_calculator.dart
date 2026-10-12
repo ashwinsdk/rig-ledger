@@ -202,19 +202,20 @@ class CashbookCalculator {
 
   /// Grouped number, decimals only when present unless [fixed2].
   /// Negative values get a leading minus.
-  static String formatNumber(double v, {bool fixed2 = false}) {
+  static String formatNumber(double v,
+      {bool fixed2 = false, bool group = true}) {
     final r = roundMoney(v);
     final hasFraction = toPaise(r) % 100 != 0;
-    final f = (fixed2 || hasFraction)
-        ? NumberFormat('#,##0.00', 'en_US')
-        : NumberFormat('#,##0', 'en_US');
+    final digits = (fixed2 || hasFraction) ? '0.00' : '0';
+    final f = NumberFormat(group ? '#,##$digits' : digits, 'en_US');
     return f.format(r);
   }
 
   /// "Rs. 1,000", "-Rs. 800", "Rs. 2,500.50".
-  static String formatMoney(double v, {bool fixed2 = false}) {
+  static String formatMoney(double v,
+      {bool fixed2 = false, bool group = true}) {
     final r = roundMoney(v);
-    final body = formatNumber(r.abs(), fixed2: fixed2);
+    final body = formatNumber(r.abs(), fixed2: fixed2, group: group);
     return r < 0 ? '-Rs. $body' : 'Rs. $body';
   }
 }

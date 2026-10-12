@@ -163,9 +163,8 @@ class CashEntry extends HiveObject {
       isCashIn: map['isCashIn'] as bool? ?? true,
       notes: map['notes'] as String? ?? '',
       description: map['description'] as String?,
-      attachmentPaths: (map['attachmentPaths'] as List?)
-          ?.map((e) => e as String)
-          .toList(),
+      attachmentPaths:
+          (map['attachmentPaths'] as List?)?.map((e) => e as String).toList(),
       itemsJson: map['itemsJson'] as String?,
       isDeleted: map['isDeleted'] as bool? ?? false,
       deletedAt: map['deletedAt'] != null

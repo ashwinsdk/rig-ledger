@@ -153,7 +153,7 @@ class _CashbookAccountSummaryScreenState
           child: FittedBox(
             fit: BoxFit.scaleDown,
             child: Text(
-              CashbookCalculator.formatNumber(v, fixed2: s.fixedDecimals),
+              s.formatNumber(v),
               style: TextStyle(
                   color: color, fontWeight: FontWeight.w600, fontSize: 13),
             ),

@@ -133,8 +133,7 @@ class _CashbookCalendarScreenState
                           if (t != null && t.cashIn > 0)
                             FittedBox(
                               fit: BoxFit.scaleDown,
-                              child: Text(
-                                  CashbookCalculator.formatNumber(t.cashIn),
+                              child: Text(settings.formatNumber(t.cashIn),
                                   style: const TextStyle(
                                       fontSize: 10,
                                       color: CashColors.income,
@@ -143,8 +142,7 @@ class _CashbookCalendarScreenState
                           if (t != null && t.cashOut > 0)
                             FittedBox(
                               fit: BoxFit.scaleDown,
-                              child: Text(
-                                  CashbookCalculator.formatNumber(t.cashOut),
+                              child: Text(settings.formatNumber(t.cashOut),
                                   style: const TextStyle(
                                       fontSize: 10,
                                       color: CashColors.expense,

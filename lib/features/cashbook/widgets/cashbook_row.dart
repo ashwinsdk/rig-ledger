@@ -131,8 +131,7 @@ class CashbookRow extends StatelessWidget {
                   ],
                   const Spacer(),
                   if (settings.showBalancePerEntry)
-                    Text(
-                        'Balance ${CashbookCalculator.formatNumber(row.balance, fixed2: settings.fixedDecimals)}',
+                    Text('Balance ${settings.formatNumber(row.balance)}',
                         style: const TextStyle(
                             fontSize: 12, color: AppColors.textSecondary)),
                 ],

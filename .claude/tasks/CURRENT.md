@@ -106,12 +106,12 @@ Depends: T-CB05
 Resume notes: Notebook (tabs, period bar, checkbox toggles completed, stats strip, Completed/Pending/asc/desc overflow, FAB add) and note form with delete confirm. Notebook 'Report' overflow item skipped (no PDF for notes). Hub entry added.
 Commit: Add cashbook Notebook screens
 
-## T-CB14 Settings and Income/Expense labels [PENDING]
+## T-CB14 Settings and Income/Expense labels [DONE]
 Goal: PARITY-027, 028, 035, 039, 040, 076, 078, 079, 084.
 Files: cashbook_settings_screen.dart, cashbook_provider.dart
 Depends: T-CB05
-Resume notes:
-Commit:
+Resume notes: settings screen (date format, show time, 12/24h, currency/number style, 6 display switches, Your Name and Address) + same dialog in home overflow; labels fixed to Income/Expense. Settings persisted under cashbook.* keys. Number style = group digits x fixed decimals. Dark mode, fingerprint, language dropped (RigLedger is light-only, English-only).
+Commit: Add cashbook settings screen and number style options
 
 ## T-CB15 PDF and CSV export [PENDING]
 Goal: PARITY-069..074 (PDF and CSV only).

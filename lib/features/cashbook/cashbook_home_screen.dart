@@ -7,6 +7,7 @@ import '../../core/utils/cashbook_calculator.dart';
 import '../../core/utils/platform_helper.dart';
 import 'cashbook_book_picker_dialog.dart';
 import 'cashbook_entry_form_screen.dart';
+import 'cashbook_settings_screen.dart';
 import 'widgets/cashbook_common.dart';
 import 'widgets/cashbook_header.dart';
 import 'widgets/cashbook_period_bar.dart';
@@ -92,6 +93,16 @@ class _CashbookHomeScreenState extends ConsumerState<CashbookHomeScreen> {
     }
   }
 
+  Future<void> _editReporterName() async {
+    final settings = ref.read(cashSettingsProvider);
+    final text = await showReporterNameDialog(context, settings.reporterName);
+    if (text != null) {
+      await ref
+          .read(cashSettingsProvider.notifier)
+          .updateSettings(settings.copyWith(reporterName: text));
+    }
+  }
+
   Widget _overflow(CashViewConfig cfg) {
     final notifier = ref.read(cashViewConfigProvider.notifier);
     return PopupMenuButton<String>(
@@ -116,6 +127,8 @@ class _CashbookHomeScreenState extends ConsumerState<CashbookHomeScreen> {
             notifier.setType(cfg.type == CashTypeFilter.expense
                 ? CashTypeFilter.all
                 : CashTypeFilter.expense);
+          case 'name':
+            _editReporterName();
           case 'clear':
             _searchController.clear();
             notifier.clearFilters();
@@ -143,6 +156,8 @@ class _CashbookHomeScreenState extends ConsumerState<CashbookHomeScreen> {
             checked: cfg.type == CashTypeFilter.expense,
             child: const Text(CashLabels.expense)),
         const PopupMenuItem(value: 'clear', child: Text('Clear filters')),
+        const PopupMenuItem(
+            value: 'name', child: Text('Your Name and Address')),
       ],
     );
   }

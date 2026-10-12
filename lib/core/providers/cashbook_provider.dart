@@ -41,6 +41,8 @@ class CashSettings {
   final bool showTime;
   final bool use24Hour;
   final bool fixedDecimals; // "1,234.00" instead of "1,234"
+  final bool groupDigits; // "1,234" instead of "1234"
+  final String reporterName; // "Your Name and Address" for reports
   final bool showDateInEntry;
   final bool showPreviousBalance;
   final bool showBalancePerEntry;
@@ -53,6 +55,8 @@ class CashSettings {
     this.showTime = true,
     this.use24Hour = false,
     this.fixedDecimals = false,
+    this.groupDigits = true,
+    this.reporterName = '',
     this.showDateInEntry = false,
     this.showPreviousBalance = true,
     this.showBalancePerEntry = true,
@@ -66,6 +70,8 @@ class CashSettings {
     bool? showTime,
     bool? use24Hour,
     bool? fixedDecimals,
+    bool? groupDigits,
+    String? reporterName,
     bool? showDateInEntry,
     bool? showPreviousBalance,
     bool? showBalancePerEntry,
@@ -78,6 +84,8 @@ class CashSettings {
       showTime: showTime ?? this.showTime,
       use24Hour: use24Hour ?? this.use24Hour,
       fixedDecimals: fixedDecimals ?? this.fixedDecimals,
+      groupDigits: groupDigits ?? this.groupDigits,
+      reporterName: reporterName ?? this.reporterName,
       showDateInEntry: showDateInEntry ?? this.showDateInEntry,
       showPreviousBalance: showPreviousBalance ?? this.showPreviousBalance,
       showBalancePerEntry: showBalancePerEntry ?? this.showBalancePerEntry,
@@ -92,8 +100,10 @@ class CashSettings {
       DateFormat(use24Hour ? 'HH:mm' : 'hh:mm a').format(d);
   String formatDayHeader(DateTime d) =>
       DateFormat('EEE, MMM dd yyyy').format(d);
-  String formatMoney(double v) =>
-      CashbookCalculator.formatMoney(v, fixed2: fixedDecimals);
+  String formatNumber(double v) => CashbookCalculator.formatNumber(v,
+      fixed2: fixedDecimals, group: groupDigits);
+  String formatMoney(double v) => CashbookCalculator.formatMoney(v,
+      fixed2: fixedDecimals, group: groupDigits);
 }
 
 class CashSettingsNotifier extends StateNotifier<CashSettings> {
@@ -113,6 +123,8 @@ class CashSettingsNotifier extends StateNotifier<CashSettings> {
       showTime: _get('showTime', d.showTime),
       use24Hour: _get('use24Hour', d.use24Hour),
       fixedDecimals: _get('fixedDecimals', d.fixedDecimals),
+      groupDigits: _get('groupDigits', d.groupDigits),
+      reporterName: _get('reporterName', d.reporterName),
       showDateInEntry: _get('showDateInEntry', d.showDateInEntry),
       showPreviousBalance: _get('showPreviousBalance', d.showPreviousBalance),
       showBalancePerEntry: _get('showBalancePerEntry', d.showBalancePerEntry),
@@ -129,6 +141,8 @@ class CashSettingsNotifier extends StateNotifier<CashSettings> {
       'cashbook.showTime': s.showTime,
       'cashbook.use24Hour': s.use24Hour,
       'cashbook.fixedDecimals': s.fixedDecimals,
+      'cashbook.groupDigits': s.groupDigits,
+      'cashbook.reporterName': s.reporterName,
       'cashbook.showDateInEntry': s.showDateInEntry,
       'cashbook.showPreviousBalance': s.showPreviousBalance,
       'cashbook.showBalancePerEntry': s.showBalancePerEntry,
