@@ -86,55 +86,10 @@ class _CashbookHomeScreenState extends ConsumerState<CashbookHomeScreen> {
 
   Future<void> _pickRange() async {
     final settings = ref.read(cashSettingsProvider);
-    var start = DateTime.now();
-    var end = DateTime.now();
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setLocal) => AlertDialog(
-          title: const Text('Select Date Range'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Align(
-                  alignment: Alignment.centerLeft, child: Text('Start Date')),
-              const SizedBox(height: 4),
-              CashDateField(
-                  value: start,
-                  format: settings.formatDate,
-                  onChanged: (d) => setLocal(() => start = d)),
-              const SizedBox(height: 12),
-              const Align(
-                  alignment: Alignment.centerLeft, child: Text('End Date')),
-              const SizedBox(height: 4),
-              CashDateField(
-                  value: end,
-                  format: settings.formatDate,
-                  onChanged: (d) => setLocal(() => end = d)),
-            ],
-          ),
-          actions: [
-            TextButton(
-                onPressed: () => Navigator.pop(ctx, false),
-                child: const Text('Cancel')),
-            TextButton(
-                onPressed: () => Navigator.pop(ctx, true),
-                child: const Text('OK')),
-          ],
-        ),
-      ),
-    );
-    if (ok != true) return;
-    var a = CashbookCalculator.dateOnly(start);
-    var b = CashbookCalculator.dateOnly(end);
-    if (b.isBefore(a)) {
-      final t = a;
-      a = b;
-      b = t;
+    final range = await pickCashDateRange(context, settings.formatDate);
+    if (range != null) {
+      ref.read(cashViewConfigProvider.notifier).setCustomRange(range);
     }
-    ref
-        .read(cashViewConfigProvider.notifier)
-        .setCustomRange(CashDateRange(a, DateTime(b.year, b.month, b.day + 1)));
   }
 
   Widget _overflow(CashViewConfig cfg) {

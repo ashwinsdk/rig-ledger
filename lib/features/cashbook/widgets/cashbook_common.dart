@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/cashbook_calculator.dart';
 import '../../../core/utils/platform_helper.dart';
 
 /// Colors with a functional meaning in the Account Ledger.
@@ -184,4 +185,59 @@ class CashDateField extends StatelessWidget {
       ),
     );
   }
+}
+
+/// "Select Date Range" dialog: start and end date, returns a half-open range
+/// covering both days, or null when cancelled.
+Future<CashDateRange?> pickCashDateRange(
+  BuildContext context,
+  String Function(DateTime) format,
+) async {
+  var start = DateTime.now();
+  var end = DateTime.now();
+  final ok = await showDialog<bool>(
+    context: context,
+    builder: (ctx) => StatefulBuilder(
+      builder: (ctx, setLocal) => AlertDialog(
+        title: const Text('Select Date Range'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Align(
+                alignment: Alignment.centerLeft, child: Text('Start Date')),
+            const SizedBox(height: 4),
+            CashDateField(
+                value: start,
+                format: format,
+                onChanged: (d) => setLocal(() => start = d)),
+            const SizedBox(height: 12),
+            const Align(
+                alignment: Alignment.centerLeft, child: Text('End Date')),
+            const SizedBox(height: 4),
+            CashDateField(
+                value: end,
+                format: format,
+                onChanged: (d) => setLocal(() => end = d)),
+          ],
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('OK')),
+        ],
+      ),
+    ),
+  );
+  if (ok != true) return null;
+  var a = CashbookCalculator.dateOnly(start);
+  var b = CashbookCalculator.dateOnly(end);
+  if (b.isBefore(a)) {
+    final t = a;
+    a = b;
+    b = t;
+  }
+  return CashDateRange(a, DateTime(b.year, b.month, b.day + 1));
 }

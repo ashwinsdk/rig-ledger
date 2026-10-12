@@ -92,12 +92,12 @@ Depends: T-CB06
 Resume notes: Transfer screen + hub entry; logic (linked pair, notes format, same-book refusal) covered by provider tests.
 Commit: Add cashbook Transfer screen
 
-## T-CB12 Summaries and calendar [PENDING]
+## T-CB12 Summaries and calendar [DONE]
 Goal: PARITY-061..064.
 Files: cashbook_summary_screen.dart, cashbook_account_summary_screen.dart, cashbook_all_transactions_screen.dart, cashbook_calendar_screen.dart
 Depends: T-CB08
-Resume notes:
-Commit:
+Resume notes: Summary (tap a book to open it), Account Summary, Transaction-All (search + tabs), Calendar (tap a day lists entries). Shared CashPeriodSel/CashPeriodSelector widget and pickCashDateRange. Hub entries added.
+Commit: Add cashbook summaries, all-transactions and calendar screens
 
 ## T-CB13 Notebook [PENDING]
 Goal: PARITY-065..068.

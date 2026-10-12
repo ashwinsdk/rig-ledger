@@ -3,8 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/providers/cashbook_provider.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/platform_helper.dart';
+import 'cashbook_account_summary_screen.dart';
+import 'cashbook_all_transactions_screen.dart';
 import 'cashbook_books_screen.dart';
+import 'cashbook_calendar_screen.dart';
 import 'cashbook_home_screen.dart';
+import 'cashbook_summary_screen.dart';
 import 'cashbook_entry_form_screen.dart';
 import 'cashbook_transfer_screen.dart';
 import 'cashbook_trash_screen.dart';
@@ -18,9 +22,16 @@ class _HubItem {
 
 /// Destinations of the Account Ledger (replaces the reference app's drawer).
 final List<_HubItem> _hubItems = [
+  _HubItem(Icons.bar_chart, 'Summary', (_) => const CashbookSummaryScreen()),
+  _HubItem(Icons.pie_chart_outline, 'Account Summary',
+      (_) => const CashbookAccountSummaryScreen()),
+  _HubItem(Icons.list_alt, 'Transaction-All Accounts',
+      (_) => const CashbookAllTransactionsScreen()),
   _HubItem(Icons.account_balance_wallet_outlined, 'Accounts',
       (_) => const CashbookBooksScreen()),
   _HubItem(Icons.swap_horiz, 'Transfer', (_) => const CashbookTransferScreen()),
+  _HubItem(Icons.calendar_month_outlined, 'Calendar',
+      (_) => const CashbookCalendarScreen()),
   _HubItem(Icons.delete_sweep_outlined, 'Deleted Transactions',
       (_) => const CashbookTrashScreen()),
 ];
