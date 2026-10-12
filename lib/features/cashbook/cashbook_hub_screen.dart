@@ -7,6 +7,7 @@ import 'cashbook_account_summary_screen.dart';
 import 'cashbook_all_transactions_screen.dart';
 import 'cashbook_books_screen.dart';
 import 'cashbook_calendar_screen.dart';
+import 'cashbook_help_screen.dart';
 import 'cashbook_home_screen.dart';
 import 'cashbook_import_screen.dart';
 import 'cashbook_notebook_screen.dart';
@@ -48,6 +49,7 @@ final List<_HubItem> _hubItems = [
       (_) => const CashbookImportScreen()),
   _HubItem(Icons.settings_outlined, 'Settings',
       (_) => const CashbookSettingsScreen()),
+  _HubItem(Icons.help_outline, 'Help', (_) => const CashbookHelpScreen()),
   _HubItem(Icons.delete_sweep_outlined, 'Deleted Transactions',
       (_) => const CashbookTrashScreen()),
 ];
@@ -79,15 +81,20 @@ class _CashbookRootScreenState extends ConsumerState<CashbookRootScreen> {
         MediaQuery.of(context).size.width >= PlatformHelper.wideBreakpoint;
 
     if (wide) {
-      return Row(
-        children: [
-          SizedBox(
-            width: 260,
-            child: _HubPanel(onSelect: _open),
-          ),
-          const VerticalDivider(width: 1),
-          const Expanded(child: CashbookHomeScreen()),
-        ],
+      // A Scaffold is needed here too: InkWells below require a Material
+      // ancestor and the macOS shell does not provide one.
+      return Scaffold(
+        backgroundColor: AppColors.background,
+        body: Row(
+          children: [
+            SizedBox(
+              width: 260,
+              child: _HubPanel(onSelect: _open),
+            ),
+            const VerticalDivider(width: 1),
+            const Expanded(child: CashbookHomeScreen()),
+          ],
+        ),
       );
     }
 

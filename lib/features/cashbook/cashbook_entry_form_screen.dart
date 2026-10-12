@@ -56,6 +56,9 @@ class _CashbookEntryFormScreenState
 
   bool get _isEdit => widget.entry != null;
 
+  /// Income created from a bill payment (type is fixed to income).
+  bool get _isLinked => widget.entry?.sourceType != null;
+
   @override
   void initState() {
     super.initState();
@@ -309,7 +312,7 @@ class _CashbookEntryFormScreenState
       backgroundColor: AppColors.surface,
       side: BorderSide(color: active ? color : AppColors.border),
       showCheckmark: false,
-      onSelected: (_) => setState(() => _isIn = value),
+      onSelected: _isLinked ? null : (_) => setState(() => _isIn = value),
     );
   }
 
