@@ -206,6 +206,64 @@ Applied during Drive sync merge: tombstone beats entity if `tombstone.deletedAt 
 
 ---
 
+## CashBook (typeId: 2) -- lib/core/models/cash_book.dart
+
+Account Ledger book (also a receiver book). Global, not vehicle-scoped. Spec: `docs/features/cashbook/SPEC.md`.
+
+| Field | HiveField | Type | Notes |
+|---|---|---|---|
+| id | 0 | String | UUID |
+| name | 1 | String | |
+| createdAt | 2 | DateTime | |
+| updatedAt | 3 | DateTime | |
+| sortOrder | 4 | int | default 0 |
+| kind | 5 | int | 0 = custom, 1 = receiver |
+
+Serialisation: `toJson()`/`fromJson()`. Adapter not yet registered (T-CB02).
+
+---
+
+## CashEntry (typeId: 3) -- lib/core/models/cash_entry.dart
+
+| Field | HiveField | Type | Notes |
+|---|---|---|---|
+| id | 0 | String | UUID |
+| bookId | 1 | String | FK to CashBook.id |
+| date | 2 | DateTime | local date and time |
+| amount | 3 | double | >= 0, rounded to 2 decimals |
+| isCashIn | 4 | bool | |
+| notes | 5 | String | may be empty |
+| description | 6 | String? | |
+| attachmentPaths | 7 | List<String>? | up to 3 |
+| itemsJson | 8 | String? | |
+| isDeleted | 9 | bool | trash flag |
+| deletedAt | 10 | DateTime? | auto-purged after 30 days |
+| transferGroupId | 11 | String? | links the two rows of a transfer |
+| importedLegacyId | 12 | int? | reference app row id |
+| createdAt | 13 | DateTime | |
+| updatedAt | 14 | DateTime | |
+| bookNameSnapshot | 15 | String? | |
+| sourceType | 16 | String? | 'ledger_payment' |
+| sourceId | 17 | String? | LedgerEntry.id |
+| sourcePaymentId | 18 | String? | |
+
+No stored balance: balances are computed. Getter `signedAmount`.
+
+---
+
+## CashNote (typeId: 11) -- lib/core/models/cash_note.dart
+
+| Field | HiveField | Type | Notes |
+|---|---|---|---|
+| id | 0 | String | UUID |
+| date | 1 | DateTime | |
+| text | 2 | String | |
+| isCompleted | 3 | bool | |
+| createdAt | 4 | DateTime | |
+| updatedAt | 5 | DateTime | |
+
+---
+
 ## Hive typeId registry
 
 | Model | typeId |
@@ -219,9 +277,11 @@ Applied during Drive sync merge: tombstone beats entity if `tombstone.deletedAt 
 | HammerEntry | 8 |
 | MiniLedgerEntry | 9 |
 | Tombstone | 10 |
+| CashNote | 11 |
+| CashBook | 2 |
+| CashEntry | 3 |
 
-typeIds 2 and 3 are not assigned to any current model as of this check. Before
-reusing them, re-grep every model's `@HiveType(typeId: N)` annotation to
-confirm nothing claimed them since.
+typeIds 2, 3 (CashBook, CashEntry) and 11 (CashNote) were claimed by the Account
+Ledger feature. Next free: 12.
 
 When adding a new Hive model, check existing typeIds to avoid collision. Use the next available integer.
