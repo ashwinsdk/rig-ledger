@@ -15,6 +15,7 @@ import '../../core/models/vehicle.dart';
 import '../../core/models/bit_entry.dart';
 import '../../core/models/hammer_entry.dart';
 import '../../core/services/file_save_service.dart';
+import '../../core/services/cashbook_export_service.dart';
 
 enum PdfExportType {
   ledger('Ledger'),
@@ -890,8 +891,18 @@ class _PdfExportScreenState extends ConsumerState<PdfExportScreen> {
     return 'rigledger_${typeName}_${dateFormat.format(_startDate)}_to_${dateFormat.format(_endDate)}.pdf';
   }
 
+  /// PDF document with the bundled Noto fonts so Tamil text (addresses, notes)
+  /// is not dropped from reports.
+  Future<pw.Document> _newPdfDocument() async {
+    final (base, fallback) = await CashbookExportService.loadFonts();
+    return pw.Document(
+      theme:
+          pw.ThemeData.withFont(base: base, bold: base, fontFallback: fallback),
+    );
+  }
+
   Future<Uint8List> _generatePdf(List<LedgerEntry> entries) async {
-    final pdf = pw.Document();
+    final pdf = await _newPdfDocument();
 
     // Get current vehicle name
     final currentVehicle = DatabaseService.getCurrentVehicle();
@@ -1150,7 +1161,7 @@ class _PdfExportScreenState extends ConsumerState<PdfExportScreen> {
   }
 
   Future<Uint8List> _generateDieselPdf(List<DieselEntry> entries) async {
-    final pdf = pw.Document();
+    final pdf = await _newPdfDocument();
 
     // Get current vehicle name
     final currentVehicle = DatabaseService.getCurrentVehicle();
@@ -1468,7 +1479,7 @@ class _PdfExportScreenState extends ConsumerState<PdfExportScreen> {
     required List<String> Function(T) getRow,
     required String Function() getTotals,
   }) async {
-    final pdf = pw.Document();
+    final pdf = await _newPdfDocument();
 
     // Get current vehicle name
     final currentVehicle = DatabaseService.getCurrentVehicle();
