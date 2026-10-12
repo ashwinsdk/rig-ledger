@@ -50,12 +50,12 @@ Depends: T-CB02, T-CB04
 Resume notes: providers for books, entries (incl. transfer, trash), notes, settings (Income/Expense labels fixed), home view config and derived ledger, summary/day-summary families keyed by CashQuery record. Refresh added to sync_provider and the 3 restore/clear sites in settings_screen. Unit tests for providers not written (logic is in the calculator).
 Commit: Add cashbook providers and refresh wiring
 
-## T-CB06 Books: picker, Accounts screen, add/edit/delete, opening balance [PENDING]
+## T-CB06 Books: picker, Accounts screen, add/edit/delete, opening balance [DONE]
 Goal: PARITY-001..012, 082.
 Files: lib/features/cashbook/cashbook_books_screen.dart, cashbook_book_picker_dialog.dart
 Depends: T-CB05
-Resume notes:
-Commit:
+Resume notes: add/rename/opening-balance dialogs, two-step delete, picker, Accounts screen done. Not reachable from the UI until the hub/tab task. Receiver switch added to Add Account.
+Commit: Add cashbook book picker, Accounts screen and book dialogs
 
 ## T-CB07 Entry form, calculator sheet, items dialog [PENDING]
 Goal: PARITY-013..030.
