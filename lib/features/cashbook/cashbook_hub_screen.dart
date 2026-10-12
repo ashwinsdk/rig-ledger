@@ -8,6 +8,7 @@ import 'cashbook_all_transactions_screen.dart';
 import 'cashbook_books_screen.dart';
 import 'cashbook_calendar_screen.dart';
 import 'cashbook_home_screen.dart';
+import 'cashbook_notebook_screen.dart';
 import 'cashbook_summary_screen.dart';
 import 'cashbook_entry_form_screen.dart';
 import 'cashbook_transfer_screen.dart';
@@ -30,6 +31,8 @@ final List<_HubItem> _hubItems = [
   _HubItem(Icons.account_balance_wallet_outlined, 'Accounts',
       (_) => const CashbookBooksScreen()),
   _HubItem(Icons.swap_horiz, 'Transfer', (_) => const CashbookTransferScreen()),
+  _HubItem(Icons.sticky_note_2_outlined, 'Notebook',
+      (_) => const CashbookNotebookScreen()),
   _HubItem(Icons.calendar_month_outlined, 'Calendar',
       (_) => const CashbookCalendarScreen()),
   _HubItem(Icons.delete_sweep_outlined, 'Deleted Transactions',

@@ -99,12 +99,12 @@ Depends: T-CB08
 Resume notes: Summary (tap a book to open it), Account Summary, Transaction-All (search + tabs), Calendar (tap a day lists entries). Shared CashPeriodSel/CashPeriodSelector widget and pickCashDateRange. Hub entries added.
 Commit: Add cashbook summaries, all-transactions and calendar screens
 
-## T-CB13 Notebook [PENDING]
+## T-CB13 Notebook [DONE]
 Goal: PARITY-065..068.
 Files: cashbook_notebook_screen.dart, cashbook_note_form_screen.dart
 Depends: T-CB05
-Resume notes:
-Commit:
+Resume notes: Notebook (tabs, period bar, checkbox toggles completed, stats strip, Completed/Pending/asc/desc overflow, FAB add) and note form with delete confirm. Notebook 'Report' overflow item skipped (no PDF for notes). Hub entry added.
+Commit: Add cashbook Notebook screens
 
 ## T-CB14 Settings and Income/Expense labels [PENDING]
 Goal: PARITY-027, 028, 035, 039, 040, 076, 078, 079, 084.
