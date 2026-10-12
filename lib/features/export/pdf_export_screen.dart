@@ -11,6 +11,7 @@ import '../../core/database/database_service.dart';
 import '../../core/models/ledger_entry.dart';
 import '../../core/models/diesel_entry.dart';
 import '../../core/models/pvc_entry.dart';
+import '../../core/models/vehicle.dart';
 import '../../core/models/bit_entry.dart';
 import '../../core/models/hammer_entry.dart';
 import '../../core/services/file_save_service.dart';
@@ -161,8 +162,18 @@ class _PdfExportScreenState extends ConsumerState<PdfExportScreen> {
     _selectedColumnIds = _allColumns.map((c) => c.id).toSet();
   }
 
+  /// Side bore rigs have no PVC (v2.0.0).
+  bool get _isSideBore =>
+      DatabaseService.getCurrentVehicle()?.vehicleType == VehicleType.sideBore;
+
+  static const _pvcColumnIds = {'pvcType', 'pvcFeet', 'pvcRate'};
+
+  List<PdfColumn> get _visibleColumns => _allColumns
+      .where((c) => !(_isSideBore && _pvcColumnIds.contains(c.id)))
+      .toList();
+
   List<PdfColumn> get _selectedColumns =>
-      _allColumns.where((c) => _selectedColumnIds.contains(c.id)).toList();
+      _visibleColumns.where((c) => _selectedColumnIds.contains(c.id)).toList();
 
   int _getEntriesCount() {
     final vehicleId = DatabaseService.currentVehicleId;
@@ -339,7 +350,9 @@ class _PdfExportScreenState extends ConsumerState<PdfExportScreen> {
           Wrap(
             spacing: 8,
             runSpacing: 8,
-            children: PdfExportType.values.map((type) {
+            children: PdfExportType.values
+                .where((t) => !(_isSideBore && t == PdfExportType.pvc))
+                .map((type) {
               final isSelected = _exportType == type;
               return GestureDetector(
                 onTap: () {
@@ -533,7 +546,7 @@ class _PdfExportScreenState extends ConsumerState<PdfExportScreen> {
           Wrap(
             spacing: 8,
             runSpacing: 8,
-            children: _allColumns.map((column) {
+            children: _visibleColumns.map((column) {
               final isSelected = _selectedColumnIds.contains(column.id);
               return FilterChip(
                 label: Text(column.label),
@@ -680,8 +693,10 @@ class _PdfExportScreenState extends ConsumerState<PdfExportScreen> {
                 '7" Depth', '${_feetFormat.format(depth7inch)} ft'),
             _buildSummaryRow(
                 '8" Depth', '${_feetFormat.format(depth8inch)} ft'),
-            _buildSummaryRow('7" PVC', '${_feetFormat.format(pvc7inch)} ft'),
-            _buildSummaryRow('8" PVC', '${_feetFormat.format(pvc8inch)} ft'),
+            if (!_isSideBore) ...[
+              _buildSummaryRow('7" PVC', '${_feetFormat.format(pvc7inch)} ft'),
+              _buildSummaryRow('8" PVC', '${_feetFormat.format(pvc8inch)} ft'),
+            ],
             _buildSummaryRow(
                 'MS Pipe', '${_feetFormat.format(msPipeTotal)} ft'),
           ],

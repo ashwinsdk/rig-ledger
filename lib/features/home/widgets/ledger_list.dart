@@ -120,6 +120,7 @@ class _LedgerEntryCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final currencyFormat = NumberFormat('#,##0.00');
+    final isSideBore = ref.watch(isSideBoreProvider);
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -186,14 +187,18 @@ class _LedgerEntryCard extends ConsumerWidget {
                     _InfoChip(
                       icon: Icons.straighten,
                       label: 'Depth',
-                      value: '${entry.depthInFeet}ft (${entry.depth})',
+                      value: isSideBore
+                          ? '${entry.depthInFeet}ft'
+                          : '${entry.depthInFeet}ft (${entry.depth})',
                     ),
-                    const SizedBox(width: 12),
-                    _InfoChip(
-                      icon: Icons.format_paint_outlined,
-                      label: 'PVC',
-                      value: entry.pvc,
-                    ),
+                    if (!isSideBore) ...[
+                      const SizedBox(width: 12),
+                      _InfoChip(
+                        icon: Icons.format_paint_outlined,
+                        label: 'PVC',
+                        value: entry.pvc,
+                      ),
+                    ],
                   ],
                 ),
                 const SizedBox(height: 12),

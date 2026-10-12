@@ -499,6 +499,9 @@ class _CombinedHomeScreenState extends ConsumerState<CombinedHomeScreen>
         ref.watch(sideLedgerCustomStartDateProvider);
     final sideLedgerCustomEndDate = ref.watch(sideLedgerCustomEndDateProvider);
 
+    // Side bore rigs have no PVC (v2.0.0)
+    final isSideBore = ref.watch(isSideBoreProvider);
+
     // Get all entries
     final allDieselEntries = ref.watch(dieselEntriesProvider);
     final allPvcEntries = ref.watch(pvcEntriesProvider);
@@ -721,20 +724,29 @@ class _CombinedHomeScreenState extends ConsumerState<CombinedHomeScreen>
                         '${format.format(dieselLitres)} L',
                         '₹${format.format(dieselTotal)}',
                         AppColors.warning),
-                    _buildMiniStatDouble('PVC', '$pvcCount pcs',
-                        '₹${format.format(pvcTotal)}', AppColors.primary),
+                    if (!isSideBore)
+                      _buildMiniStatDouble('PVC', '$pvcCount pcs',
+                          '₹${format.format(pvcTotal)}', AppColors.primary),
+                    if (isSideBore) ...[
+                      _buildMiniStatDouble('Bit', '$bitCount pcs',
+                          '₹${format.format(bitTotal)}', AppColors.success),
+                      _buildMiniStatDouble('Hammer', '$hammerCount pcs',
+                          '₹${format.format(hammerTotal)}', hammerColor),
+                    ],
                   ],
                 ),
-                const SizedBox(height: 12),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    _buildMiniStatDouble('Bit', '$bitCount pcs',
-                        '₹${format.format(bitTotal)}', AppColors.success),
-                    _buildMiniStatDouble('Hammer', '$hammerCount pcs',
-                        '₹${format.format(hammerTotal)}', hammerColor),
-                  ],
-                ),
+                if (!isSideBore) ...[
+                  const SizedBox(height: 12),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      _buildMiniStatDouble('Bit', '$bitCount pcs',
+                          '₹${format.format(bitTotal)}', AppColors.success),
+                      _buildMiniStatDouble('Hammer', '$hammerCount pcs',
+                          '₹${format.format(hammerTotal)}', hammerColor),
+                    ],
+                  ),
+                ],
               ],
             ),
           ),
@@ -764,22 +776,23 @@ class _CombinedHomeScreenState extends ConsumerState<CombinedHomeScreen>
                     ),
                   ),
                 ),
-                _buildCategoryCard(
-                  'PVC',
-                  Icons.plumbing,
-                  AppColors.primary,
-                  '$pvcCount pieces',
-                  '₹${format.format(pvcTotal)}',
-                  pvcPending > 0
-                      ? '₹${format.format(pvcPending)} pending'
-                      : null,
-                  () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const PvcListScreen(),
+                if (!isSideBore)
+                  _buildCategoryCard(
+                    'PVC',
+                    Icons.plumbing,
+                    AppColors.primary,
+                    '$pvcCount pieces',
+                    '₹${format.format(pvcTotal)}',
+                    pvcPending > 0
+                        ? '₹${format.format(pvcPending)} pending'
+                        : null,
+                    () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const PvcListScreen(),
+                      ),
                     ),
                   ),
-                ),
                 _buildCategoryCard(
                   'Bit',
                   Icons.circle_outlined,

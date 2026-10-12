@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/providers/vehicle_provider.dart';
 import 'package:intl/intl.dart';
 import 'package:csv/csv.dart';
 import '../../core/theme/app_colors.dart';
@@ -81,7 +82,10 @@ class _CsvExportScreenState extends ConsumerState<CsvExportScreen> {
                 Wrap(
                   spacing: 8,
                   runSpacing: 8,
-                  children: ExportType.values.map((type) {
+                  children: ExportType.values
+                      .where((t) => !(ref.watch(isSideBoreProvider) &&
+                          t == ExportType.pvc))
+                      .map((type) {
                     final isSelected = _exportType == type;
                     return GestureDetector(
                       onTap: () {

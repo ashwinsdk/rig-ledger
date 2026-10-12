@@ -172,16 +172,17 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
                         builder: (context) => const DieselFormScreen()),
                   ),
                 ),
-                _buildAddOption(
-                  context,
-                  'PVC',
-                  Icons.plumbing,
-                  AppColors.info,
-                  () => Navigator.of(context).push(
-                    MaterialPageRoute(
-                        builder: (context) => const PvcFormScreen()),
+                if (!ref.read(isSideBoreProvider))
+                  _buildAddOption(
+                    context,
+                    'PVC',
+                    Icons.plumbing,
+                    AppColors.info,
+                    () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                          builder: (context) => const PvcFormScreen()),
+                    ),
                   ),
-                ),
                 _buildAddOption(
                   context,
                   'Bit',

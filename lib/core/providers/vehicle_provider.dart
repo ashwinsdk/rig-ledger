@@ -66,3 +66,9 @@ final currentVehicleProvider =
 final vehicleTypeNameProvider = Provider.family<String, int>((ref, typeIndex) {
   return typeIndex == 0 ? 'Main Bore' : 'Side Bore';
 });
+
+/// True when the current rig is a side bore rig. Side bore rigs have no PVC
+/// anywhere in the app (v2.0.0).
+final isSideBoreProvider = Provider<bool>((ref) {
+  return ref.watch(currentVehicleProvider)?.vehicleType == VehicleType.sideBore;
+});

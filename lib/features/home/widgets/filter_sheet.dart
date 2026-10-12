@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/providers/vehicle_provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/providers/ledger_provider.dart';
 import '../../../core/providers/agent_provider.dart';
@@ -166,33 +167,35 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
               },
             ),
             const SizedBox(height: 16),
-            // PVC Type Dropdown
-            DropdownButtonFormField<String>(
-              value: _selectedPvcType,
-              decoration: const InputDecoration(
-                labelText: 'PVC Type',
-                prefixIcon: Icon(Icons.plumbing),
+            // PVC Type Dropdown (side bore rigs have no PVC)
+            if (!ref.watch(isSideBoreProvider)) ...[
+              DropdownButtonFormField<String>(
+                value: _selectedPvcType,
+                decoration: const InputDecoration(
+                  labelText: 'PVC Type',
+                  prefixIcon: Icon(Icons.plumbing),
+                ),
+                items: const [
+                  DropdownMenuItem<String>(
+                    value: null,
+                    child: Text('All PVC'),
+                  ),
+                  DropdownMenuItem<String>(
+                    value: '7inch',
+                    child: Text('7 inch'),
+                  ),
+                  DropdownMenuItem<String>(
+                    value: '8inch',
+                    child: Text('8 inch'),
+                  ),
+                ],
+                onChanged: (value) {
+                  setState(() {
+                    _selectedPvcType = value;
+                  });
+                },
               ),
-              items: const [
-                DropdownMenuItem<String>(
-                  value: null,
-                  child: Text('All PVC'),
-                ),
-                DropdownMenuItem<String>(
-                  value: '7inch',
-                  child: Text('7 inch'),
-                ),
-                DropdownMenuItem<String>(
-                  value: '8inch',
-                  child: Text('8 inch'),
-                ),
-              ],
-              onChanged: (value) {
-                setState(() {
-                  _selectedPvcType = value;
-                });
-              },
-            ),
+            ],
             const SizedBox(height: 24),
             // Action buttons
             Row(

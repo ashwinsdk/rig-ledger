@@ -7,6 +7,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/models/ledger_entry.dart';
 import '../../core/models/ledger_payment.dart';
 import 'widgets/payment_log_editor.dart';
+import 'widgets/address_autocomplete_field.dart';
 import 'widgets/commission_section.dart';
 import '../../core/models/agent.dart';
 import '../../core/database/database_service.dart';
@@ -672,70 +673,7 @@ class _LedgerFormScreenState extends ConsumerState<LedgerFormScreen> {
 
               // Address
               _buildSectionTitle('Address (City)'),
-              Autocomplete<String>(
-                initialValue: TextEditingValue(text: _addressController.text),
-                optionsBuilder: (TextEditingValue textEditingValue) {
-                  if (textEditingValue.text.isEmpty) {
-                    return const Iterable<String>.empty();
-                  }
-                  final addresses = DatabaseService.getUniqueAddresses();
-                  return addresses.where((address) => address
-                      .toLowerCase()
-                      .contains(textEditingValue.text.toLowerCase()));
-                },
-                onSelected: (String selection) {
-                  _addressController.text = selection;
-                },
-                fieldViewBuilder: (context, textEditingController, focusNode,
-                    onFieldSubmitted) {
-                  // Sync the autocomplete controller with our controller
-                  textEditingController.text = _addressController.text;
-                  textEditingController.addListener(() {
-                    _addressController.text = textEditingController.text;
-                  });
-                  return TextFormField(
-                    controller: textEditingController,
-                    focusNode: focusNode,
-                    decoration: const InputDecoration(
-                      hintText: 'Enter city/address',
-                      prefixIcon: Icon(Icons.location_on_outlined),
-                    ),
-                    validator: (value) {
-                      if (value == null || value.trim().isEmpty) {
-                        return 'Address is required';
-                      }
-                      return null;
-                    },
-                  );
-                },
-                optionsViewBuilder: (context, onSelected, options) {
-                  return Align(
-                    alignment: Alignment.topLeft,
-                    child: Material(
-                      elevation: 4,
-                      borderRadius: BorderRadius.circular(8),
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxHeight: 200),
-                        child: ListView.builder(
-                          padding: EdgeInsets.zero,
-                          shrinkWrap: true,
-                          itemCount: options.length,
-                          itemBuilder: (context, index) {
-                            final option = options.elementAt(index);
-                            return ListTile(
-                              leading: const Icon(Icons.location_on_outlined,
-                                  size: 20, color: AppColors.textSecondary),
-                              title: Text(option),
-                              dense: true,
-                              onTap: () => onSelected(option),
-                            );
-                          },
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ),
+              AddressAutocompleteField(controller: _addressController),
               const SizedBox(height: 24),
 
               // Depth Section

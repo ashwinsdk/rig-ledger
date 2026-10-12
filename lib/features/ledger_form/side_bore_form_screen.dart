@@ -7,6 +7,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/models/ledger_entry.dart';
 import '../../core/models/ledger_payment.dart';
 import 'widgets/payment_log_editor.dart';
+import 'widgets/address_autocomplete_field.dart';
 import 'widgets/commission_section.dart';
 import '../../core/models/agent.dart';
 import '../../core/database/database_service.dart';
@@ -518,19 +519,10 @@ class _SideBoreFormScreenState extends ConsumerState<SideBoreFormScreen> {
 
               // Address (City only - single line)
               _buildSectionTitle('Address (City)'),
-              TextFormField(
+              AddressAutocompleteField(
                 controller: _addressController,
-                decoration: const InputDecoration(
-                  hintText: 'Enter city name',
-                  prefixIcon: Icon(Icons.location_city),
-                ),
-                textCapitalization: TextCapitalization.words,
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Address is required';
-                  }
-                  return null;
-                },
+                hintText: 'Enter city name',
+                icon: Icons.location_city,
               ),
               const SizedBox(height: 24),
 

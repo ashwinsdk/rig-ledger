@@ -83,21 +83,23 @@ class SideLedgerScreen extends ConsumerWidget {
                           ),
                         ),
                       ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: _buildCategoryCard(
-                          context,
-                          'PVC',
-                          Icons.plumbing,
-                          AppColors.primary,
-                          () => Navigator.push(
+                      if (!ref.watch(isSideBoreProvider)) ...[
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: _buildCategoryCard(
                             context,
-                            MaterialPageRoute(
-                              builder: (context) => const PvcListScreen(),
+                            'PVC',
+                            Icons.plumbing,
+                            AppColors.primary,
+                            () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const PvcListScreen(),
+                              ),
                             ),
                           ),
                         ),
-                      ),
+                      ],
                     ],
                   ),
                   const SizedBox(height: 16),

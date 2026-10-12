@@ -291,12 +291,13 @@ class _DesktopShellState extends ConsumerState<DesktopShell>
                 Navigator.of(context).push(MaterialPageRoute(
                     builder: (context) => const DieselFormScreen()));
               }),
-              _buildAddOption(context, 'PVC', Icons.plumbing, AppColors.info,
-                  () {
-                Navigator.pop(context);
-                Navigator.of(context).push(MaterialPageRoute(
-                    builder: (context) => const PvcFormScreen()));
-              }),
+              if (!ref.read(isSideBoreProvider))
+                _buildAddOption(context, 'PVC', Icons.plumbing, AppColors.info,
+                    () {
+                  Navigator.pop(context);
+                  Navigator.of(context).push(MaterialPageRoute(
+                      builder: (context) => const PvcFormScreen()));
+                }),
               _buildAddOption(context, 'Bit', Icons.settings, AppColors.success,
                   () {
                 Navigator.pop(context);

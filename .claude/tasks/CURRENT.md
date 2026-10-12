@@ -53,14 +53,14 @@ Depends: T-V204
 Resume notes: Portfolio lives in the former Stats tab (renamed Portfolio): tabs Overview (new) / Ledger / Side Ledger, range chips Day, Month, 3 Mo, 6 Mo, Year, All, Custom. Overview = profit card (received - expenses - commission, plus expected profit), total/received/pending/commission cards, expenses breakdown, by-agent table, agent filter (hides expenses and profit because expenses are not per agent), This rig / All rigs toggle. Pure PortfolioCalculator with 5 tests. MODELS.md note: DieselEntry has total/paid (not amount).
 Commit: Add Portfolio overview with profit, commission and agent filters
 
-## T-V206 Side bore fixes: remove PVC, location suggestions [IN_PROGRESS]
+## T-V206 Side bore fixes: remove PVC, location suggestions [DONE]
 Goal: no PVC anywhere for side bore vehicles (entry card, summary, side ledger, add sheets, filters, stats, exports); address autocomplete in the side bore form like main bore.
 Files: ledger_list.dart, combined_home_screen.dart, side_ledger_screen.dart, filter_sheet.dart, stats_screen.dart, main_navigation.dart, desktop_shell.dart, side_bore_form_screen.dart
 Depends: none
-Resume notes:
-Commit:
+Resume notes: isSideBoreProvider; PVC hidden for side bore in bill cards, depth label, side ledger summary and category cards, add-entry sheet/dialog, filter sheet, stats charts/details, PDF columns and summary, CSV type list, Portfolio expenses. New shared AddressAutocompleteField used by both forms (side bore now has location suggestions; also removes a listener leak in the main form's old autocomplete). Payee bug: fixed by the payment dialog (T-V202). Verified on the emulator (side bore rig).
+Commit: Remove PVC for side bore rigs and add location suggestions
 
-## T-V207 App information, private license [PENDING]
+## T-V207 App information, private license [IN_PROGRESS]
 Goal: About screen (version from build, package id, data and privacy facts verifiable from the code, third-party licenses via Flutter license page), proprietary LICENSE file, font OFL notices.
 Files: lib/features/settings/about_screen.dart, settings_screen.dart, LICENSE, assets/fonts/*
 Depends: none

@@ -194,23 +194,44 @@ class _StatsScreenState extends ConsumerState<StatsScreen>
                       if (_dateRangeOption == DateRangeOption.custom)
                         _buildCustomDateRangePicker(),
                       // 4 Pie Charts in 2x2 Grid
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(child: _buildDieselPieChart()),
-                          const SizedBox(width: 12),
-                          Expanded(child: _buildPvcPieChart()),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(child: _buildBitPieChart()),
-                          const SizedBox(width: 12),
-                          Expanded(child: _buildHammerPieChart()),
-                        ],
-                      ),
+                      if (ref.watch(isSideBoreProvider)) ...[
+                        // Side bore rigs have no PVC (v2.0.0)
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(child: _buildDieselPieChart()),
+                            const SizedBox(width: 12),
+                            Expanded(child: _buildBitPieChart()),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(child: _buildHammerPieChart()),
+                            const SizedBox(width: 12),
+                            const Expanded(child: SizedBox()),
+                          ],
+                        ),
+                      ] else ...[
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(child: _buildDieselPieChart()),
+                            const SizedBox(width: 12),
+                            Expanded(child: _buildPvcPieChart()),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(child: _buildBitPieChart()),
+                            const SizedBox(width: 12),
+                            Expanded(child: _buildHammerPieChart()),
+                          ],
+                        ),
+                      ],
                       const SizedBox(height: 24),
                       // Detailed Stats Cards
                       const Text(
@@ -224,8 +245,10 @@ class _StatsScreenState extends ConsumerState<StatsScreen>
                       const SizedBox(height: 16),
                       _buildDieselStats(),
                       const SizedBox(height: 16),
-                      _buildPvcStats(),
-                      const SizedBox(height: 16),
+                      if (!ref.watch(isSideBoreProvider)) ...[
+                        _buildPvcStats(),
+                        const SizedBox(height: 16),
+                      ],
                       _buildBitStats(),
                       const SizedBox(height: 16),
                       _buildHammerStats(),
