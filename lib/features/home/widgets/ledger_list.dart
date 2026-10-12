@@ -227,6 +227,14 @@ class _LedgerEntryCard extends ConsumerWidget {
                     ),
                   ],
                 ),
+                if (entry.commission > 0) ...[
+                  const SizedBox(height: 10),
+                  _InfoChip(
+                    icon: Icons.handshake_outlined,
+                    label: 'Commission',
+                    value: '₹${currencyFormat.format(entry.commission)}',
+                  ),
+                ],
               ],
             ),
           ),

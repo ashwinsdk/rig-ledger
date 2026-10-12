@@ -151,6 +151,11 @@ class _PdfExportScreenState extends ConsumerState<PdfExportScreen> {
           label: 'Less',
           getValue: (e) => _currencyFormat.format(e.less),
           flex: 0.5),
+      PdfColumn(
+          id: 'commission',
+          label: 'Commission',
+          getValue: (e) => _currencyFormat.format(e.commission),
+          flex: 0.6),
     ];
     // Default: select all columns
     _selectedColumnIds = _allColumns.map((c) => c.id).toSet();
@@ -577,6 +582,7 @@ class _PdfExportScreenState extends ConsumerState<PdfExportScreen> {
     double totalSum = 0;
     double receivedSum = 0;
     double balanceSum = 0;
+    double commissionSum = 0; // informational, not part of total
     double depth7inch = 0;
     double depth8inch = 0;
     double pvc7inch = 0;
@@ -587,6 +593,7 @@ class _PdfExportScreenState extends ConsumerState<PdfExportScreen> {
       totalSum += e.total;
       receivedSum += e.received;
       balanceSum += e.balance;
+      commissionSum += e.commission;
 
       if (e.depth == '7inch') {
         depth7inch += e.depthInFeet;
@@ -656,6 +663,8 @@ class _PdfExportScreenState extends ConsumerState<PdfExportScreen> {
                 'Received', 'Rs. ${_currencyFormat.format(receivedSum)}'),
             _buildSummaryRow(
                 'Balance', 'Rs. ${_currencyFormat.format(balanceSum)}'),
+            _buildSummaryRow('Commission (not in total)',
+                'Rs. ${_currencyFormat.format(commissionSum)}'),
             const Divider(height: 24),
             // Feet Totals
             const Text(
@@ -877,6 +886,7 @@ class _PdfExportScreenState extends ConsumerState<PdfExportScreen> {
     double totalSum = 0;
     double receivedSum = 0;
     double balanceSum = 0;
+    double commissionSum = 0; // informational, not part of total
     double depth7inch = 0;
     double depth8inch = 0;
     double pvc7inch = 0;
@@ -887,6 +897,7 @@ class _PdfExportScreenState extends ConsumerState<PdfExportScreen> {
       totalSum += e.total;
       receivedSum += e.received;
       balanceSum += e.balance;
+      commissionSum += e.commission;
 
       if (e.depth == '7inch') {
         depth7inch += e.depthInFeet;
@@ -986,6 +997,8 @@ class _PdfExportScreenState extends ConsumerState<PdfExportScreen> {
                             'Rs. ${_currencyFormat.format(receivedSum)}'),
                         _buildPdfSummaryItem('Balance',
                             'Rs. ${_currencyFormat.format(balanceSum)}'),
+                        _buildPdfSummaryItem('Commission',
+                            'Rs. ${_currencyFormat.format(commissionSum)}'),
                       ],
                     ),
                   ),

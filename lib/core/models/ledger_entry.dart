@@ -493,6 +493,7 @@ class LedgerEntry extends HiveObject {
       balance.toString(),
       less.toString(),
       notes ?? '',
+      commission.toString(),
     ];
   }
 
@@ -517,5 +518,6 @@ class LedgerEntry extends HiveObject {
     'Balance',
     'Less',
     'Notes',
+    'Commission',
   ];
 }

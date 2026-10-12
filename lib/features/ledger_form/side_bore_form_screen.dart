@@ -7,6 +7,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/models/ledger_entry.dart';
 import '../../core/models/ledger_payment.dart';
 import 'widgets/payment_log_editor.dart';
+import 'widgets/commission_section.dart';
 import '../../core/models/agent.dart';
 import '../../core/database/database_service.dart';
 import '../../core/providers/ledger_provider.dart';
@@ -49,8 +50,40 @@ class _SideBoreFormScreenState extends ConsumerState<SideBoreFormScreen> {
   late TextEditingController _lessController;
   late TextEditingController _notesController;
 
+  // Commission (v2.0.0): depth only on side bore, never part of the total
+  late TextEditingController _depthCommissionController;
+  late TextEditingController _commissionController;
+  final _unusedRate = TextEditingController();
+  bool _isCommissionManuallyEdited = false;
+
   bool get isEditing => widget.entry != null;
   bool _isBillNumberDuplicate = false;
+
+  double _num(TextEditingController c) => double.tryParse(c.text) ?? 0;
+
+  /// Recomputes commission unless the user typed an override.
+  void _updateCommission() {
+    if (_isCommissionManuallyEdited) return;
+    final c = CommissionSection.calculate(
+      depthFeet: _num(_depthInFeetController),
+      pvcFeet: 0,
+      msPipeFeet: 0,
+      depthRate: _depthCommissionController,
+      pvcRate: _unusedRate,
+      msPipeRate: _unusedRate,
+      showPvcAndMs: false,
+    );
+    _commissionController.text = c.toStringAsFixed(2);
+  }
+
+  /// New bills start with the agent's default depth commission rate.
+  void _applyAgentCommissionDefaults(Agent agent) {
+    if (isEditing) return;
+    _depthCommissionController.text = agent.depthCommissionRate == 0
+        ? ''
+        : agent.depthCommissionRate.toString();
+    _updateCommission();
+  }
 
   @override
   void initState() {
@@ -80,6 +113,13 @@ class _SideBoreFormScreenState extends ConsumerState<SideBoreFormScreen> {
     _lessController =
         TextEditingController(text: entry?.less.toString() ?? '0');
     _notesController = TextEditingController(text: entry?.notes ?? '');
+    _depthCommissionController = TextEditingController(
+        text: (entry == null || entry.depthCommissionRate == 0)
+            ? ''
+            : entry.depthCommissionRate.toString());
+    _commissionController = TextEditingController(
+        text: (entry?.commission ?? 0).toStringAsFixed(2));
+    _isCommissionManuallyEdited = entry?.isCommissionManuallyEdited ?? false;
 
     // Set selected agent after build
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -111,10 +151,14 @@ class _SideBoreFormScreenState extends ConsumerState<SideBoreFormScreen> {
     _balanceController.dispose();
     _lessController.dispose();
     _notesController.dispose();
+    _depthCommissionController.dispose();
+    _commissionController.dispose();
+    _unusedRate.dispose();
     super.dispose();
   }
 
   void _recalculate() {
+    _updateCommission();
     if (!_isTotalManuallyEdited) {
       final depth = double.tryParse(_depthInFeetController.text) ?? 0;
       final rate = double.tryParse(_depthPerFeetRateController.text) ?? 0;
@@ -211,6 +255,7 @@ class _SideBoreFormScreenState extends ConsumerState<SideBoreFormScreen> {
       final agent = await ref.read(agentsProvider.notifier).addAgent(result);
       setState(() {
         _selectedAgent = agent;
+        _applyAgentCommissionDefaults(agent);
       });
     }
   }
@@ -261,6 +306,9 @@ class _SideBoreFormScreenState extends ConsumerState<SideBoreFormScreen> {
       receivedPhonePe: phonePe,
       phonePeName: lastPayer ?? widget.entry?.phonePeName,
       paymentsJson: LedgerPayment.encodeList(_payments),
+      depthCommissionRate: _num(_depthCommissionController),
+      commission: _num(_commissionController),
+      isCommissionManuallyEdited: _isCommissionManuallyEdited,
       balance: double.tryParse(_balanceController.text) ?? 0,
       less: double.tryParse(_lessController.text) ?? 0,
       notes: _notesController.text.trim().isNotEmpty
@@ -444,6 +492,9 @@ class _SideBoreFormScreenState extends ConsumerState<SideBoreFormScreen> {
                       onChanged: (agent) {
                         setState(() {
                           _selectedAgent = agent;
+                          if (agent != null) {
+                            _applyAgentCommissionDefaults(agent);
+                          }
                         });
                       },
                       validator: (value) {
@@ -607,6 +658,28 @@ class _SideBoreFormScreenState extends ConsumerState<SideBoreFormScreen> {
                       ),
                   ],
                 ),
+              ),
+              const SizedBox(height: 24),
+
+              // Commission (not added to total)
+              CommissionSection(
+                depthFeet: _num(_depthInFeetController),
+                pvcFeet: 0,
+                msPipeFeet: 0,
+                showPvcAndMs: false,
+                depthRate: _depthCommissionController,
+                pvcRate: _unusedRate,
+                msPipeRate: _unusedRate,
+                commission: _commissionController,
+                isManual: _isCommissionManuallyEdited,
+                onChanged: () {
+                  _updateCommission();
+                  setState(() {});
+                },
+                onManualChanged: (manual) {
+                  setState(() => _isCommissionManuallyEdited = manual);
+                  if (!manual) _updateCommission();
+                },
               ),
               const SizedBox(height: 24),
 

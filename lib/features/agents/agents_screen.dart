@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/models/agent.dart';
@@ -13,6 +15,7 @@ class AgentsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final agents = ref.watch(agentsProvider);
     final billCounts = ref.watch(agentBillCountsProvider);
+    final commissions = ref.watch(agentCommissionTotalsProvider);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -81,6 +84,7 @@ class AgentsScreen extends ConsumerWidget {
                       return _AgentCard(
                         agent: agent,
                         billCount: billCount,
+                        commissionTotal: commissions[agent.id] ?? 0,
                         onEdit: () => _showEditAgentDialog(context, ref, agent),
                         onDelete: () =>
                             _showDeleteAgentDialog(context, ref, agent, agents),
@@ -104,6 +108,9 @@ class AgentsScreen extends ConsumerWidget {
     final nameController = TextEditingController();
     final phoneController = TextEditingController();
     final notesController = TextEditingController();
+    final depthRate = TextEditingController();
+    final pvcRate = TextEditingController();
+    final msRate = TextEditingController();
 
     showDialog(
       context: context,
@@ -143,6 +150,8 @@ class AgentsScreen extends ConsumerWidget {
                 ),
                 maxLines: 2,
               ),
+              const SizedBox(height: 16),
+              _CommissionRateFields(depth: depthRate, pvc: pvcRate, ms: msRate),
             ],
           ),
         ),
@@ -180,6 +189,9 @@ class AgentsScreen extends ConsumerWidget {
                     notes: notesController.text.trim().isNotEmpty
                         ? notesController.text.trim()
                         : null,
+                    depthCommissionRate: _rateVal(depthRate),
+                    pvcCommissionRate: _rateVal(pvcRate),
+                    msPipeCommissionRate: _rateVal(msRate),
                   );
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
@@ -200,6 +212,12 @@ class AgentsScreen extends ConsumerWidget {
     final nameController = TextEditingController(text: agent.name);
     final phoneController = TextEditingController(text: agent.phone ?? '');
     final notesController = TextEditingController(text: agent.notes ?? '');
+    final depthRate =
+        TextEditingController(text: _rateText(agent.depthCommissionRate));
+    final pvcRate =
+        TextEditingController(text: _rateText(agent.pvcCommissionRate));
+    final msRate =
+        TextEditingController(text: _rateText(agent.msPipeCommissionRate));
 
     showDialog(
       context: context,
@@ -235,6 +253,8 @@ class AgentsScreen extends ConsumerWidget {
                 ),
                 maxLines: 2,
               ),
+              const SizedBox(height: 16),
+              _CommissionRateFields(depth: depthRate, pvc: pvcRate, ms: msRate),
             ],
           ),
         ),
@@ -260,6 +280,9 @@ class AgentsScreen extends ConsumerWidget {
                 notes: notesController.text.trim().isNotEmpty
                     ? notesController.text.trim()
                     : null,
+                depthCommissionRate: _rateVal(depthRate),
+                pvcCommissionRate: _rateVal(pvcRate),
+                msPipeCommissionRate: _rateVal(msRate),
               );
               ref.read(agentsProvider.notifier).updateAgent(updated);
               ref.read(ledgerEntriesProvider.notifier).refresh();
@@ -414,15 +437,60 @@ class AgentsScreen extends ConsumerWidget {
   }
 }
 
+/// Default commission rate fields (Rs per foot) used by the add / edit agent
+/// dialogs. Copied to new bills of the agent and editable per bill.
+class _CommissionRateFields extends StatelessWidget {
+  final TextEditingController depth;
+  final TextEditingController pvc;
+  final TextEditingController ms;
+  const _CommissionRateFields(
+      {required this.depth, required this.pvc, required this.ms});
+
+  Widget _field(TextEditingController c, String label) => TextField(
+        controller: c,
+        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+        inputFormatters: [
+          FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))
+        ],
+        decoration: InputDecoration(labelText: label),
+      );
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Default commission (₹ per foot)',
+            style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+        const SizedBox(height: 4),
+        const Text(
+            'Copied to new bills of this agent. Not added to bill totals.',
+            style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+        const SizedBox(height: 8),
+        _field(depth, 'Depth'),
+        const SizedBox(height: 8),
+        _field(pvc, 'PVC'),
+        const SizedBox(height: 8),
+        _field(ms, 'MS pipe'),
+      ],
+    );
+  }
+}
+
+String _rateText(double v) => v == 0 ? '' : v.toString();
+double _rateVal(TextEditingController c) => double.tryParse(c.text) ?? 0;
+
 class _AgentCard extends StatelessWidget {
   final Agent agent;
   final int billCount;
+  final double commissionTotal;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
 
   const _AgentCard({
     required this.agent,
     required this.billCount,
+    this.commissionTotal = 0,
     required this.onEdit,
     required this.onDelete,
   });
@@ -513,6 +581,27 @@ class _AgentCard extends StatelessWidget {
                           ),
                         ],
                       ),
+                      if (commissionTotal > 0 ||
+                          agent.depthCommissionRate > 0 ||
+                          agent.pvcCommissionRate > 0 ||
+                          agent.msPipeCommissionRate > 0) ...[
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            const Icon(Icons.handshake_outlined,
+                                size: 14, color: AppColors.accent),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Commission ₹${NumberFormat('#,##0.00').format(commissionTotal)}',
+                              style: const TextStyle(
+                                color: AppColors.accent,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ],
                   ),
                 ),

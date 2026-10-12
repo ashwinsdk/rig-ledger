@@ -39,14 +39,14 @@ Depends: T-V202, T-CB05
 Resume notes: PaymentLinkService (create/update/trash incomes from payments; editing the income edits the payment; trashing it keeps the payment and clears the receiver; restore relinks; deleting a book or a bill handled; reconcile at startup and inside sync before the push). LedgerEntriesNotifier, CashEntriesNotifier and AgentsNotifier now take a Ref. 8 link tests + whole suite green (replaced the broken template widget_test.dart with a theme smoke test). UI lock of the Income/Expense chips for linked entries is not done yet (see T-CB18).
 Commit: Link bill payments to receiver books in Account Ledger
 
-## T-V204 Commission on main and side bore entries [IN_PROGRESS]
+## T-V204 Commission on main and side bore entries [DONE]
 Goal: commission rates per entry (prefilled from agent defaults, manually editable), computed commission shown in form, list card, and the main summary bar; not added to total; agent commission defaults editable in Agents screen; CSV/PDF export column.
 Files: ledger_form_screen.dart, side_bore_form_screen.dart, ledger_list.dart, combined_home_screen.dart, summary_row.dart, agents_screen.dart, export screens
 Depends: T-V201
-Resume notes:
-Commit:
+Resume notes: CommissionSection widget in both forms (rates per ft, auto calc with manual override and Auto reset, agent defaults copied to new bills), commission chip on bill cards, 4th item in the main summary bar (monthlyStatsProvider 'commission'), agent dialogs (default rates) and agent card line (agentCommissionTotalsProvider), CSV column and PDF column/summary. Commission is never added to total. Side bore uses depth only. Verified on the emulator (summary bar, side bore form, payment dialog).
+Commit: Add commission to bills, agents, summary bar and exports
 
-## T-V205 Portfolio page [PENDING]
+## T-V205 Portfolio page [IN_PROGRESS]
 Goal: total, received, pending, commission, expenses and profit with filters (day, month, 6 months, year, all, custom, by agent).
 Files: lib/features/portfolio/portfolio_screen.dart, lib/core/providers/portfolio_provider.dart, navigation
 Depends: T-V204

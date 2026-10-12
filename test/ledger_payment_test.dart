@@ -132,4 +132,12 @@ void main() {
       ..remove('pvcCommissionRate'));
     expect(oldAgent.depthCommissionRate, 0);
   });
+
+  test('CSV row matches headers and includes commission', () {
+    final e = entry(cash: 10)..commission = 250.5;
+    final row = e.toCsvRow();
+    expect(row.length, LedgerEntry.csvHeaders.length);
+    expect(LedgerEntry.csvHeaders.last, 'Commission');
+    expect(row.last, '250.5');
+  });
 }

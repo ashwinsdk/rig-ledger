@@ -19,12 +19,22 @@ class AgentsNotifier extends StateNotifier<List<Agent>> {
     state = DatabaseService.getAllAgents();
   }
 
-  Future<Agent> addAgent(String name, {String? phone, String? notes}) async {
+  Future<Agent> addAgent(
+    String name, {
+    String? phone,
+    String? notes,
+    double depthCommissionRate = 0,
+    double pvcCommissionRate = 0,
+    double msPipeCommissionRate = 0,
+  }) async {
     final agent = Agent(
       id: _uuid.v4(),
       name: name,
       phone: phone,
       notes: notes,
+      depthCommissionRate: depthCommissionRate,
+      pvcCommissionRate: pvcCommissionRate,
+      msPipeCommissionRate: msPipeCommissionRate,
       createdAt: DateTime.now(),
       updatedAt: DateTime.now(),
       vehicleId: DatabaseService.currentVehicleId,
@@ -100,6 +110,16 @@ final agentBillCountsProvider = Provider<Map<String, int>>((ref) {
   }
 
   return counts;
+});
+
+/// Total commission per agent (informational, not part of any bill total).
+final agentCommissionTotalsProvider = Provider<Map<String, double>>((ref) {
+  final entries = ref.watch(ledgerEntriesProvider);
+  final totals = <String, double>{};
+  for (final e in entries) {
+    totals[e.agentId] = (totals[e.agentId] ?? 0) + e.commission;
+  }
+  return totals;
 });
 
 /// Generate new agent ID

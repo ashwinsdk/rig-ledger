@@ -278,17 +278,20 @@ final monthlyStatsProvider = Provider<Map<String, double>>((ref) {
   double total = 0;
   double received = 0;
   double balance = 0;
+  double commission = 0; // informational, never part of total
 
   for (final entry in entries) {
     total += entry.total;
     received += entry.received;
     balance += entry.balance;
+    commission += entry.commission;
   }
 
   return {
     'total': total,
     'received': received,
     'balance': balance,
+    'commission': commission,
   };
 });
 

@@ -7,6 +7,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/models/ledger_entry.dart';
 import '../../core/models/ledger_payment.dart';
 import 'widgets/payment_log_editor.dart';
+import 'widgets/commission_section.dart';
 import '../../core/models/agent.dart';
 import '../../core/database/database_service.dart';
 import '../../core/providers/ledger_provider.dart';
@@ -59,10 +60,46 @@ class _LedgerFormScreenState extends ConsumerState<LedgerFormScreen> {
   late TextEditingController _lessController;
   late TextEditingController _notesController;
 
+  // Commission (v2.0.0): informational, never part of the total
+  late TextEditingController _depthCommissionController;
+  late TextEditingController _pvcCommissionController;
+  late TextEditingController _msCommissionController;
+  late TextEditingController _commissionController;
+  bool _isCommissionManuallyEdited = false;
+
   double get _totalReceived => _baseCash + LedgerPayment.totalCash(_payments);
 
   bool get isEditing => widget.entry != null;
   bool _isBillNumberDuplicate = false;
+
+  static String _rateText(double? v) =>
+      (v == null || v == 0) ? '' : v.toString();
+
+  double _num(TextEditingController c) => double.tryParse(c.text) ?? 0;
+
+  /// Recomputes commission unless the user typed an override.
+  void _updateCommission() {
+    if (_isCommissionManuallyEdited) return;
+    final c = CommissionSection.calculate(
+      depthFeet: _num(_depthInFeetController),
+      pvcFeet: _num(_pvcInFeetController),
+      msPipeFeet: _num(_msPipeInFeetController),
+      depthRate: _depthCommissionController,
+      pvcRate: _pvcCommissionController,
+      msPipeRate: _msCommissionController,
+      showPvcAndMs: true,
+    );
+    _commissionController.text = c.toStringAsFixed(2);
+  }
+
+  /// New bills start with the agent's default commission rates.
+  void _applyAgentCommissionDefaults(Agent agent) {
+    if (isEditing) return;
+    _depthCommissionController.text = _rateText(agent.depthCommissionRate);
+    _pvcCommissionController.text = _rateText(agent.pvcCommissionRate);
+    _msCommissionController.text = _rateText(agent.msPipeCommissionRate);
+    _updateCommission();
+  }
 
   @override
   void initState() {
@@ -112,6 +149,17 @@ class _LedgerFormScreenState extends ConsumerState<LedgerFormScreen> {
         TextEditingController(text: entry?.less.toString() ?? '0');
     _notesController = TextEditingController(text: entry?.notes ?? '');
 
+    // Commission
+    _depthCommissionController =
+        TextEditingController(text: _rateText(entry?.depthCommissionRate));
+    _pvcCommissionController =
+        TextEditingController(text: _rateText(entry?.pvcCommissionRate));
+    _msCommissionController =
+        TextEditingController(text: _rateText(entry?.msPipeCommissionRate));
+    _commissionController = TextEditingController(
+        text: (entry?.commission ?? 0).toStringAsFixed(2));
+    _isCommissionManuallyEdited = entry?.isCommissionManuallyEdited ?? false;
+
     // Set selected agent after build
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (entry != null) {
@@ -154,12 +202,17 @@ class _LedgerFormScreenState extends ConsumerState<LedgerFormScreen> {
     _balanceController.dispose();
     _lessController.dispose();
     _notesController.dispose();
+    _depthCommissionController.dispose();
+    _pvcCommissionController.dispose();
+    _msCommissionController.dispose();
+    _commissionController.dispose();
     super.dispose();
   }
 
   // Wrapper methods that call setState for live preview updates
   void _onCalculationFieldChanged() {
     _updateStepRate();
+    _updateCommission();
     setState(() {}); // Trigger rebuild for calculation preview
   }
 
@@ -344,6 +397,7 @@ class _LedgerFormScreenState extends ConsumerState<LedgerFormScreen> {
           );
       setState(() {
         _selectedAgent = agent;
+        _applyAgentCommissionDefaults(agent);
       });
     }
   }
@@ -388,6 +442,11 @@ class _LedgerFormScreenState extends ConsumerState<LedgerFormScreen> {
       receivedPhonePe: 0, // Main-bore: No PhonePe
       phonePeName: null, // Main-bore: No PhonePe name
       paymentsJson: LedgerPayment.encodeList(_payments),
+      depthCommissionRate: _num(_depthCommissionController),
+      pvcCommissionRate: _num(_pvcCommissionController),
+      msPipeCommissionRate: _num(_msCommissionController),
+      commission: _num(_commissionController),
+      isCommissionManuallyEdited: _isCommissionManuallyEdited,
       balance: double.tryParse(_balanceController.text) ?? 0,
       less: double.tryParse(_lessController.text) ?? 0,
       notes: _notesController.text.trim().isNotEmpty
@@ -587,6 +646,9 @@ class _LedgerFormScreenState extends ConsumerState<LedgerFormScreen> {
                       onChanged: (agent) {
                         setState(() {
                           _selectedAgent = agent;
+                          if (agent != null) {
+                            _applyAgentCommissionDefaults(agent);
+                          }
                         });
                       },
                       validator: (value) {
@@ -961,6 +1023,28 @@ class _LedgerFormScreenState extends ConsumerState<LedgerFormScreen> {
                       child: const Text('Auto'),
                     ),
                 ],
+              ),
+              const SizedBox(height: 16),
+
+              // Commission (not added to total)
+              CommissionSection(
+                depthFeet: _num(_depthInFeetController),
+                pvcFeet: _num(_pvcInFeetController),
+                msPipeFeet: _num(_msPipeInFeetController),
+                showPvcAndMs: true,
+                depthRate: _depthCommissionController,
+                pvcRate: _pvcCommissionController,
+                msPipeRate: _msCommissionController,
+                commission: _commissionController,
+                isManual: _isCommissionManuallyEdited,
+                onChanged: () {
+                  _updateCommission();
+                  setState(() {});
+                },
+                onManualChanged: (manual) {
+                  setState(() => _isCommissionManuallyEdited = manual);
+                  if (!manual) _updateCommission();
+                },
               ),
               const SizedBox(height: 16),
 

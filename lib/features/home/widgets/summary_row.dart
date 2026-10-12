@@ -71,6 +71,19 @@ class SummaryRow extends ConsumerWidget {
                   icon: Icons.pending_outlined,
                 ),
               ),
+              Container(
+                width: 1,
+                height: 40,
+                color: AppColors.divider,
+              ),
+              Expanded(
+                child: _SummaryItem(
+                  label: 'Commission',
+                  value: '₹${currencyFormat.format(stats['commission'] ?? 0)}',
+                  color: AppColors.accent,
+                  icon: Icons.handshake_outlined,
+                ),
+              ),
             ],
           ),
         ),
