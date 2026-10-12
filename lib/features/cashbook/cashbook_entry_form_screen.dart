@@ -306,6 +306,8 @@ class _CashbookEntryFormScreenState
               fontWeight: FontWeight.w600)),
       selected: active,
       selectedColor: color,
+      backgroundColor: AppColors.surface,
+      side: BorderSide(color: active ? color : AppColors.border),
       showCheckmark: false,
       onSelected: (_) => setState(() => _isIn = value),
     );
@@ -346,291 +348,302 @@ class _CashbookEntryFormScreenState
           ],
         ),
       ]),
-      body: CashPageBody(
-        maxWidth: 700,
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Card(
-            child: Padding(
+      body: Column(
+        children: [
+          Expanded(
+              child: CashPageBody(
+            maxWidth: 700,
+            child: SingleChildScrollView(
               padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(children: [
-                    _typeChip(CashLabels.income, true, CashColors.income),
-                    const SizedBox(width: 8),
-                    _typeChip(CashLabels.expense, false, CashColors.expense),
-                  ]),
-                  const SizedBox(height: 16),
-                  Row(
+              child: Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        flex: 3,
-                        child: Container(
-                          decoration: BoxDecoration(
-                            border: Border.all(color: AppColors.border),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Row(
-                            children: [
-                              IconButton(
-                                  tooltip: 'Previous day',
-                                  icon: const Icon(Icons.chevron_left),
-                                  onPressed: () => _shiftDay(-1)),
-                              Expanded(
-                                child: InkWell(
-                                  onTap: () async {
-                                    final p = await showDatePicker(
-                                      context: context,
-                                      initialDate: _date,
-                                      firstDate: DateTime(2000),
-                                      lastDate: DateTime(2100),
-                                    );
-                                    if (p != null) {
-                                      setState(() => _date = DateTime(
-                                          p.year,
-                                          p.month,
-                                          p.day,
-                                          _date.hour,
-                                          _date.minute,
-                                          _date.second));
-                                    }
-                                  },
-                                  child: Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                        vertical: 12),
-                                    child: Text(settings.formatDate(_date),
-                                        textAlign: TextAlign.center),
+                      Row(children: [
+                        _typeChip(CashLabels.income, true, CashColors.income),
+                        const SizedBox(width: 8),
+                        _typeChip(
+                            CashLabels.expense, false, CashColors.expense),
+                      ]),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Expanded(
+                            flex: 3,
+                            child: Container(
+                              decoration: BoxDecoration(
+                                border: Border.all(color: AppColors.border),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Row(
+                                children: [
+                                  IconButton(
+                                      tooltip: 'Previous day',
+                                      icon: const Icon(Icons.chevron_left),
+                                      onPressed: () => _shiftDay(-1)),
+                                  Expanded(
+                                    child: InkWell(
+                                      onTap: () async {
+                                        final p = await showDatePicker(
+                                          context: context,
+                                          initialDate: _date,
+                                          firstDate: DateTime(2000),
+                                          lastDate: DateTime(2100),
+                                        );
+                                        if (p != null) {
+                                          setState(() => _date = DateTime(
+                                              p.year,
+                                              p.month,
+                                              p.day,
+                                              _date.hour,
+                                              _date.minute,
+                                              _date.second));
+                                        }
+                                      },
+                                      child: Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                            vertical: 12),
+                                        child: Text(settings.formatDate(_date),
+                                            textAlign: TextAlign.center),
+                                      ),
+                                    ),
                                   ),
+                                  IconButton(
+                                      tooltip: 'Next day',
+                                      icon: const Icon(Icons.chevron_right),
+                                      onPressed: () => _shiftDay(1)),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            flex: 2,
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(12),
+                              onTap: _pickTime,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                    vertical: 14, horizontal: 8),
+                                decoration: BoxDecoration(
+                                  border: Border.all(color: AppColors.border),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text(settings.formatTime(_date)),
+                                    const SizedBox(width: 6),
+                                    const Icon(Icons.access_time,
+                                        size: 18, color: AppColors.primary),
+                                  ],
                                 ),
                               ),
-                              IconButton(
-                                  tooltip: 'Next day',
-                                  icon: const Icon(Icons.chevron_right),
-                                  onPressed: () => _shiftDay(1)),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        flex: 2,
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(12),
-                          onTap: _pickTime,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                                vertical: 14, horizontal: 8),
-                            decoration: BoxDecoration(
-                              border: Border.all(color: AppColors.border),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(settings.formatTime(_date)),
-                                const SizedBox(width: 6),
-                                const Icon(Icons.access_time,
-                                    size: 18, color: AppColors.primary),
-                              ],
                             ),
                           ),
-                        ),
+                        ],
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: _amount,
-                    focusNode: _amountFocus,
-                    autofocus: !_isEdit,
-                    keyboardType:
-                        const TextInputType.numberWithOptions(decimal: true),
-                    inputFormatters: [AmountInputFormatter()],
-                    style: TextStyle(
-                        color: activeColor,
-                        fontSize: 20,
-                        fontWeight: FontWeight.w600),
-                    decoration: InputDecoration(
-                      labelText: amountLabel,
-                      prefixText: 'Rs. ',
-                      suffixIcon: IconButton(
-                        tooltip: 'Calculator',
-                        icon: const Icon(Icons.calculate_outlined,
-                            color: AppColors.primary),
-                        onPressed: _openCalculator,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  RawAutocomplete<String>(
-                    textEditingController: _notes,
-                    focusNode: _notesFocus,
-                    optionsBuilder: (v) {
-                      final q = v.text.trim().toLowerCase();
-                      if (q.isEmpty) return const Iterable<String>.empty();
-                      return suggestions
-                          .where((s) =>
-                              s.toLowerCase().contains(q) &&
-                              s.toLowerCase() != q)
-                          .take(5);
-                    },
-                    fieldViewBuilder: (ctx, c, f, _) => TextField(
-                      controller: c,
-                      focusNode: f,
-                      minLines: 1,
-                      maxLines: 3,
-                      textCapitalization: TextCapitalization.sentences,
-                      decoration: const InputDecoration(labelText: 'Notes'),
-                    ),
-                    optionsViewBuilder: (ctx, onSelected, options) => Align(
-                      alignment: Alignment.topLeft,
-                      child: Material(
-                        elevation: 4,
-                        borderRadius: BorderRadius.circular(12),
-                        child: ConstrainedBox(
-                          constraints: const BoxConstraints(
-                              maxHeight: 220, maxWidth: 460),
-                          child: ListView(
-                            padding: EdgeInsets.zero,
-                            shrinkWrap: true,
-                            children: [
-                              for (final o in options)
-                                ListTile(
-                                    dense: true,
-                                    title: Text(o),
-                                    onTap: () => onSelected(o)),
-                            ],
+                      const SizedBox(height: 16),
+                      TextField(
+                        controller: _amount,
+                        focusNode: _amountFocus,
+                        autofocus: !_isEdit,
+                        keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true),
+                        inputFormatters: [AmountInputFormatter()],
+                        style: TextStyle(
+                            color: activeColor,
+                            fontSize: 20,
+                            fontWeight: FontWeight.w600),
+                        decoration: InputDecoration(
+                          labelText: amountLabel,
+                          prefixText: 'Rs. ',
+                          suffixIcon: IconButton(
+                            tooltip: 'Calculator',
+                            icon: const Icon(Icons.calculate_outlined,
+                                color: AppColors.primary),
+                            onPressed: _openCalculator,
                           ),
                         ),
                       ),
-                    ),
-                  ),
-                  if (_showDesc) ...[
-                    const SizedBox(height: 16),
-                    TextField(
-                      controller: _desc,
-                      decoration: const InputDecoration(
-                          labelText: 'Description / Category'),
-                    ),
-                  ],
-                  if (_isEdit) ...[
-                    const SizedBox(height: 16),
-                    DropdownButtonFormField<String>(
-                      initialValue:
-                          books.any((b) => b.id == _bookId) ? _bookId : null,
-                      decoration: const InputDecoration(labelText: 'Accounts'),
-                      items: [
-                        for (final b in books)
-                          DropdownMenuItem(value: b.id, child: Text(b.name)),
+                      const SizedBox(height: 16),
+                      RawAutocomplete<String>(
+                        textEditingController: _notes,
+                        focusNode: _notesFocus,
+                        optionsBuilder: (v) {
+                          final q = v.text.trim().toLowerCase();
+                          if (q.isEmpty) return const Iterable<String>.empty();
+                          return suggestions
+                              .where((s) =>
+                                  s.toLowerCase().contains(q) &&
+                                  s.toLowerCase() != q)
+                              .take(5);
+                        },
+                        fieldViewBuilder: (ctx, c, f, _) => TextField(
+                          controller: c,
+                          focusNode: f,
+                          minLines: 1,
+                          maxLines: 3,
+                          textCapitalization: TextCapitalization.sentences,
+                          decoration: const InputDecoration(labelText: 'Notes'),
+                        ),
+                        optionsViewBuilder: (ctx, onSelected, options) => Align(
+                          alignment: Alignment.topLeft,
+                          child: Material(
+                            elevation: 4,
+                            borderRadius: BorderRadius.circular(12),
+                            child: ConstrainedBox(
+                              constraints: const BoxConstraints(
+                                  maxHeight: 220, maxWidth: 460),
+                              child: ListView(
+                                padding: EdgeInsets.zero,
+                                shrinkWrap: true,
+                                children: [
+                                  for (final o in options)
+                                    ListTile(
+                                        dense: true,
+                                        title: Text(o),
+                                        onTap: () => onSelected(o)),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      if (_showDesc) ...[
+                        const SizedBox(height: 16),
+                        TextField(
+                          controller: _desc,
+                          decoration: const InputDecoration(
+                              labelText: 'Description / Category'),
+                        ),
                       ],
-                      onChanged: (v) => setState(() => _bookId = v ?? _bookId),
-                    ),
-                  ],
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: PopupMenuButton<String>(
-                          onSelected: _addBill,
-                          itemBuilder: (_) => [
-                            if (PlatformHelper.isMobile)
-                              const PopupMenuItem(
-                                  value: 'camera', child: Text('Camera')),
-                            const PopupMenuItem(
-                                value: 'gallery', child: Text('Gallery')),
-                            const PopupMenuItem(
-                                value: 'pdf', child: Text('PDF')),
+                      if (_isEdit) ...[
+                        const SizedBox(height: 16),
+                        DropdownButtonFormField<String>(
+                          initialValue: books.any((b) => b.id == _bookId)
+                              ? _bookId
+                              : null,
+                          decoration:
+                              const InputDecoration(labelText: 'Accounts'),
+                          items: [
+                            for (final b in books)
+                              DropdownMenuItem(
+                                  value: b.id, child: Text(b.name)),
                           ],
-                          child: _OutlinedAction(
-                              icon: Icons.add_a_photo_outlined,
-                              label: _attachments.isEmpty
-                                  ? 'Add Bills'
-                                  : 'Bills (${_attachments.length})'),
+                          onChanged: (v) =>
+                              setState(() => _bookId = v ?? _bookId),
                         ),
+                      ],
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: PopupMenuButton<String>(
+                              onSelected: _addBill,
+                              itemBuilder: (_) => [
+                                if (PlatformHelper.isMobile)
+                                  const PopupMenuItem(
+                                      value: 'camera', child: Text('Camera')),
+                                const PopupMenuItem(
+                                    value: 'gallery', child: Text('Gallery')),
+                                const PopupMenuItem(
+                                    value: 'pdf', child: Text('PDF')),
+                              ],
+                              child: _OutlinedAction(
+                                  icon: Icons.add_a_photo_outlined,
+                                  label: _attachments.isEmpty
+                                      ? 'Add Bills'
+                                      : 'Bills (${_attachments.length})'),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(12),
+                              onTap: _openItems,
+                              child: _OutlinedAction(
+                                  icon: Icons.list_alt_outlined,
+                                  label: _items.isEmpty
+                                      ? 'Add Items'
+                                      : 'Items (${_items.length})'),
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(12),
-                          onTap: _openItems,
-                          child: _OutlinedAction(
-                              icon: Icons.list_alt_outlined,
-                              label: _items.isEmpty
-                                  ? 'Add Items'
-                                  : 'Items (${_items.length})'),
+                      if (_attachments.isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 8,
+                          children: [
+                            for (final p in _attachments)
+                              InputChip(
+                                label: Text(p
+                                    .split(Platform.pathSeparator)
+                                    .last
+                                    .split('_')
+                                    .skip(1)
+                                    .join('_')),
+                                onDeleted: () =>
+                                    setState(() => _attachments.remove(p)),
+                              ),
+                          ],
                         ),
-                      ),
+                      ],
                     ],
                   ),
-                  if (_attachments.isNotEmpty) ...[
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 8,
-                      children: [
-                        for (final p in _attachments)
-                          InputChip(
-                            label: Text(p
-                                .split(Platform.pathSeparator)
-                                .last
-                                .split('_')
-                                .skip(1)
-                                .join('_')),
-                            onDeleted: () =>
-                                setState(() => _attachments.remove(p)),
+                ),
+              ),
+            ),
+          )),
+          SafeArea(
+            child: CashPageBody(
+              maxWidth: 700,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                child: _isEdit
+                    ? Row(children: [
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            style: OutlinedButton.styleFrom(
+                                foregroundColor: AppColors.error,
+                                side: const BorderSide(color: AppColors.error)),
+                            onPressed: _delete,
+                            icon: const Icon(Icons.delete_outline),
+                            label: const Text('Delete'),
                           ),
-                      ],
-                    ),
-                  ],
-                ],
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: _saving ? null : () => _save(exit: true),
+                            icon: const Icon(Icons.check),
+                            label: const Text('Save'),
+                          ),
+                        ),
+                      ])
+                    : Row(children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: _saving ? null : () => _save(exit: true),
+                            child: const Text('Save and exit'),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed:
+                                _saving ? null : () => _save(exit: false),
+                            child: const Text('Save and continue'),
+                          ),
+                        ),
+                      ]),
               ),
             ),
           ),
-        ),
-      ),
-      bottomNavigationBar: SafeArea(
-        child: CashPageBody(
-          maxWidth: 700,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-            child: _isEdit
-                ? Row(children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        style: OutlinedButton.styleFrom(
-                            foregroundColor: AppColors.error,
-                            side: const BorderSide(color: AppColors.error)),
-                        onPressed: _delete,
-                        icon: const Icon(Icons.delete_outline),
-                        label: const Text('Delete'),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: _saving ? null : () => _save(exit: true),
-                        icon: const Icon(Icons.check),
-                        label: const Text('Save'),
-                      ),
-                    ),
-                  ])
-                : Row(children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: _saving ? null : () => _save(exit: true),
-                        child: const Text('Save and exit'),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: _saving ? null : () => _save(exit: false),
-                        child: const Text('Save and continue'),
-                      ),
-                    ),
-                  ]),
-          ),
-        ),
+        ],
       ),
     );
   }

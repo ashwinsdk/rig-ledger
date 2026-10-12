@@ -120,12 +120,12 @@ Depends: T-CB08, T-CB12
 Resume notes:
 Commit:
 
-## T-CB16 Hub screen and fifth tab [PENDING]
+## T-CB16 Hub screen and fifth tab [DONE]
 Goal: PARITY-077, 083; fifth tab in both shells; desktop two-pane layout.
 Files: cashbook_hub_screen.dart, lib/features/navigation/main_navigation.dart, desktop_shell.dart
 Depends: T-CB08
-Resume notes: IndexedStack 5 items, Cmd+5, update ARCHITECTURE.md.
-Commit:
+Resume notes: Account Ledger is tab index 3 (Settings moved to 4, Cmd+4 / Cmd+5). Mobile: drawer hub; wide desktop: two panes. Hub list `_hubItems` in cashbook_hub_screen.dart: each later screen task adds its own entry. Verified on the Android emulator (add income, list, totals). ARCHITECTURE.md updated. Mobile bottom label is 'Accounts' (5 tabs truncate longer text).
+Commit: Add Account Ledger hub and fifth tab in both shells
 
 ## T-CB19 Receiver and payment-log hooks [PENDING]
 Goal: PARITY-081, 082; linked CashEntry create/update/trash from ledger payments (editable in book).

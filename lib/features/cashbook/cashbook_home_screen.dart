@@ -106,9 +106,9 @@ class _CashbookHomeScreenState extends ConsumerState<CashbookHomeScreen> {
               : (d) => ref.read(cashViewConfigProvider.notifier).shift(d),
         ),
         const SizedBox(height: 6),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-          child: const Row(
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          child: Row(
             children: [
               Expanded(
                   flex: 5,

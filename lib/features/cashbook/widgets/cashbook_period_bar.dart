@@ -44,6 +44,10 @@ class CashbookPeriodTabs extends StatelessWidget {
                 selected: selected == p,
                 selectedColor: AppColors.primary,
                 showCheckmark: false,
+                side: BorderSide(
+                    color:
+                        selected == p ? AppColors.primary : AppColors.border),
+                backgroundColor: AppColors.surface,
                 onSelected: (_) => onSelected(p),
               ),
             ),

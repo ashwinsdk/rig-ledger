@@ -18,7 +18,7 @@ home: PlatformHelper.isDesktop
 No named routes. No go_router.
 All screens pushed via `Navigator.push(MaterialPageRoute(...))`.
 Top-level split: `DesktopShell` vs `MainNavigation`.
-Both use `IndexedStack` of 4 screens: Ledger (0), Stats (1), Agents (2), Settings (3).
+Both use `IndexedStack` of 5 screens: Ledger (0), Stats (1), Agents (2), Account Ledger (3, `CashbookRootScreen`), Settings (4).
 Within Ledger: `homeTabIndexProvider` (StateProvider<int>) tracks tab 0=Ledger, 1=Side Ledger.
 
 Desktop nav index: `desktopNavIndexProvider` (StateProvider<int>) -- separate from mobile.
@@ -41,6 +41,7 @@ lib/core/providers/
   vehicle_provider.dart     -- vehicles list, current vehicle
   side_ledger_provider.dart -- diesel, pvc, bit, hammer entries
   sync_provider.dart        -- sync status (SyncNotifier, SyncState, SyncStatus enum)
+  cashbook_provider.dart    -- Account Ledger: books, entries, notes, settings, view config, summaries
 ```
 
 ### Adding a new provider
@@ -66,18 +67,21 @@ Hive boxes:
   bit_entries          -> Box<BitEntry>
   hammer_entries       -> Box<HammerEntry>
   mini_ledger_entries  -> Box<MiniLedgerEntry>  (orphaned: no screen/provider uses it, see BACKLOG.md)
+  cash_books           -> Box<CashBook>         (Account Ledger, global not vehicle-scoped)
+  cash_entries         -> Box<CashEntry>
+  cash_notes           -> Box<CashNote>
   tombstones           -> Box<Tombstone>
   settings             -> Box<dynamic>   (key-value store)
 ```
 
 Settings keys: `schemaVersion`, `currentVehicleId`, `lastGoogleDriveBackup`, `autoGoogleDriveBackup`, `lastSyncTime`.
 
-Schema version: 3. Migration logic is a stub (_performMigrations bumps version only, no data transforms).
+Schema version: 4 (4 added the Account Ledger boxes). Migration logic is a stub (_performMigrations bumps version only, no data transforms).
 
 ## Google Drive sync
 
 Single file in user's Drive: `RigLedger Backups/rigledger_backup.json`.
-Full snapshot of all 8 collections + tombstones + version + createdAt.
+Full snapshot of all 11 collections (8 original + cashBooks, cashEntries, cashNotes) + tombstones + version + createdAt. A remote snapshot with a higher `version` than the build is refused.
 
 Bi-directional merge in `SyncService._merge()`:
 - Latest `updatedAt` wins for each entity.
@@ -105,7 +109,7 @@ Sync triggers:
 
 Window: 1280x820 default, 900x600 minimum, hidden native title bar.
 Custom title bar: 52px gradient, draggable, vehicle switcher, sync indicator.
-Keyboard shortcuts: Cmd+1-4 (tabs), Cmd+N (new entry), Cmd+S (sync now). Cmd+F is registered but body is empty (known bug).
+Keyboard shortcuts: Cmd+1-5 (tabs), Cmd+N (new entry), Cmd+S (sync now). Cmd+F is registered but body is empty (known bug).
 Menu bar: RigLedger, File, View, Window menus via `PlatformMenuBar`.
 
 Entitlements (Release): sandbox + network.client + files.user-selected + files.downloads.

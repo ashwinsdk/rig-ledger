@@ -4,6 +4,7 @@ import '../home/combined_home_screen.dart';
 import '../stats/stats_screen.dart';
 import '../agents/agents_screen.dart';
 import '../settings/settings_screen.dart';
+import '../cashbook/cashbook_hub_screen.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/providers/vehicle_provider.dart';
 import '../../core/providers/ledger_provider.dart';
@@ -33,6 +34,7 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
     CombinedHomeScreen(),
     StatsScreen(),
     AgentsScreen(),
+    CashbookRootScreen(),
     SettingsScreen(),
   ];
 
@@ -111,6 +113,11 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
                 icon: Icon(Icons.people_outlined),
                 activeIcon: Icon(Icons.people),
                 label: 'Agents',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.account_balance_wallet_outlined),
+                activeIcon: Icon(Icons.account_balance_wallet),
+                label: 'Accounts',
               ),
               BottomNavigationBarItem(
                 icon: Icon(Icons.settings_outlined),
