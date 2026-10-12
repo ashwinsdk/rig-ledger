@@ -41,12 +41,6 @@ void main() {
     await DatabaseService.initialize();
   });
 
-  /// Starts every test from an empty database. Hive work is real async work,
-  /// so it must run through runAsync inside the test body.
-  Future<void> freshDb(WidgetTester t) async {
-    await t.runAsync(DatabaseService.clearAllData);
-  }
-
   // Hive.close() can wait forever for writes that were started inside a widget
   // test's fake-async zone, so the box is left open; the process exit and the
   // temp directory clean-up below are enough.
