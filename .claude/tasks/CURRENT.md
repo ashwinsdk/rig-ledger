@@ -67,12 +67,12 @@ Depends: none
 Resume notes: root LICENSE (proprietary, copyright line from the git author and first commit year; owner must confirm it, governing law and a contact address are intentionally omitted), declared as an asset; AppInfo (every value traceable to the repo); About screen (version from package_info_plus, data and Drive facts, Android permissions from the manifest, license text, Flutter license page with Noto OFL notices registered, developer link); replaced the old About dialog that hardcoded 'Version 1.0.7' / 'Version: 7' (pubspec said 1.0.4+4). Widget test added.
 Commit: Add About screen, proprietary license and verified app information
 
-## T-V208 Version bump to 2.0.0 [IN_PROGRESS]
+## T-V208 Version bump to 2.0.0 [DONE]
 Goal: pubspec version 2.0.0+N, MEMORY.md, docs.
 Files: pubspec.yaml
 Depends: all feature tasks
-Resume notes:
-Commit:
+Resume notes: pubspec version 2.0.0+5 (build number must keep increasing for Play Store). Both platforms read it at build time.
+Commit: Bump version to 2.0.0+5
 
 ## T-V209 Full test pass, bug review, improvement review [PENDING]
 Goal: run all tests and the app on the emulator end to end; write docs/v2.0.0-review.md with bugs found and improvement ideas; add backlog items.

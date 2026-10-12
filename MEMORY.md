@@ -1,6 +1,6 @@
 # RigLedger - Session Memory
 
-Last updated: 2026-10-12 (Account Ledger work started)
+Last updated: 2026-10-12 (v2.0.0 feature work)
 
 ## Current versions
 
