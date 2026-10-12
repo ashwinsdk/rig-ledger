@@ -9,6 +9,7 @@ import 'cashbook_books_screen.dart';
 import 'cashbook_calendar_screen.dart';
 import 'cashbook_home_screen.dart';
 import 'cashbook_notebook_screen.dart';
+import 'cashbook_report_dialog.dart';
 import 'cashbook_settings_screen.dart';
 import 'cashbook_summary_screen.dart';
 import 'cashbook_entry_form_screen.dart';
@@ -18,8 +19,12 @@ import 'cashbook_trash_screen.dart';
 class _HubItem {
   final IconData icon;
   final String label;
-  final WidgetBuilder builder;
-  const _HubItem(this.icon, this.label, this.builder);
+  final WidgetBuilder? builder;
+
+  /// For items that open a dialog instead of a screen.
+  final void Function(BuildContext, WidgetRef)? action;
+  const _HubItem(this.icon, this.label, this.builder) : action = null;
+  const _HubItem.action(this.icon, this.label, this.action) : builder = null;
 }
 
 /// Destinations of the Account Ledger (replaces the reference app's drawer).
@@ -31,6 +36,8 @@ final List<_HubItem> _hubItems = [
       (_) => const CashbookAllTransactionsScreen()),
   _HubItem(Icons.account_balance_wallet_outlined, 'Accounts',
       (_) => const CashbookBooksScreen()),
+  _HubItem.action(Icons.picture_as_pdf_outlined, 'Report-All Accounts',
+      (context, ref) => showCashReportAllDialog(context, ref)),
   _HubItem(Icons.swap_horiz, 'Transfer', (_) => const CashbookTransferScreen()),
   _HubItem(Icons.sticky_note_2_outlined, 'Notebook',
       (_) => const CashbookNotebookScreen()),
@@ -56,7 +63,11 @@ class _CashbookRootScreenState extends ConsumerState<CashbookRootScreen> {
   final _scaffoldKey = GlobalKey<ScaffoldState>();
 
   void _open(_HubItem item) {
-    Navigator.of(context).push(MaterialPageRoute(builder: item.builder));
+    if (item.action != null) {
+      item.action!(context, ref);
+    } else {
+      Navigator.of(context).push(MaterialPageRoute(builder: item.builder!));
+    }
   }
 
   @override

@@ -7,7 +7,9 @@ import '../../core/utils/cashbook_calculator.dart';
 import '../../core/utils/platform_helper.dart';
 import 'cashbook_book_picker_dialog.dart';
 import 'cashbook_entry_form_screen.dart';
+import 'cashbook_report_dialog.dart';
 import 'cashbook_settings_screen.dart';
+import '../../core/services/cashbook_export_service.dart';
 import 'widgets/cashbook_common.dart';
 import 'widgets/cashbook_header.dart';
 import 'widgets/cashbook_period_bar.dart';
@@ -101,6 +103,30 @@ class _CashbookHomeScreenState extends ConsumerState<CashbookHomeScreen> {
           .read(cashSettingsProvider.notifier)
           .updateSettings(settings.copyWith(reporterName: text));
     }
+  }
+
+  /// Report of what is on screen: period, search and filters apply.
+  void _report() {
+    final book = ref.read(currentCashBookProvider);
+    final cfg = ref.read(cashViewConfigProvider);
+    final view = ref.read(cashLedgerProvider);
+    final settings = ref.read(cashSettingsProvider);
+    if (book == null) return;
+    final rows = cfg.ascending ? view.rows : view.rows.reversed.toList();
+    final range = view.range;
+    final data = CashExportData(
+      title: book.name,
+      rangeLabel: range == null
+          ? 'All'
+          : CashbookCalculator.rangeLabel(range).replaceAll(' -> ', ' To '),
+      allBooks: false,
+      rows: rows,
+      previousBalance: view.previousBalance,
+      hasPreviousBalance: view.hasPreviousBalance,
+      reporter: settings.reporterName,
+      generatedAt: DateTime.now(),
+    );
+    showCashReportDialog(context, ref, data);
   }
 
   Widget _overflow(CashViewConfig cfg) {
@@ -264,6 +290,10 @@ class _CashbookHomeScreenState extends ConsumerState<CashbookHomeScreen> {
                   tooltip: 'Search',
                   icon: const Icon(Icons.search),
                   onPressed: _startSearch),
+            IconButton(
+                tooltip: 'Report',
+                icon: const Icon(Icons.picture_as_pdf_outlined),
+                onPressed: _report),
             _overflow(cfg),
           ],
         ),

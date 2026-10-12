@@ -113,12 +113,12 @@ Depends: T-CB05
 Resume notes: settings screen (date format, show time, 12/24h, currency/number style, 6 display switches, Your Name and Address) + same dialog in home overflow; labels fixed to Income/Expense. Settings persisted under cashbook.* keys. Number style = group digits x fixed decimals. Dark mode, fingerprint, language dropped (RigLedger is light-only, English-only).
 Commit: Add cashbook settings screen and number style options
 
-## T-CB15 PDF and CSV export [PENDING]
+## T-CB15 PDF and CSV export [DONE]
 Goal: PARITY-069..074 (PDF and CSV only).
 Files: lib/core/services/cashbook_export_service.dart
 Depends: T-CB08, T-CB12
-Resume notes:
-Commit:
+Resume notes: PDF (A4, single-book and all-books layouts) and CSV (UTF-8 with BOM) via cashbook_export_service.dart; Report button on the home header honours period/search/filters; Report-All Accounts hub item; share/save via FileSaveService. Bundled Noto Sans + Noto Sans Tamil (OFL, licenses in assets/fonts) so Tamil notes render in PDFs. File names '<Book> <MMM-dd-yyyy>.ext' and 'cashbook <date>.ext'. Excel/xls dropped (decision D7). 6 export tests pass.
+Commit: Add cashbook PDF and CSV export with bundled Tamil font
 
 ## T-CB16 Hub screen and fifth tab [DONE]
 Goal: PARITY-077, 083; fifth tab in both shells; desktop two-pane layout.
