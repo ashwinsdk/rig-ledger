@@ -26,6 +26,11 @@ Last updated: 2026-10-12 (v2.0.0 feature work)
 - Gotchas learned: dialogs must own their TextEditingControllers (dispose in State, never right after `await showDialog`); widget tests that touch Hive must wait on real time (`runAsync`) and must not call `Hive.close()`; `flutter test` runs on the macOS host so `PlatformHelper.isDesktop` is true in tests.
 - Hive typeIds in use: 0-11 (2 CashBook, 3 CashEntry, 11 CashNote; next free 12).
 
+## Left unfinished
+
+- Open bugs and improvements: `BACKLOG.md` and `docs/v2.0.0-review.md` (Drive scope, MANAGE_EXTERNAL_STORAGE, non-atomic restore, auto backup vs newer snapshot).
+- `android/app/build.gradle` and `debug.keystore` are the developer's local uncommitted changes.
+
 ## Next recommended action
 
 Developer reviews `docs/v2.0.0-review.md`, answers the decisions above, then decides which open items to schedule. Nothing is left IN_PROGRESS in `CURRENT.md`.

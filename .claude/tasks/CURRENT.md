@@ -18,6 +18,9 @@ Assumption to confirm with the developer: commission = quantity (ft) x commissio
 
 Feature: Account Ledger (cashbook replica, v2.0.0 feature 1). Full spec: `docs/features/cashbook/SPEC.md` (parity lines PARITY-001..084, decisions D1..D14). Flags: T-CB01/02/03 touch Hive models, DatabaseService and SyncService; T-CB15 touches export.
 
+## OPEN (nothing IN_PROGRESS)
+Awaiting developer: confirm commission formula (ft x rate per ft), profit definition, LICENSE copyright line, Rs. vs rupee sign. Unverified: macOS app run, real Drive sync, camera/gallery bills, share/save dialogs for new exports. Unscheduled fixes are in BACKLOG.md and docs/v2.0.0-review.md section 3.2.
+
 ## T-V201 Payment log, commission fields on LedgerEntry and Agent [DONE]
 Goal: LedgerPayment (plain class, JSON in LedgerEntry.paymentsJson), commission fields on LedgerEntry (rates per unit for depth, PVC, MS pipe, commission amount, manual flag), default commission rates on Agent, schemaVersion 5, MODELS.md.
 Files: lib/core/models/ledger_payment.dart, ledger_entry.dart, agent.dart, *.g.dart, database_service.dart, .claude/context/MODELS.md
@@ -36,7 +39,7 @@ Commit: Add payment log editor to main and side bore forms
 Goal: PaymentLinkService creates, updates and trashes Income entries in receiver books from ledger payments; editing in the book updates the bill; reconcile after sync; receiver books are created from the payment dialog.
 Files: lib/core/services/payment_link_service.dart, ledger_provider.dart, cashbook_provider.dart, sync_provider.dart
 Depends: T-V202, T-CB05
-Resume notes: PaymentLinkService (create/update/trash incomes from payments; editing the income edits the payment; trashing it keeps the payment and clears the receiver; restore relinks; deleting a book or a bill handled; reconcile at startup and inside sync before the push). LedgerEntriesNotifier, CashEntriesNotifier and AgentsNotifier now take a Ref. 8 link tests + whole suite green (replaced the broken template widget_test.dart with a theme smoke test). UI lock of the Income/Expense chips for linked entries is not done yet (see T-CB18).
+Resume notes: PaymentLinkService (create/update/trash incomes from payments; editing the income edits the payment; trashing it keeps the payment and clears the receiver; restore relinks; deleting a book or a bill handled; reconcile at startup and inside sync before the push). LedgerEntriesNotifier, CashEntriesNotifier and AgentsNotifier now take a Ref. 8 link tests + whole suite green (replaced the broken template widget_test.dart with a theme smoke test). The Income/Expense chip lock for linked entries was added in T-CB18.
 Commit: Link bill payments to receiver books in Account Ledger
 
 ## T-V204 Commission on main and side bore entries [DONE]
@@ -204,7 +207,7 @@ Commit: Link bill payments to receiver books in Account Ledger
 Goal: one-time import from the reference app .db (dry run and report), only once the feature is stable.
 Files: cashbook_import_screen.dart, cashbook_import_service.dart, pubspec.yaml (sqlite reader)
 Depends: T-CB02, feature stable
-Resume notes: sqlite3 ^3.5 (build hooks, no flutter_libs; works on Android, verified on the emulator; macOS build still to verify in T-CB18). CashbookImportService: dry run preview, import by column name (both column orders), merge books by name, idempotent via importedLegacyId, trash imported with deletedAt = import time (30 day window), notebook import, never touches the source file. 6 tests with synthetic databases. Screen with dry run, confirm, progress, report; hub entry. Tested on the emulator with a real backup file (test data only).
+Resume notes: sqlite3 ^3.5 (build hooks, no flutter_libs; works on Android, verified on the emulator; macOS build could NOT be verified: needs macos/Runner/GoogleService-Info.plist, not in the repo). CashbookImportService: dry run preview, import by column name (both column orders), merge books by name, idempotent via importedLegacyId, trash imported with deletedAt = import time (30 day window), notebook import, never touches the source file. 6 tests with synthetic databases. Screen with dry run, confirm, progress, report; hub entry. Tested on the emulator with a real backup file (test data only).
 Commit: Add one-time import from the cashbook app backup
 
 ## T-CB18 Parity QA pass and docs [DONE]
