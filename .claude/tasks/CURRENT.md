@@ -13,7 +13,73 @@ Resume notes:
 Commit:
 ```
 
+v2.0.0 plan (source: v2.0.0.md). Order: T-V201..T-V208, then T-CB19, T-CB17, T-CB18, T-V209 (final test, bug and improvement review).
+Assumption to confirm with the developer: commission = quantity (ft) x commission rate per unit (Rs per ft) for depth, PVC and MS pipe, never added to the bill total (v2.0.0.md example "1000 x 2", "150 x 40", "100 x 60" read as quantity x rate).
+
 Feature: Account Ledger (cashbook replica, v2.0.0 feature 1). Full spec: `docs/features/cashbook/SPEC.md` (parity lines PARITY-001..084, decisions D1..D14). Flags: T-CB01/02/03 touch Hive models, DatabaseService and SyncService; T-CB15 touches export.
+
+## T-V201 Payment log, commission fields on LedgerEntry and Agent [IN_PROGRESS]
+Goal: LedgerPayment (plain class, JSON in LedgerEntry.paymentsJson), commission fields on LedgerEntry (rates per unit for depth, PVC, MS pipe, commission amount, manual flag), default commission rates on Agent, schemaVersion 5, MODELS.md.
+Files: lib/core/models/ledger_payment.dart, ledger_entry.dart, agent.dart, *.g.dart, database_service.dart, .claude/context/MODELS.md
+Depends: T-CB02
+Resume notes:
+Commit:
+
+## T-V202 Payment log editor in main and side bore forms [PENDING]
+Goal: replace the single Cash/PhonePe inputs with a payment log (amount, mode, date, receiver book, payer name, note); totals = unlogged base + logs; fixes the payee-add bug in the side bore form.
+Files: lib/features/ledger_form/widgets/payment_log_editor.dart, ledger_form_screen.dart, side_bore_form_screen.dart
+Depends: T-V201
+Resume notes:
+Commit:
+
+## T-V203 Payment to receiver book link (T-CB19) [PENDING]
+Goal: PaymentLinkService creates, updates and trashes Income entries in receiver books from ledger payments; editing in the book updates the bill; reconcile after sync; receiver books are created from the payment dialog.
+Files: lib/core/services/payment_link_service.dart, ledger_provider.dart, cashbook_provider.dart, sync_provider.dart
+Depends: T-V202, T-CB05
+Resume notes:
+Commit:
+
+## T-V204 Commission on main and side bore entries [PENDING]
+Goal: commission rates per entry (prefilled from agent defaults, manually editable), computed commission shown in form, list card, and the main summary bar; not added to total; agent commission defaults editable in Agents screen; CSV/PDF export column.
+Files: ledger_form_screen.dart, side_bore_form_screen.dart, ledger_list.dart, combined_home_screen.dart, summary_row.dart, agents_screen.dart, export screens
+Depends: T-V201
+Resume notes:
+Commit:
+
+## T-V205 Portfolio page [PENDING]
+Goal: total, received, pending, commission, expenses and profit with filters (day, month, 6 months, year, all, custom, by agent).
+Files: lib/features/portfolio/portfolio_screen.dart, lib/core/providers/portfolio_provider.dart, navigation
+Depends: T-V204
+Resume notes:
+Commit:
+
+## T-V206 Side bore fixes: remove PVC, location suggestions [PENDING]
+Goal: no PVC anywhere for side bore vehicles (entry card, summary, side ledger, add sheets, filters, stats, exports); address autocomplete in the side bore form like main bore.
+Files: ledger_list.dart, combined_home_screen.dart, side_ledger_screen.dart, filter_sheet.dart, stats_screen.dart, main_navigation.dart, desktop_shell.dart, side_bore_form_screen.dart
+Depends: none
+Resume notes:
+Commit:
+
+## T-V207 App information, private license [PENDING]
+Goal: About screen (version from build, package id, data and privacy facts verifiable from the code, third-party licenses via Flutter license page), proprietary LICENSE file, font OFL notices.
+Files: lib/features/settings/about_screen.dart, settings_screen.dart, LICENSE, assets/fonts/*
+Depends: none
+Resume notes:
+Commit:
+
+## T-V208 Version bump to 2.0.0 [PENDING]
+Goal: pubspec version 2.0.0+N, MEMORY.md, docs.
+Files: pubspec.yaml
+Depends: all feature tasks
+Resume notes:
+Commit:
+
+## T-V209 Full test pass, bug review, improvement review [PENDING]
+Goal: run all tests and the app on the emulator end to end; write docs/v2.0.0-review.md with bugs found and improvement ideas; add backlog items.
+Files: docs/v2.0.0-review.md, .claude/tasks/BACKLOG.md
+Depends: all
+Resume notes:
+Commit:
 
 ## T-CB01 Cashbook models and adapters [DONE]
 Goal: CashBook (typeId 2), CashEntry (typeId 3), CashNote (typeId 11) with copyWith, toJson/fromJson, generated adapters. No receiverId on CashBook (receivers are just books).
