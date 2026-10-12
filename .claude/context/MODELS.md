@@ -1,0 +1,220 @@
+# RigLedger - Full Model Schema
+
+All models are Hive-backed (extend HiveObject). All have `id` (UUID string), `createdAt`, `updatedAt` (DateTime).
+Serialisation note: LedgerEntry and Agent use `toMap()`/`fromMap()`. All other models use `toJson()`/`fromJson()`. Do not change without updating DatabaseService and SyncService.
+
+---
+
+## Vehicle (typeId: 4) -- lib/core/models/vehicle.dart
+
+| Field | HiveField | Type | Notes |
+|---|---|---|---|
+| id | 0 | String | UUID |
+| name | 1 | String | Rig display name |
+| vehicleTypeIndex | 2 | int | 0 = mainBore, 1 = sideBore |
+| createdAt | 3 | DateTime | |
+| updatedAt | 4 | DateTime | |
+
+Computed getter: `vehicleType` returns `VehicleType` enum (mainBore / sideBore).
+Default vehicle: id = `'default_vehicle'`, name = `'Main Rig'`, type = mainBore.
+All other entities reference vehicleId as FK for data isolation between rigs.
+
+---
+
+## LedgerEntry (typeId: 0) -- lib/core/models/ledger_entry.dart
+
+Main Bore drilling job record.
+
+| Field | HiveField | Type | Notes |
+|---|---|---|---|
+| id | 0 | String | UUID |
+| date | 1 | DateTime | Job date |
+| billNumber | 2 | String | Free-text, manually entered |
+| agentId | 3 | String | FK to Agent.id |
+| agentName | 4 | String | Denormalised from Agent (kept in sync via DatabaseService.updateAgentInLedgerEntries) |
+| address | 5 | String | Customer/party location (no separate Party entity) |
+| depth | 6 | String | '7inch' or '8inch' |
+| depthInFeet | 7 | double | Depth drilled |
+| depthPerFeetRate | 8 | double | Rate per foot |
+| pvc | 9 | String | '7inch' or '8inch' |
+| pvcRate | 10 | double | LEGACY -- kept for backward compat; use pvcPerFeetRate |
+| msPipe | 11 | String | Type, e.g. '6inch' |
+| msPipeRate | 12 | double | LEGACY -- kept for backward compat; use msPipePerFeetRate |
+| extraCharges | 13 | double | Miscellaneous charges |
+| total | 14 | double | Calculated or manually overridden |
+| isTotalManuallyEdited | 15 | bool | True if user overrode calculated total |
+| received | 16 | double | LEGACY total received (= receivedCash + receivedPhonePe; invariant not enforced at DB layer) |
+| balance | 17 | double | total - received - less |
+| less | 18 | double | Discount amount |
+| notes | 19 | String? | |
+| createdAt | 20 | DateTime | |
+| updatedAt | 21 | DateTime | |
+| pvcInFeet | 22 | double | PVC pipe installed |
+| pvcPerFeetRate | 23 | double | PVC rate per foot |
+| msPipeInFeet | 24 | double | MS pipe installed |
+| msPipePerFeetRate | 25 | double | MS pipe rate per foot |
+| stepRate | 26 | double | Calculated or manually overridden |
+| isStepRateManuallyEdited | 27 | bool | |
+| vehicleId | 28 | String | FK to Vehicle.id |
+| receivedCash | 29 | double | Cash portion of payment |
+| receivedPhonePe | 30 | double | UPI/PhonePe portion |
+| phonePeName | 31 | String? | Sender's UPI name for reconciliation |
+
+### Total formula
+
+```
+total = (depthInFeet x depthPerFeetRate) + stepRate + (pvcInFeet x pvcPerFeetRate) + (msPipeInFeet x msPipePerFeetRate) + extraCharges
+balance = total - received - less
+received = receivedCash + receivedPhonePe
+```
+
+### Step rate brackets (hardcoded in LedgerEntry.calculateStepRate -- not user-configurable yet)
+
+7 inch: 0-300ft = 0 extra, 300-400 = +10/ft, 400-500 = +20/ft, 500-600 = +30/ft, 600-700 = +50/ft, 700-800 = +70/ft, 800-900 = +90/ft. Beyond 900: +20 per 100ft bracket cumulative.
+8 inch: 0-300ft = 0 extra, 300-400 = +10/ft, 400-500 = +20/ft, 500-600 = +40/ft, 600-700 = +60/ft, 700-800 = +80/ft, 800-900 = +100/ft. Beyond 900: +20 per 100ft bracket cumulative.
+
+These are extra-per-foot rates for feet within each bracket, applied cumulatively.
+
+---
+
+## MiniLedgerEntry (typeId: 9) -- lib/core/models/mini_ledger_entry.dart
+
+Side Bore drilling job record (simplified version of LedgerEntry).
+
+| Field | HiveField | Type | Notes |
+|---|---|---|---|
+| id | 0 | String | UUID |
+| vehicleId | 1 | String | FK to Vehicle.id |
+| date | 2 | DateTime | |
+| billNumber | 3 | String | Free-text |
+| agentId | 4 | String | FK to Agent.id |
+| agentName | 5 | String | Denormalised |
+| address | 6 | String | Customer/party location |
+| depth | 7 | double | Depth in feet |
+| depthPerFeetRate | 8 | double | |
+| total | 9 | double | depth x depthPerFeetRate |
+| receivedCash | 10 | double | |
+| receivedPhonePe | 11 | double | |
+| phonePeName | 12 | String? | UPI sender name |
+| balance | 13 | double | total - receivedCash - receivedPhonePe - less |
+| less | 14 | double | Discount |
+| notes | 15 | String? | |
+| createdAt | 16 | DateTime | |
+| updatedAt | 17 | DateTime | |
+
+Computed getter: `totalReceived` = receivedCash + receivedPhonePe.
+
+---
+
+## Agent (typeId: 1) -- lib/core/models/agent.dart
+
+| Field | Type | Notes |
+|---|---|---|
+| id | String | UUID |
+| vehicleId | String | FK to Vehicle.id (agents are vehicle-scoped) |
+| name | String | Broker/agent display name |
+| createdAt | DateTime | |
+| updatedAt | DateTime | |
+
+Bill count computed on-the-fly via `DatabaseService.getAgentBillCount(agentId)` -- not stored.
+When agent is renamed, all linked LedgerEntry.agentName fields are updated via `DatabaseService.updateAgentInLedgerEntries()`.
+
+---
+
+## DieselEntry (typeId: 5) -- lib/core/models/diesel_entry.dart
+
+Side ledger: fuel.
+
+| Field | Type | Notes |
+|---|---|---|
+| id | String | UUID |
+| vehicleId | String | |
+| date | DateTime | |
+| litres | double | Quantity |
+| amount | double | Total cost |
+| updatedAt | DateTime | |
+
+---
+
+## PvcEntry (typeId: 6) -- lib/core/models/pvc_entry.dart
+
+Side ledger: PVC pipe purchase. Supports multi-type selection via TypeDetail.
+
+| Field | HiveField | Type | Notes |
+|---|---|---|---|
+| id | 0 | String | UUID |
+| vehicleId | 1 | String | |
+| date | 2 | DateTime | |
+| billNumber | 3 | String | |
+| type | 4 | String | LEGACY single type ('7inch', '8inch', '10inch', 'MS') |
+| count | 5 | int | LEGACY total count |
+| rate | 6 | double | LEGACY single rate |
+| total | 7 | double | Total cost |
+| paid | 8 | double | Amount paid to supplier |
+| pending | 9 | double | total - paid |
+| balance | 10 | double | |
+| paidDate | 11 | DateTime? | When payment was made |
+| storagePlace | 12 | String | Where stored |
+| notes | 13 | String? | |
+| createdAt | 14 | DateTime | |
+| updatedAt | 15 | DateTime | |
+| types | 16 | List<String>? | DEPRECATED, use typeDetailsJson |
+| typeDetailsJson | 17 | String? | JSON-encoded List<TypeDetail> (current approach) |
+
+Available types: `PvcEntry.pvcTypes` = ['7 inch', '8 inch', '10 inch', 'MS'].
+
+BitEntry and HammerEntry follow the same pattern and schema as PvcEntry.
+
+---
+
+## TypeDetail -- lib/core/models/type_detail.dart
+
+Not a Hive model. Plain Dart class. Used by PvcEntry, BitEntry, HammerEntry.
+
+| Field | Type | Notes |
+|---|---|---|
+| type | String | e.g. '7 inch', '8 inch' |
+| count | int | Quantity |
+| rate | double | Price per unit |
+
+Computed: `total` = count x rate.
+Stored as JSON string inside the parent entry's `typeDetailsJson` HiveField.
+Encoding: `TypeDetail.encodeList(list)` -> String. Decoding: `TypeDetail.decodeList(jsonString)` -> List<TypeDetail>?.
+Display helpers: `TypeDetail.displayTypes()`, `TypeDetail.displayDetailed()`, `TypeDetail.totalCount()`, `TypeDetail.totalAmount()`.
+
+---
+
+## Tombstone -- lib/core/models/tombstone.dart
+
+Soft-delete marker for bi-directional Drive sync.
+
+| Field | Type | Notes |
+|---|---|---|
+| entityId | String | ID of deleted entity (also used as Hive box key) |
+| collection | String | Box name, e.g. 'ledger_entries', 'agents' |
+| deletedAt | DateTime | When deletion happened |
+
+Pruned after 30 days via `DatabaseService.pruneTombstones()`.
+Applied during Drive sync merge: tombstone beats entity if `tombstone.deletedAt >= entity.updatedAt`.
+
+---
+
+## Hive typeId registry
+
+| Model | typeId |
+|---|---|
+| LedgerEntry | 0 |
+| Agent | 1 |
+| Vehicle | 4 |
+| DieselEntry | 5 |
+| PvcEntry | 6 |
+| BitEntry | 7 |
+| HammerEntry | 8 |
+| MiniLedgerEntry | 9 |
+| Tombstone | 10 |
+
+typeIds 2 and 3 are not assigned to any current model as of this check. Before
+reusing them, re-grep every model's `@HiveType(typeId: N)` annotation to
+confirm nothing claimed them since.
+
+When adding a new Hive model, check existing typeIds to avoid collision. Use the next available integer.
