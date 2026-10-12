@@ -43,12 +43,12 @@ Depends: T-CB01
 Resume notes: 10 tests pass. Rule found in the reference app: running balance restarts from the period previous balance and accumulates over the rows shown only (searches and filters get their own running balance). Weeks start Sunday (assumption).
 Commit: Add cashbook calculator utility with unit tests
 
-## T-CB05 Providers [PENDING]
+## T-CB05 Providers [DONE]
 Goal: CashBooksNotifier, CashEntriesNotifier, CashNotesNotifier, view-config and derived providers, settings provider.
 Files: lib/core/providers/cashbook_provider.dart
 Depends: T-CB02, T-CB04
-Resume notes:
-Commit:
+Resume notes: providers for books, entries (incl. transfer, trash), notes, settings (Income/Expense labels fixed), home view config and derived ledger, summary/day-summary families keyed by CashQuery record. Refresh added to sync_provider and the 3 restore/clear sites in settings_screen. Unit tests for providers not written (logic is in the calculator).
+Commit: Add cashbook providers and refresh wiring
 
 ## T-CB06 Books: picker, Accounts screen, add/edit/delete, opening balance [PENDING]
 Goal: PARITY-001..012, 082.

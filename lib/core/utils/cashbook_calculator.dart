@@ -14,6 +14,13 @@ class CashDateRange {
 
   /// Last day shown to the user (inclusive).
   DateTime get lastDay => end.subtract(const Duration(days: 1));
+
+  @override
+  bool operator ==(Object other) =>
+      other is CashDateRange && other.start == start && other.end == end;
+
+  @override
+  int get hashCode => Object.hash(start, end);
 }
 
 /// In, out and net totals of a set of entries.

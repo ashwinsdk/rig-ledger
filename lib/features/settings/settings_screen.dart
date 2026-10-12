@@ -10,6 +10,7 @@ import '../../core/providers/ledger_provider.dart';
 import '../../core/providers/agent_provider.dart';
 import '../../core/providers/vehicle_provider.dart';
 import '../../core/providers/side_ledger_provider.dart';
+import '../../core/providers/cashbook_provider.dart';
 import '../../core/services/file_save_service.dart';
 import '../../core/services/google_drive_service.dart';
 import '../../core/utils/platform_helper.dart';
@@ -268,6 +269,11 @@ class SettingsScreen extends ConsumerWidget {
       ref.read(pvcEntriesProvider.notifier).refresh();
       ref.read(bitEntriesProvider.notifier).refresh();
       ref.read(hammerEntriesProvider.notifier).refresh();
+      ref.read(cashBooksProvider.notifier).refresh();
+      ref.read(cashEntriesProvider.notifier).refresh();
+      ref.read(cashNotesProvider.notifier).refresh();
+      ref.read(cashSettingsProvider.notifier).refresh();
+      ref.read(currentCashBookIdProvider.notifier).refresh();
 
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -346,6 +352,11 @@ class SettingsScreen extends ConsumerWidget {
       ref.read(pvcEntriesProvider.notifier).refresh();
       ref.read(bitEntriesProvider.notifier).refresh();
       ref.read(hammerEntriesProvider.notifier).refresh();
+      ref.read(cashBooksProvider.notifier).refresh();
+      ref.read(cashEntriesProvider.notifier).refresh();
+      ref.read(cashNotesProvider.notifier).refresh();
+      ref.read(cashSettingsProvider.notifier).refresh();
+      ref.read(currentCashBookIdProvider.notifier).refresh();
 
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -630,6 +641,11 @@ class _GoogleDriveBackupCardState extends State<_GoogleDriveBackupCard> {
         ref.read(pvcEntriesProvider.notifier).refresh();
         ref.read(bitEntriesProvider.notifier).refresh();
         ref.read(hammerEntriesProvider.notifier).refresh();
+        ref.read(cashBooksProvider.notifier).refresh();
+        ref.read(cashEntriesProvider.notifier).refresh();
+        ref.read(cashNotesProvider.notifier).refresh();
+        ref.read(cashSettingsProvider.notifier).refresh();
+        ref.read(currentCashBookIdProvider.notifier).refresh();
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(

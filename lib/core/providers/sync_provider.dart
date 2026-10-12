@@ -6,6 +6,7 @@ import 'ledger_provider.dart';
 import 'agent_provider.dart';
 import 'vehicle_provider.dart';
 import 'side_ledger_provider.dart';
+import 'cashbook_provider.dart';
 
 /// Sync status for UI display.
 enum SyncStatus {
@@ -114,6 +115,7 @@ class SyncNotifier extends StateNotifier<SyncState> {
     _ref.read(pvcEntriesProvider.notifier).refresh();
     _ref.read(bitEntriesProvider.notifier).refresh();
     _ref.read(hammerEntriesProvider.notifier).refresh();
+    refreshCashbookProviders(_ref);
   }
 
   @override
