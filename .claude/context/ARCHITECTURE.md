@@ -137,6 +137,15 @@ ref.read(hammerEntriesProvider.notifier).refresh();
 
 Always include all 8 refresh calls when a full data reload is needed.
 
+## Danger zones
+
+- **`agentName` denormalisation**: stored directly on every `LedgerEntry` and `MiniLedgerEntry`. Renaming an agent requires calling `DatabaseService.updateAgentInLedgerEntries()` before saving the renamed agent -- see `CONVENTIONS.md` "Agent name denormalisation". Skipping either step leaves stale names on existing entries.
+- **`received` invariant not enforced**: `LedgerEntry.received` is documented to equal `receivedCash + receivedPhonePe`, but nothing at the DB layer enforces this -- see `MODELS.md`. A bug in any write path can silently desynchronise the two.
+- **Sync merge and tombstones**: `SyncService._merge()` resolves conflicts by latest `updatedAt`, with a tombstone beating an entity if `tombstone.deletedAt >= entity.updatedAt`. Tombstones are pruned after 30 days -- a device offline longer than that can resurrect a deleted entity on its next sync.
+- **Hive writes during sync**: there is no lock preventing a UI-triggered Hive write while a sync merge is in progress. A write landing mid-merge can be overwritten by the merge or vice versa.
+- **macOS Release entitlements**: sandboxed, with only `network.client` (no `network.server`). `DesktopAuthService`'s localhost OAuth redirect needs `network.server`, which is only present in Debug entitlements -- it will not work if ever enabled on macOS Release builds.
+- **Never print secrets**: keystore files, `google-services.json`, OAuth client secrets. See `.claude/hooks/pre_read.md`.
+
 ## Build runner
 
 Run after any change to a Hive model file (`lib/core/models/*.dart`, not `.g.dart`):
