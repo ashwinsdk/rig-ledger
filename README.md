@@ -13,9 +13,9 @@ A fast, lightweight, production-ready Flutter application for borewell drilling 
 
 The macOS companion app is a full-featured desktop version of RigLedger with:
 
-- **Sidebar navigation** — four sections: Ledger, Statistics, Agents, Settings
+- **Sidebar navigation** — five sections: Ledger, Portfolio, Agents, Account Ledger, Settings
 - **Custom title bar** with vehicle switcher dropdown and sync status indicator
-- **Keyboard shortcuts** — Cmd+1–4 (tabs), Cmd+N (new entry), Cmd+S (sync), Cmd+F (search)
+- **Keyboard shortcuts** — Cmd+1–5 (tabs), Cmd+N (new entry), Cmd+S (sync), Cmd+F (search)
 - **Native macOS menu bar** — File, View, Window menus with standard Mac conventions
 - **Width-constrained forms** — form screens center at 700px max for comfortable editing
 - **Adaptive headers** — slim section headers on desktop vs gradient headers on mobile
@@ -42,15 +42,25 @@ RigLedger syncs data between Android and macOS via Google Drive:
   └────────┘  restore()   └──────────┘   merge()    └────────┘
 ```
 
-- Snapshot = all 8 collections + tombstones serialized to JSON
+- Snapshot = all 11 collections (8 ledger collections + Account Ledger books, entries and notes) + tombstones serialized to JSON
+- A snapshot written by a newer app version is refused by an older build (all devices must run the same major version)
 - Merge algorithm: for each entity, compare `updatedAt` timestamps, check tombstones
 - Tombstones auto-prune after 30 days
 
 ## Version
 
-Current: 1.0.7
+Current: 2.0.0 (see `pubspec.yaml`)
 
 ### Changelog
+
+v2.0.0
+- Account Ledger: a cash book (Income and Expense, several books, running balances, period views, search, filters, summaries, calendar, notebook, transfers, trash with 30 day purge, PDF and CSV reports, one-time import from the cashbook app backup). It is the fifth tab and syncs with the rest of the data.
+- Payment log on every bill (main bore and side bore): each payment has a date, mode and receiver. Receivers are books of the Account Ledger and the amount appears there as Income. Earlier received amounts stay as "Earlier received".
+- Commission on bills (depth, PVC and MS pipe rates per foot, manual override, agent defaults). Never added to the bill total. Shown on bill cards, the main summary bar, the agent list and in the PDF and CSV exports.
+- Portfolio (former Stats tab): total, received, pending, commission, expenses and profit for a day, month, 3 or 6 months, year, all time or a custom range, per rig or for all rigs, optionally for one agent.
+- Side bore: PVC removed everywhere, location suggestions in the bill form, the payee (PhonePe name) problem is fixed by the new payment dialog.
+- About screen with version, data and permission facts, proprietary license and open source notices. PDF reports render Tamil text (bundled Noto fonts).
+- Sync, backup and restore include the new data; the schema version is 5.
 
 v1.0.7
 - Create dedicated macos application
@@ -117,7 +127,8 @@ v1.0.1
 - Diesel: Track litres and total cost
 - PVC/Bit/Hammer: Track quantity and amount
 
-### Statistics
+### Portfolio and Statistics
+- Portfolio overview: total, received, pending, commission, expenses, profit (received - expenses - commission)
 - Visual pie charts by agent
 - Customizable date range filters
 - Aggregated totals (depth, PVC, MS, amounts)
