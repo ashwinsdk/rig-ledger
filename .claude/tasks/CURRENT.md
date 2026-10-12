@@ -46,14 +46,14 @@ Depends: T-V201
 Resume notes: CommissionSection widget in both forms (rates per ft, auto calc with manual override and Auto reset, agent defaults copied to new bills), commission chip on bill cards, 4th item in the main summary bar (monthlyStatsProvider 'commission'), agent dialogs (default rates) and agent card line (agentCommissionTotalsProvider), CSV column and PDF column/summary. Commission is never added to total. Side bore uses depth only. Verified on the emulator (summary bar, side bore form, payment dialog).
 Commit: Add commission to bills, agents, summary bar and exports
 
-## T-V205 Portfolio page [IN_PROGRESS]
+## T-V205 Portfolio page [DONE]
 Goal: total, received, pending, commission, expenses and profit with filters (day, month, 6 months, year, all, custom, by agent).
 Files: lib/features/portfolio/portfolio_screen.dart, lib/core/providers/portfolio_provider.dart, navigation
 Depends: T-V204
-Resume notes:
-Commit:
+Resume notes: Portfolio lives in the former Stats tab (renamed Portfolio): tabs Overview (new) / Ledger / Side Ledger, range chips Day, Month, 3 Mo, 6 Mo, Year, All, Custom. Overview = profit card (received - expenses - commission, plus expected profit), total/received/pending/commission cards, expenses breakdown, by-agent table, agent filter (hides expenses and profit because expenses are not per agent), This rig / All rigs toggle. Pure PortfolioCalculator with 5 tests. MODELS.md note: DieselEntry has total/paid (not amount).
+Commit: Add Portfolio overview with profit, commission and agent filters
 
-## T-V206 Side bore fixes: remove PVC, location suggestions [PENDING]
+## T-V206 Side bore fixes: remove PVC, location suggestions [IN_PROGRESS]
 Goal: no PVC anywhere for side bore vehicles (entry card, summary, side ledger, add sheets, filters, stats, exports); address autocomplete in the side bore form like main bore.
 Files: ledger_list.dart, combined_home_screen.dart, side_ledger_screen.dart, filter_sheet.dart, stats_screen.dart, main_navigation.dart, desktop_shell.dart, side_bore_form_screen.dart
 Depends: none

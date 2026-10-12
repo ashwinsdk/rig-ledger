@@ -107,7 +107,7 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
               BottomNavigationBarItem(
                 icon: Icon(Icons.pie_chart_outline),
                 activeIcon: Icon(Icons.pie_chart),
-                label: 'Stats',
+                label: 'Portfolio',
               ),
               BottomNavigationBarItem(
                 icon: Icon(Icons.people_outlined),

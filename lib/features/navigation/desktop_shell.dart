@@ -64,7 +64,7 @@ class _DesktopShellState extends ConsumerState<DesktopShell>
     _NavItem(
         icon: Icons.pie_chart_outline,
         activeIcon: Icons.pie_chart,
-        label: 'Stats'),
+        label: 'Portfolio'),
     _NavItem(
         icon: Icons.people_outlined, activeIcon: Icons.people, label: 'Agents'),
     _NavItem(
@@ -207,7 +207,7 @@ class _DesktopShellState extends ConsumerState<DesktopShell>
                 ref.read(desktopNavIndexProvider.notifier).state = 0,
           ),
           PlatformMenuItem(
-            label: 'Stats',
+            label: 'Portfolio',
             shortcut:
                 const SingleActivator(LogicalKeyboardKey.digit2, meta: true),
             onSelected: () =>

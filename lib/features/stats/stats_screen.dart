@@ -6,12 +6,15 @@ import '../../core/theme/app_colors.dart';
 import '../../core/providers/ledger_provider.dart';
 import '../../core/providers/side_ledger_provider.dart';
 import '../../core/providers/vehicle_provider.dart';
+import '../portfolio/portfolio_view.dart';
 
 enum DateRangeOption {
+  today,
   currentMonth,
   lastThreeMonths,
   lastSixMonths,
   lastYear,
+  all,
   custom
 }
 
@@ -33,7 +36,7 @@ class _StatsScreenState extends ConsumerState<StatsScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
   }
 
   @override
@@ -71,7 +74,7 @@ class _StatsScreenState extends ConsumerState<StatsScreen>
                 child: Column(
                   children: [
                     const Text(
-                      'Statistics',
+                      'Portfolio',
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 20,
@@ -112,6 +115,7 @@ class _StatsScreenState extends ConsumerState<StatsScreen>
                           fontSize: 14,
                         ),
                         tabs: const [
+                          Tab(text: 'Overview'),
                           Tab(text: 'Ledger'),
                           Tab(text: 'Side Ledger'),
                         ],
@@ -123,6 +127,7 @@ class _StatsScreenState extends ConsumerState<StatsScreen>
                       scrollDirection: Axis.horizontal,
                       child: Row(
                         children: [
+                          _buildRangeChip('Day', DateRangeOption.today),
                           _buildRangeChip(
                               'Month', DateRangeOption.currentMonth),
                           _buildRangeChip(
@@ -130,6 +135,7 @@ class _StatsScreenState extends ConsumerState<StatsScreen>
                           _buildRangeChip(
                               '6 Mo', DateRangeOption.lastSixMonths),
                           _buildRangeChip('Year', DateRangeOption.lastYear),
+                          _buildRangeChip('All', DateRangeOption.all),
                           _buildRangeChip('Custom', DateRangeOption.custom),
                         ],
                       ),
@@ -145,6 +151,26 @@ class _StatsScreenState extends ConsumerState<StatsScreen>
             child: TabBarView(
               controller: _tabController,
               children: [
+                // Portfolio overview
+                Column(
+                  children: [
+                    if (_dateRangeOption == DateRangeOption.custom)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                        child: _buildCustomDateRangePicker(),
+                      ),
+                    Expanded(
+                      child: Builder(builder: (context) {
+                        final all = _dateRangeOption == DateRangeOption.all;
+                        final (start, end) = _getDateRange();
+                        return PortfolioView(
+                          start: all ? null : start,
+                          end: all ? null : end,
+                        );
+                      }),
+                    ),
+                  ],
+                ),
                 // Ledger Stats Tab
                 SingleChildScrollView(
                   padding: const EdgeInsets.all(16),
@@ -351,6 +377,10 @@ class _StatsScreenState extends ConsumerState<StatsScreen>
         DateTime(date.year, date.month, date.day, 23, 59, 59, 999);
 
     switch (_dateRangeOption) {
+      case DateRangeOption.today:
+        return (DateTime(now.year, now.month, now.day), endOfDay(now));
+      case DateRangeOption.all:
+        return (DateTime(2000), endOfDay(DateTime(2100, 12, 31)));
       case DateRangeOption.currentMonth:
         // Last day of current month at end of day
         final lastDayOfMonth = DateTime(now.year, now.month + 1, 0);
