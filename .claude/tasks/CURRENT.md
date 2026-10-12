@@ -200,14 +200,14 @@ Depends: T-CB05, v2.0.0 payment log model
 Resume notes:
 Commit:
 
-## T-CB17 Import tool [PENDING]
+## T-CB17 Import tool [DONE]
 Goal: one-time import from the reference app .db (dry run and report), only once the feature is stable.
 Files: cashbook_import_screen.dart, cashbook_import_service.dart, pubspec.yaml (sqlite reader)
 Depends: T-CB02, feature stable
-Resume notes:
-Commit:
+Resume notes: sqlite3 ^3.5 (build hooks, no flutter_libs; works on Android, verified on the emulator; macOS build still to verify in T-CB18). CashbookImportService: dry run preview, import by column name (both column orders), merge books by name, idempotent via importedLegacyId, trash imported with deletedAt = import time (30 day window), notebook import, never touches the source file. 6 tests with synthetic databases. Screen with dry run, confirm, progress, report; hub entry. Tested on the emulator with a real backup file (test data only).
+Commit: Add one-time import from the cashbook app backup
 
-## T-CB18 Parity QA pass and docs [PENDING]
+## T-CB18 Parity QA pass and docs [IN_PROGRESS]
 Goal: walk PARITY-001..084 against the reference app; update MODELS.md, ARCHITECTURE.md, MEMORY.md.
 Files: docs/features/cashbook/*, .claude/context/*.md
 Depends: all

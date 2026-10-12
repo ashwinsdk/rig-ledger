@@ -8,6 +8,7 @@ import 'cashbook_all_transactions_screen.dart';
 import 'cashbook_books_screen.dart';
 import 'cashbook_calendar_screen.dart';
 import 'cashbook_home_screen.dart';
+import 'cashbook_import_screen.dart';
 import 'cashbook_notebook_screen.dart';
 import 'cashbook_report_dialog.dart';
 import 'cashbook_settings_screen.dart';
@@ -43,6 +44,8 @@ final List<_HubItem> _hubItems = [
       (_) => const CashbookNotebookScreen()),
   _HubItem(Icons.calendar_month_outlined, 'Calendar',
       (_) => const CashbookCalendarScreen()),
+  _HubItem(Icons.file_download_outlined, 'Import from cashbook app',
+      (_) => const CashbookImportScreen()),
   _HubItem(Icons.settings_outlined, 'Settings',
       (_) => const CashbookSettingsScreen()),
   _HubItem(Icons.delete_sweep_outlined, 'Deleted Transactions',
