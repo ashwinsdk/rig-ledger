@@ -64,12 +64,12 @@ Depends: T-CB05
 Resume notes: form covers add AND edit (book dropdown, Delete to trash with confirm, Copy to same/other account), calculator sheet with tested evaluator, items dialog (sets amount from total), bills via camera/gallery/pdf copied into app support dir (image_picker added to pubspec). T-CB10 now only needs trash screen and list wiring. Voice input (mic) not implemented.
 Commit: Add cashbook entry form, calculator sheet and items dialog
 
-## T-CB08 Book home screen: list, tabs, totals [PENDING]
+## T-CB08 Book home screen: list, tabs, totals [DONE]
 Goal: PARITY-031..041, 080.
 Files: lib/features/cashbook/cashbook_home_screen.dart, widgets/cashbook_row.dart, cashbook_totals_strip.dart, cashbook_period_bar.dart, cashbook_day_header.dart
 Depends: T-CB05, T-CB07
-Resume notes:
-Commit:
+Resume notes: home screen with header/book selector, tabs, period bar, grouped list, Previous Balance row, Income/Expense buttons, totals strip; row tap opens edit. Search/overflow come in T-CB09. Deviation: shows a muted 'No transactions' hint on empty lists (PARITY-080 said none). T-CB16 (hub/tab) is being done next so the screens can be run.
+Commit: Add Account Ledger home screen with list, tabs and totals
 
 ## T-CB09 Search, filters, sort, date range [PENDING]
 Goal: PARITY-042..047.
