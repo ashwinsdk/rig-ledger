@@ -1,5 +1,7 @@
 # Cashbook replication - PROGRESS
 
+STATUS (2026-10-12): the replica is IMPLEMENTED in the app (tasks T-CB01..T-CB19 and T-V201..T-V208 in .claude/tasks/CURRENT.md). See PARITY_STATUS.md for the per line result. The notes below describe the research phase.
+
 Resume from this file alone. Docs only: do not touch lib/, pubspec.yaml, CURRENT.md.
 Reference material (DB copy, dumps, screenshots, tools) lives in ~/cashbook-ref/ (outside repo).
 

@@ -74,12 +74,12 @@ Depends: all feature tasks
 Resume notes: pubspec version 2.0.0+5 (build number must keep increasing for Play Store). Both platforms read it at build time.
 Commit: Bump version to 2.0.0+5
 
-## T-V209 Full test pass, bug review, improvement review [PENDING]
+## T-V209 Full test pass, bug review, improvement review [DONE]
 Goal: run all tests and the app on the emulator end to end; write docs/v2.0.0-review.md with bugs found and improvement ideas; add backlog items.
 Files: docs/v2.0.0-review.md, .claude/tasks/BACKLOG.md
 Depends: all
-Resume notes:
-Commit:
+Resume notes: 68 automated tests pass; emulator walkthrough of the main v2 flows; macOS app not runnable here (missing GoogleService-Info.plist). docs/v2.0.0-review.md lists tested and untested areas, 10 bugs fixed, open bugs and improvements; BACKLOG.md updated.
+Commit: Add v2.0.0 review with tested areas, bugs and improvements
 
 ## T-CB01 Cashbook models and adapters [DONE]
 Goal: CashBook (typeId 2), CashEntry (typeId 3), CashNote (typeId 11) with copyWith, toJson/fromJson, generated adapters. No receiverId on CashBook (receivers are just books).
@@ -193,12 +193,12 @@ Depends: T-CB08
 Resume notes: Account Ledger is tab index 3 (Settings moved to 4, Cmd+4 / Cmd+5). Mobile: drawer hub; wide desktop: two panes. Hub list `_hubItems` in cashbook_hub_screen.dart: each later screen task adds its own entry. Verified on the Android emulator (add income, list, totals). ARCHITECTURE.md updated. Mobile bottom label is 'Accounts' (5 tabs truncate longer text).
 Commit: Add Account Ledger hub and fifth tab in both shells
 
-## T-CB19 Receiver and payment-log hooks [PENDING]
+## T-CB19 Receiver and payment-log hooks [DONE]
 Goal: PARITY-081, 082; linked CashEntry create/update/trash from ledger payments (editable in book).
 Files: cashbook_provider.dart, database_service.dart, v2.0.0 payment-log files
 Depends: T-CB05, v2.0.0 payment log model
-Resume notes:
-Commit:
+Resume notes: implemented as T-V203 (PaymentLinkService).
+Commit: Link bill payments to receiver books in Account Ledger
 
 ## T-CB17 Import tool [DONE]
 Goal: one-time import from the reference app .db (dry run and report), only once the feature is stable.
@@ -207,9 +207,9 @@ Depends: T-CB02, feature stable
 Resume notes: sqlite3 ^3.5 (build hooks, no flutter_libs; works on Android, verified on the emulator; macOS build still to verify in T-CB18). CashbookImportService: dry run preview, import by column name (both column orders), merge books by name, idempotent via importedLegacyId, trash imported with deletedAt = import time (30 day window), notebook import, never touches the source file. 6 tests with synthetic databases. Screen with dry run, confirm, progress, report; hub entry. Tested on the emulator with a real backup file (test data only).
 Commit: Add one-time import from the cashbook app backup
 
-## T-CB18 Parity QA pass and docs [IN_PROGRESS]
+## T-CB18 Parity QA pass and docs [DONE]
 Goal: walk PARITY-001..084 against the reference app; update MODELS.md, ARCHITECTURE.md, MEMORY.md.
 Files: docs/features/cashbook/*, .claude/context/*.md
 Depends: all
-Resume notes:
-Commit:
+Resume notes: PARITY_STATUS.md written (84 lines: PASS/IMPL/DEVIATION). Fixes found by the QA tests: missing Material in the desktop two-pane layout, linked entry type lock, Help screen, dialog controller crash, vehicle delete orphans, restore of orphaned linked income. README, ARCHITECTURE and MODELS updated.
+Commit: Fix desktop Material ancestor, lock linked entry type, add Help and flow tests (and later QA fix commits)

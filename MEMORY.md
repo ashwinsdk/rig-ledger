@@ -16,15 +16,16 @@ Last updated: 2026-10-12 (v2.0.0 feature work)
 
 - `MiniLedgerEntry` is orphaned: fully wired into `DatabaseService` and `SyncService` but no screen or provider uses it. Side Bore saves plain `LedgerEntry` instead. See `BACKLOG.md`.
 - `LedgerEntry.msPipe` is free-text defaulting to `'6inch'`; the form dropdown only offers `'6inch'` today, despite older docs implying multiple sizes.
-- Hive typeIds currently in use: 0-11 (2 CashBook, 3 CashEntry, 11 CashNote; next free 12). See `MODELS.md`.
 
-## Account Ledger (v2.0.0 feature 1)
+## v2.0.0 (released candidate, version 2.0.0+5)
 
-- Spec in `docs/features/cashbook/` (SPEC.md has decisions D1..D14, 84 parity lines). Tasks T-CB01..T-CB19 in `CURRENT.md`.
-- Books are global, receivers are just books, money is double, fifth tab, trash purged after 30 days, all devices must update (snapshot version bump).
-- T-CB01 DONE (models + adapters generated, not registered). Existing analyzer error: `test/widget_test.dart` references missing `MyApp` (pre-existing).
-- Reference material lives outside the repo in `~/cashbook-ref/`.
+- Done: Account Ledger (tab 4, Settings is tab 5), payment log with receiver books (`PaymentLinkService`), commission, Portfolio (former Stats tab), side bore fixes (no PVC, location suggestions), About screen and proprietary LICENSE, import from the cashbook app, schemaVersion 5. Every task is committed; see `CURRENT.md` and `docs/features/cashbook/PARITY_STATUS.md`.
+- Review: `docs/v2.0.0-review.md` (tested, not tested, bugs fixed, open bugs, improvements). Open items copied to `BACKLOG.md`.
+- Decisions to confirm with the developer: commission formula (ft x rate per ft), profit definition, LICENSE copyright line, Rs. vs the rupee sign.
+- Not verifiable here: running the macOS app (needs `macos/Runner/GoogleService-Info.plist`), real Drive sync, camera/gallery bills.
+- Gotchas learned: dialogs must own their TextEditingControllers (dispose in State, never right after `await showDialog`); widget tests that touch Hive must wait on real time (`runAsync`) and must not call `Hive.close()`; `flutter test` runs on the macOS host so `PlatformHelper.isDesktop` is true in tests.
+- Hive typeIds in use: 0-11 (2 CashBook, 3 CashEntry, 11 CashNote; next free 12).
 
 ## Next recommended action
 
-Developer commits T-CB01, then start T-CB02 (DatabaseService boxes, CRUD, trash, schemaVersion 4).
+Developer reviews `docs/v2.0.0-review.md`, answers the decisions above, then decides which open items to schedule. Nothing is left IN_PROGRESS in `CURRENT.md`.
