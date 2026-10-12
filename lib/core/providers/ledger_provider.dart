@@ -2,6 +2,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import '../database/database_service.dart';
 import '../models/ledger_entry.dart';
+import '../services/payment_link_service.dart';
+import 'cashbook_provider.dart';
 
 const _uuid = Uuid();
 
@@ -100,7 +102,8 @@ final ledgerFilterProvider =
 
 /// Ledger entries notifier
 class LedgerEntriesNotifier extends StateNotifier<List<LedgerEntry>> {
-  LedgerEntriesNotifier() : super([]) {
+  final Ref _ref;
+  LedgerEntriesNotifier(this._ref) : super([]) {
     loadEntries();
   }
 
@@ -110,17 +113,27 @@ class LedgerEntriesNotifier extends StateNotifier<List<LedgerEntry>> {
 
   Future<void> addEntry(LedgerEntry entry) async {
     await DatabaseService.saveLedgerEntry(entry);
+    await _syncPayments(entry);
     loadEntries();
   }
 
   Future<void> updateEntry(LedgerEntry entry) async {
     await DatabaseService.saveLedgerEntry(entry);
+    await _syncPayments(entry);
     loadEntries();
   }
 
   Future<void> deleteEntry(String id) async {
+    await PaymentLinkService.onBillDeleted(id);
     await DatabaseService.deleteLedgerEntry(id);
+    _ref.read(cashEntriesProvider.notifier).refresh();
     loadEntries();
+  }
+
+  /// Mirrors the payments of [entry] into the receiver books.
+  Future<void> _syncPayments(LedgerEntry entry) async {
+    await PaymentLinkService.syncEntry(entry);
+    _ref.read(cashEntriesProvider.notifier).refresh();
   }
 
   Future<void> importEntries(List<LedgerEntry> entries) async {
@@ -137,7 +150,7 @@ class LedgerEntriesNotifier extends StateNotifier<List<LedgerEntry>> {
 
 final ledgerEntriesProvider =
     StateNotifierProvider<LedgerEntriesNotifier, List<LedgerEntry>>((ref) {
-  return LedgerEntriesNotifier();
+  return LedgerEntriesNotifier(ref);
 });
 
 /// Filtered entries based on time period

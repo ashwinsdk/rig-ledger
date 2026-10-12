@@ -5,7 +5,9 @@ import '../database/database_service.dart';
 import '../models/cash_book.dart';
 import '../models/cash_entry.dart';
 import '../models/cash_note.dart';
+import '../services/payment_link_service.dart';
 import '../utils/cashbook_calculator.dart';
+import 'ledger_provider.dart';
 
 const _uuid = Uuid();
 
@@ -242,6 +244,9 @@ class CashBooksNotifier extends StateNotifier<List<CashBook>> {
 
   /// Deletes a book; its entries go to the trash.
   Future<void> deleteBook(String id) async {
+    // Payments received by this book lose their receiver (kept on the bill).
+    await PaymentLinkService.onBookDeleted(id);
+    _ref.read(ledgerEntriesProvider.notifier).refresh();
     await DatabaseService.deleteCashBook(id);
     loadBooks();
     _ref.read(cashEntriesProvider.notifier).refresh();
@@ -339,7 +344,8 @@ final currentCashBookProvider = Provider<CashBook?>((ref) {
 // ---------------------------------------------------------------------------
 
 class CashEntriesNotifier extends StateNotifier<List<CashEntry>> {
-  CashEntriesNotifier() : super([]) {
+  final Ref _ref;
+  CashEntriesNotifier(this._ref) : super([]) {
     loadEntries();
   }
 
@@ -397,17 +403,29 @@ class CashEntriesNotifier extends StateNotifier<List<CashEntry>> {
     entry.amount = CashbookCalculator.roundMoney(entry.amount);
     entry.updatedAt = DateTime.now();
     await DatabaseService.saveCashEntry(entry);
+    // An income created from a bill payment: keep the bill in step.
+    if (await PaymentLinkService.onCashEntryEdited(entry)) {
+      _ref.read(ledgerEntriesProvider.notifier).refresh();
+    }
     loadEntries();
     return (true, null);
   }
 
   Future<void> moveToTrash(String id) async {
     await DatabaseService.moveCashEntryToTrash(id);
+    final e = DatabaseService.getCashEntry(id);
+    if (e != null && await PaymentLinkService.onCashEntryTrashed(e)) {
+      _ref.read(ledgerEntriesProvider.notifier).refresh();
+    }
     loadEntries();
   }
 
   Future<void> restore(String id, {String? toBookId}) async {
     await DatabaseService.restoreCashEntry(id, toBookId: toBookId);
+    final e = DatabaseService.getCashEntry(id);
+    if (e != null && await PaymentLinkService.onCashEntryRestored(e)) {
+      _ref.read(ledgerEntriesProvider.notifier).refresh();
+    }
     loadEntries();
   }
 
@@ -472,7 +490,7 @@ class CashEntriesNotifier extends StateNotifier<List<CashEntry>> {
 
 final cashEntriesProvider =
     StateNotifierProvider<CashEntriesNotifier, List<CashEntry>>((ref) {
-  return CashEntriesNotifier();
+  return CashEntriesNotifier(ref);
 });
 
 /// Trashed entries, most recently deleted first.

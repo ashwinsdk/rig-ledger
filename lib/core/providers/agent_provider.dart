@@ -2,13 +2,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import '../database/database_service.dart';
 import '../models/agent.dart';
+import '../services/payment_link_service.dart';
+import 'cashbook_provider.dart';
 import 'ledger_provider.dart';
 
 const _uuid = Uuid();
 
 /// Agents notifier
 class AgentsNotifier extends StateNotifier<List<Agent>> {
-  AgentsNotifier() : super([]) {
+  final Ref _ref;
+  AgentsNotifier(this._ref) : super([]) {
     loadAgents();
   }
 
@@ -49,7 +52,11 @@ class AgentsNotifier extends StateNotifier<List<Agent>> {
             id, reassignToAgentId, targetAgent.name);
       }
     } else {
+      for (final bill in DatabaseService.getLedgerEntriesByAgent(id)) {
+        await PaymentLinkService.onBillDeleted(bill.id);
+      }
       await DatabaseService.deleteLedgerEntriesByAgent(id);
+      _ref.read(cashEntriesProvider.notifier).refresh();
     }
     await DatabaseService.deleteAgent(id);
     loadAgents();
@@ -78,7 +85,7 @@ class AgentsNotifier extends StateNotifier<List<Agent>> {
 
 final agentsProvider =
     StateNotifierProvider<AgentsNotifier, List<Agent>>((ref) {
-  return AgentsNotifier();
+  return AgentsNotifier(ref);
 });
 
 /// Agent bill counts - watches both agents and ledger entries for reactivity

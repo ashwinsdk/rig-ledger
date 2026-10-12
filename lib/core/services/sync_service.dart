@@ -10,6 +10,7 @@ import '../models/bit_entry.dart';
 import '../models/hammer_entry.dart';
 import '../models/mini_ledger_entry.dart';
 import '../models/tombstone.dart';
+import 'payment_link_service.dart';
 import 'google_drive_service.dart';
 
 /// The result of a sync operation.
@@ -103,6 +104,9 @@ class SyncService {
         final t = Tombstone.fromJson(Map<String, dynamic>.from(tj));
         await DatabaseService.tombstoneBox.put(t.entityId, t);
       }
+
+      // 5b. Repair bill payment <-> receiver book links after the merge
+      await PaymentLinkService.reconcileAll();
 
       // 6. Push merged snapshot to remote
       final (pushOk, pushErr) = await GoogleDriveService.backup();

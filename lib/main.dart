@@ -12,6 +12,7 @@ import 'core/theme/app_theme.dart';
 import 'core/database/database_service.dart';
 import 'core/services/google_drive_service.dart';
 import 'core/services/sync_service.dart';
+import 'core/services/payment_link_service.dart';
 import 'core/providers/sync_provider.dart';
 import 'core/utils/platform_helper.dart';
 import 'features/navigation/main_navigation.dart';
@@ -54,6 +55,7 @@ void main() async {
 
   // Initialize database
   await DatabaseService.initialize();
+  await PaymentLinkService.reconcileAll();
 
   // Request storage permissions (Android only)
   if (PlatformHelper.isAndroid) {

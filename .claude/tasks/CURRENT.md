@@ -32,14 +32,14 @@ Depends: T-V201
 Resume notes: PaymentLogEditor widget (list, add/edit dialog with mode, date, receiver book incl. New receiver, payer name autocomplete; Earlier received row for legacy unlogged amounts). Both forms use it; entry totals = base + logs; entry.phonePeName keeps the latest payer. phonePeNamesProvider also reads payment payers. This replaces the old PhonePe name dropdown (the payee-not-shown-until-saved bug cannot occur any more). The receiver link (Income entry in the book) is T-V203; until then payments only live on the bill.
 Commit: Add payment log editor to main and side bore forms
 
-## T-V203 Payment to receiver book link (T-CB19) [IN_PROGRESS]
+## T-V203 Payment to receiver book link (T-CB19) [DONE]
 Goal: PaymentLinkService creates, updates and trashes Income entries in receiver books from ledger payments; editing in the book updates the bill; reconcile after sync; receiver books are created from the payment dialog.
 Files: lib/core/services/payment_link_service.dart, ledger_provider.dart, cashbook_provider.dart, sync_provider.dart
 Depends: T-V202, T-CB05
-Resume notes:
-Commit:
+Resume notes: PaymentLinkService (create/update/trash incomes from payments; editing the income edits the payment; trashing it keeps the payment and clears the receiver; restore relinks; deleting a book or a bill handled; reconcile at startup and inside sync before the push). LedgerEntriesNotifier, CashEntriesNotifier and AgentsNotifier now take a Ref. 8 link tests + whole suite green (replaced the broken template widget_test.dart with a theme smoke test). UI lock of the Income/Expense chips for linked entries is not done yet (see T-CB18).
+Commit: Link bill payments to receiver books in Account Ledger
 
-## T-V204 Commission on main and side bore entries [PENDING]
+## T-V204 Commission on main and side bore entries [IN_PROGRESS]
 Goal: commission rates per entry (prefilled from agent defaults, manually editable), computed commission shown in form, list card, and the main summary bar; not added to total; agent commission defaults editable in Agents screen; CSV/PDF export column.
 Files: ledger_form_screen.dart, side_bore_form_screen.dart, ledger_list.dart, combined_home_screen.dart, summary_row.dart, agents_screen.dart, export screens
 Depends: T-V201
