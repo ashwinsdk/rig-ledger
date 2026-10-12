@@ -57,12 +57,12 @@ Depends: T-CB05
 Resume notes: add/rename/opening-balance dialogs, two-step delete, picker, Accounts screen done. Not reachable from the UI until the hub/tab task. Receiver switch added to Add Account.
 Commit: Add cashbook book picker, Accounts screen and book dialogs
 
-## T-CB07 Entry form, calculator sheet, items dialog [PENDING]
+## T-CB07 Entry form, calculator sheet, items dialog [DONE]
 Goal: PARITY-013..030.
 Files: lib/features/cashbook/cashbook_entry_form_screen.dart, cashbook_calculator_sheet.dart, cashbook_items_dialog.dart
 Depends: T-CB05
-Resume notes:
-Commit:
+Resume notes: form covers add AND edit (book dropdown, Delete to trash with confirm, Copy to same/other account), calculator sheet with tested evaluator, items dialog (sets amount from total), bills via camera/gallery/pdf copied into app support dir (image_picker added to pubspec). T-CB10 now only needs trash screen and list wiring. Voice input (mic) not implemented.
+Commit: Add cashbook entry form, calculator sheet and items dialog
 
 ## T-CB08 Book home screen: list, tabs, totals [PENDING]
 Goal: PARITY-031..041, 080.
