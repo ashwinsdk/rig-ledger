@@ -28,7 +28,7 @@ class DatabaseService {
   static const String cashNoteBoxName = 'cash_notes';
   static const String defaultCashBookId = 'default_cash_book';
   static const Duration cashTrashRetention = Duration(days: 30);
-  static const int schemaVersion = 4;
+  static const int schemaVersion = 5;
 
   static late Box<LedgerEntry> _ledgerBox;
   static late Box<Agent> _agentBox;
@@ -108,6 +108,9 @@ class DatabaseService {
       // Version 2: Added vehicles and side-ledger
       // Version 4: Added Account Ledger boxes (cash_books, cash_entries,
       // cash_notes). New boxes start empty, so no data transform is needed.
+      // Version 5: LedgerEntry payment log + commission fields and Agent
+      // default commission rates. New fields default to empty/0 on old data
+      // (Hive defaultValue and fromMap defaults), so no transform is needed.
 
       await _settingsBox.put('schemaVersion', schemaVersion);
     }

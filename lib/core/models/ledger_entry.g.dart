@@ -49,13 +49,20 @@ class LedgerEntryAdapter extends TypeAdapter<LedgerEntry> {
       receivedCash: fields[29] as double,
       receivedPhonePe: fields[30] as double,
       phonePeName: fields[31] as String?,
+      paymentsJson: fields[32] as String?,
+      depthCommissionRate: fields[33] == null ? 0.0 : fields[33] as double,
+      pvcCommissionRate: fields[34] == null ? 0.0 : fields[34] as double,
+      msPipeCommissionRate: fields[35] == null ? 0.0 : fields[35] as double,
+      commission: fields[36] == null ? 0.0 : fields[36] as double,
+      isCommissionManuallyEdited:
+          fields[37] == null ? false : fields[37] as bool,
     );
   }
 
   @override
   void write(BinaryWriter writer, LedgerEntry obj) {
     writer
-      ..writeByte(32)
+      ..writeByte(38)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -119,7 +126,19 @@ class LedgerEntryAdapter extends TypeAdapter<LedgerEntry> {
       ..writeByte(30)
       ..write(obj.receivedPhonePe)
       ..writeByte(31)
-      ..write(obj.phonePeName);
+      ..write(obj.phonePeName)
+      ..writeByte(32)
+      ..write(obj.paymentsJson)
+      ..writeByte(33)
+      ..write(obj.depthCommissionRate)
+      ..writeByte(34)
+      ..write(obj.pvcCommissionRate)
+      ..writeByte(35)
+      ..write(obj.msPipeCommissionRate)
+      ..writeByte(36)
+      ..write(obj.commission)
+      ..writeByte(37)
+      ..write(obj.isCommissionManuallyEdited);
   }
 
   @override

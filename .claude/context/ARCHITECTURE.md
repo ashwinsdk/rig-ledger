@@ -76,7 +76,7 @@ Hive boxes:
 
 Settings keys: `schemaVersion`, `currentVehicleId`, `lastGoogleDriveBackup`, `autoGoogleDriveBackup`, `lastSyncTime`.
 
-Schema version: 4 (4 added the Account Ledger boxes). Migration logic is a stub (_performMigrations bumps version only, no data transforms).
+Schema version: 5 (4 added the Account Ledger boxes, 5 added the payment log and commission fields). Migration logic is a stub (_performMigrations bumps version only, no data transforms).
 
 ## Google Drive sync
 

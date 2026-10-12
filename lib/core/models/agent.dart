@@ -25,6 +25,16 @@ class Agent extends HiveObject {
   @HiveField(6)
   String vehicleId; // Vehicle this agent belongs to
 
+  // v2.0.0: default commission rates (Rs per foot) copied to new bills.
+  @HiveField(7, defaultValue: 0.0)
+  double depthCommissionRate;
+
+  @HiveField(8, defaultValue: 0.0)
+  double pvcCommissionRate;
+
+  @HiveField(9, defaultValue: 0.0)
+  double msPipeCommissionRate;
+
   Agent({
     required this.id,
     required this.name,
@@ -33,6 +43,9 @@ class Agent extends HiveObject {
     required this.createdAt,
     required this.updatedAt,
     this.vehicleId = 'default',
+    this.depthCommissionRate = 0,
+    this.pvcCommissionRate = 0,
+    this.msPipeCommissionRate = 0,
   });
 
   Agent copyWith({
@@ -43,6 +56,9 @@ class Agent extends HiveObject {
     DateTime? createdAt,
     DateTime? updatedAt,
     String? vehicleId,
+    double? depthCommissionRate,
+    double? pvcCommissionRate,
+    double? msPipeCommissionRate,
   }) {
     return Agent(
       id: id ?? this.id,
@@ -52,6 +68,9 @@ class Agent extends HiveObject {
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       vehicleId: vehicleId ?? this.vehicleId,
+      depthCommissionRate: depthCommissionRate ?? this.depthCommissionRate,
+      pvcCommissionRate: pvcCommissionRate ?? this.pvcCommissionRate,
+      msPipeCommissionRate: msPipeCommissionRate ?? this.msPipeCommissionRate,
     );
   }
 
@@ -64,6 +83,9 @@ class Agent extends HiveObject {
       'notes': notes,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
+      'depthCommissionRate': depthCommissionRate,
+      'pvcCommissionRate': pvcCommissionRate,
+      'msPipeCommissionRate': msPipeCommissionRate,
     };
   }
 
@@ -76,6 +98,11 @@ class Agent extends HiveObject {
       notes: map['notes'] as String?,
       createdAt: DateTime.parse(map['createdAt'] as String),
       updatedAt: DateTime.parse(map['updatedAt'] as String),
+      depthCommissionRate:
+          (map['depthCommissionRate'] as num?)?.toDouble() ?? 0,
+      pvcCommissionRate: (map['pvcCommissionRate'] as num?)?.toDouble() ?? 0,
+      msPipeCommissionRate:
+          (map['msPipeCommissionRate'] as num?)?.toDouble() ?? 0,
     );
   }
 

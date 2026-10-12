@@ -59,6 +59,19 @@ Main Bore drilling job record.
 | receivedCash | 29 | double | Cash portion of payment |
 | receivedPhonePe | 30 | double | UPI/PhonePe portion |
 | phonePeName | 31 | String? | Sender's UPI name for reconciliation |
+| paymentsJson | 32 | String? | v2.0.0 payment log: JSON list of `LedgerPayment` (see below) |
+| depthCommissionRate | 33 | double | v2.0.0, Rs per foot of depth, default 0 |
+| pvcCommissionRate | 34 | double | v2.0.0, Rs per foot of PVC, default 0 |
+| msPipeCommissionRate | 35 | double | v2.0.0, Rs per foot of MS pipe, default 0 |
+| commission | 36 | double | v2.0.0, calculated or manually overridden, NEVER part of `total` |
+| isCommissionManuallyEdited | 37 | bool | v2.0.0 |
+
+### Payments and commission (v2.0.0)
+
+- `received`, `receivedCash`, `receivedPhonePe` stay the TOTALS everywhere (stats, export, balance).
+- With a payment log: `receivedCash = unloggedCash + sum(cash payments)`, same for PhonePe. `unloggedCash` / `unloggedPhonePe` are getters (`received - sum(logs)`): money received before the log existed or typed without a receiver. Older bills are not migrated: all their received amount is "unlogged".
+- `commission = depthInFeet x depthCommissionRate + pvcInFeet x pvcCommissionRate + msPipeInFeet x msPipeCommissionRate` (`LedgerEntry.calculateCommission`). Side bore has no PVC, so only the depth part applies. Never added to `total`.
+- Rates are copied from the agent's defaults when a bill is created and can be edited per bill.
 
 ### Total formula
 
@@ -119,6 +132,9 @@ decision.
 |---|---|---|
 | id | String | UUID |
 | vehicleId | String | FK to Vehicle.id (agents are vehicle-scoped) |
+| depthCommissionRate | double | HiveField 7, v2.0.0 default commission Rs per foot of depth |
+| pvcCommissionRate | double | HiveField 8, v2.0.0 |
+| msPipeCommissionRate | double | HiveField 9, v2.0.0 |
 | name | String | Broker/agent display name |
 | createdAt | DateTime | |
 | updatedAt | DateTime | |
@@ -188,6 +204,18 @@ Computed: `total` = count x rate.
 Stored as JSON string inside the parent entry's `typeDetailsJson` HiveField.
 Encoding: `TypeDetail.encodeList(list)` -> String. Decoding: `TypeDetail.decodeList(jsonString)` -> List<TypeDetail>?.
 Display helpers: `TypeDetail.displayTypes()`, `TypeDetail.displayDetailed()`, `TypeDetail.totalCount()`, `TypeDetail.totalAmount()`.
+
+---
+
+## LedgerPayment -- lib/core/models/ledger_payment.dart
+
+Not a Hive model. Plain Dart class stored as JSON in `LedgerEntry.paymentsJson`
+(like `TypeDetail`). Fields: `id`, `date`, `amount`, `mode` ('cash' | 'phonepe'),
+`receiverBookId` (CashBook.id, optional), `payerName` (PhonePe sender),
+`notes`. Encoding: `LedgerPayment.encodeList` / `decodeList` (never throws).
+A payment with a receiver has a linked income `CashEntry`
+(`sourceType: 'ledger_payment'`, `sourceId: LedgerEntry.id`,
+`sourcePaymentId: payment.id`).
 
 ---
 

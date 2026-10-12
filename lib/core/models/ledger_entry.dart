@@ -1,4 +1,5 @@
 import 'package:hive/hive.dart';
+import 'ledger_payment.dart';
 
 part 'ledger_entry.g.dart';
 
@@ -101,6 +102,25 @@ class LedgerEntry extends HiveObject {
   @HiveField(31)
   String? phonePeName; // PhonePe payer name
 
+  // v2.0.0: payment log (JSON list of LedgerPayment) and commission.
+  @HiveField(32)
+  String? paymentsJson;
+
+  @HiveField(33, defaultValue: 0.0)
+  double depthCommissionRate; // Rs per foot of depth
+
+  @HiveField(34, defaultValue: 0.0)
+  double pvcCommissionRate; // Rs per foot of PVC
+
+  @HiveField(35, defaultValue: 0.0)
+  double msPipeCommissionRate; // Rs per foot of MS pipe
+
+  @HiveField(36, defaultValue: 0.0)
+  double commission; // Calculated or manually overridden; never part of total
+
+  @HiveField(37, defaultValue: false)
+  bool isCommissionManuallyEdited;
+
   LedgerEntry({
     required this.id,
     required this.date,
@@ -134,6 +154,12 @@ class LedgerEntry extends HiveObject {
     this.receivedCash = 0,
     this.receivedPhonePe = 0,
     this.phonePeName,
+    this.paymentsJson,
+    this.depthCommissionRate = 0,
+    this.pvcCommissionRate = 0,
+    this.msPipeCommissionRate = 0,
+    this.commission = 0,
+    this.isCommissionManuallyEdited = false,
   });
 
   /// Calculate step rate based on depth type and feet
@@ -233,6 +259,36 @@ class LedgerEntry extends HiveObject {
         extraCharges;
   }
 
+  /// Commission = depth ft x rate + PVC ft x rate + MS pipe ft x rate.
+  /// It is informational and is never added to [total] (v2.0.0).
+  static double calculateCommission({
+    required double depthInFeet,
+    required double depthCommissionRate,
+    required double pvcInFeet,
+    required double pvcCommissionRate,
+    required double msPipeInFeet,
+    required double msPipeCommissionRate,
+  }) {
+    final c = (depthInFeet * depthCommissionRate) +
+        (pvcInFeet * pvcCommissionRate) +
+        (msPipeInFeet * msPipeCommissionRate);
+    return (c * 100).round() / 100;
+  }
+
+  /// Payments logged on this bill (empty for bills without a log).
+  List<LedgerPayment> get payments => LedgerPayment.decodeList(paymentsJson);
+
+  /// Cash received that is not part of the payment log (older bills, or
+  /// money typed before the log existed).
+  double get unloggedCash =>
+      _round2(receivedCash - LedgerPayment.totalCash(payments));
+
+  /// PhonePe received that is not part of the payment log.
+  double get unloggedPhonePe =>
+      _round2(receivedPhonePe - LedgerPayment.totalPhonePe(payments));
+
+  static double _round2(double v) => (v * 100).round() / 100;
+
   /// Calculate balance based on formula
   static double calculateBalance({
     required double total,
@@ -275,6 +331,13 @@ class LedgerEntry extends HiveObject {
     double? receivedCash,
     double? receivedPhonePe,
     String? phonePeName,
+    String? paymentsJson,
+    bool clearPayments = false,
+    double? depthCommissionRate,
+    double? pvcCommissionRate,
+    double? msPipeCommissionRate,
+    double? commission,
+    bool? isCommissionManuallyEdited,
   }) {
     return LedgerEntry(
       id: id ?? this.id,
@@ -311,6 +374,13 @@ class LedgerEntry extends HiveObject {
       receivedCash: receivedCash ?? this.receivedCash,
       receivedPhonePe: receivedPhonePe ?? this.receivedPhonePe,
       phonePeName: phonePeName ?? this.phonePeName,
+      paymentsJson: clearPayments ? null : (paymentsJson ?? this.paymentsJson),
+      depthCommissionRate: depthCommissionRate ?? this.depthCommissionRate,
+      pvcCommissionRate: pvcCommissionRate ?? this.pvcCommissionRate,
+      msPipeCommissionRate: msPipeCommissionRate ?? this.msPipeCommissionRate,
+      commission: commission ?? this.commission,
+      isCommissionManuallyEdited:
+          isCommissionManuallyEdited ?? this.isCommissionManuallyEdited,
     );
   }
 
@@ -346,6 +416,12 @@ class LedgerEntry extends HiveObject {
       'notes': notes,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
+      'paymentsJson': paymentsJson,
+      'depthCommissionRate': depthCommissionRate,
+      'pvcCommissionRate': pvcCommissionRate,
+      'msPipeCommissionRate': msPipeCommissionRate,
+      'commission': commission,
+      'isCommissionManuallyEdited': isCommissionManuallyEdited,
     };
   }
 
@@ -382,6 +458,15 @@ class LedgerEntry extends HiveObject {
       notes: map['notes'] as String?,
       createdAt: DateTime.parse(map['createdAt'] as String),
       updatedAt: DateTime.parse(map['updatedAt'] as String),
+      paymentsJson: map['paymentsJson'] as String?,
+      depthCommissionRate:
+          (map['depthCommissionRate'] as num?)?.toDouble() ?? 0,
+      pvcCommissionRate: (map['pvcCommissionRate'] as num?)?.toDouble() ?? 0,
+      msPipeCommissionRate:
+          (map['msPipeCommissionRate'] as num?)?.toDouble() ?? 0,
+      commission: (map['commission'] as num?)?.toDouble() ?? 0,
+      isCommissionManuallyEdited:
+          map['isCommissionManuallyEdited'] as bool? ?? false,
     );
   }
 

@@ -18,14 +18,14 @@ Assumption to confirm with the developer: commission = quantity (ft) x commissio
 
 Feature: Account Ledger (cashbook replica, v2.0.0 feature 1). Full spec: `docs/features/cashbook/SPEC.md` (parity lines PARITY-001..084, decisions D1..D14). Flags: T-CB01/02/03 touch Hive models, DatabaseService and SyncService; T-CB15 touches export.
 
-## T-V201 Payment log, commission fields on LedgerEntry and Agent [IN_PROGRESS]
+## T-V201 Payment log, commission fields on LedgerEntry and Agent [DONE]
 Goal: LedgerPayment (plain class, JSON in LedgerEntry.paymentsJson), commission fields on LedgerEntry (rates per unit for depth, PVC, MS pipe, commission amount, manual flag), default commission rates on Agent, schemaVersion 5, MODELS.md.
 Files: lib/core/models/ledger_payment.dart, ledger_entry.dart, agent.dart, *.g.dart, database_service.dart, .claude/context/MODELS.md
 Depends: T-CB02
-Resume notes:
-Commit:
+Resume notes: LedgerPayment, LedgerEntry fields 32-37 (defaultValue on new non-null fields), Agent fields 7-9, schemaVersion 5. 9 tests including a binary compat test (records written by pre-2.0.0 adapters load with defaults). CSV/PDF columns come with T-V204.
+Commit: Add payment log and commission fields to ledger models
 
-## T-V202 Payment log editor in main and side bore forms [PENDING]
+## T-V202 Payment log editor in main and side bore forms [IN_PROGRESS]
 Goal: replace the single Cash/PhonePe inputs with a payment log (amount, mode, date, receiver book, payer name, note); totals = unlogged base + logs; fixes the payee-add bug in the side bore form.
 Files: lib/features/ledger_form/widgets/payment_log_editor.dart, ledger_form_screen.dart, side_bore_form_screen.dart
 Depends: T-V201

@@ -24,13 +24,16 @@ class AgentAdapter extends TypeAdapter<Agent> {
       createdAt: fields[4] as DateTime,
       updatedAt: fields[5] as DateTime,
       vehicleId: fields[6] as String,
+      depthCommissionRate: fields[7] == null ? 0.0 : fields[7] as double,
+      pvcCommissionRate: fields[8] == null ? 0.0 : fields[8] as double,
+      msPipeCommissionRate: fields[9] == null ? 0.0 : fields[9] as double,
     );
   }
 
   @override
   void write(BinaryWriter writer, Agent obj) {
     writer
-      ..writeByte(7)
+      ..writeByte(10)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -44,7 +47,13 @@ class AgentAdapter extends TypeAdapter<Agent> {
       ..writeByte(5)
       ..write(obj.updatedAt)
       ..writeByte(6)
-      ..write(obj.vehicleId);
+      ..write(obj.vehicleId)
+      ..writeByte(7)
+      ..write(obj.depthCommissionRate)
+      ..writeByte(8)
+      ..write(obj.pvcCommissionRate)
+      ..writeByte(9)
+      ..write(obj.msPipeCommissionRate);
   }
 
   @override
