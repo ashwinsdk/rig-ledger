@@ -19,6 +19,7 @@ import '../export/csv_export_screen.dart';
 import '../export/csv_import_screen.dart';
 import '../export/pdf_export_screen.dart';
 import 'vehicle_management_screen.dart';
+import 'about_screen.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -153,16 +154,29 @@ class SettingsScreen extends ConsumerWidget {
                 _buildSectionTitle('About'),
                 _SettingsCard(
                   children: [
-                    _SettingsTile(
-                      icon: Icons.info_outlined,
-                      title: 'RigLedger',
-                      subtitle: 'Version 1.0.7',
-                      trailing: Image.asset(
-                        'assets/images/logo.png',
-                        width: 32,
-                        height: 32,
-                      ),
-                      onTap: () => _showAboutDialog(context),
+                    Consumer(
+                      builder: (context, ref, child) {
+                        final info = ref.watch(packageInfoProvider);
+                        return _SettingsTile(
+                          icon: Icons.info_outlined,
+                          title: 'About RigLedger',
+                          subtitle: info.maybeWhen(
+                            data: (i) =>
+                                'Version ${i.version} (build ${i.buildNumber}), license, notices',
+                            orElse: () => 'Version, license, notices',
+                          ),
+                          trailing: Image.asset(
+                            'assets/images/logo.png',
+                            width: 32,
+                            height: 32,
+                          ),
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) => const AboutScreen()),
+                          ),
+                        );
+                      },
                     ),
                   ],
                 ),
@@ -367,74 +381,6 @@ class SettingsScreen extends ConsumerWidget {
         );
       }
     }
-  }
-
-  void _showAboutDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Row(
-          children: [
-            Image.asset(
-              'assets/images/logo.png',
-              width: 40,
-              height: 40,
-            ),
-            const SizedBox(width: 12),
-            const Text('RigLedger'),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Version: 7'),
-            const SizedBox(height: 8),
-            const Text(
-              'A fast, lightweight ledger for borewell drilling entries, income and expenses, and agent management.',
-              style: TextStyle(color: AppColors.textSecondary),
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'Features:',
-              style: TextStyle(fontWeight: FontWeight.w500),
-            ),
-            const SizedBox(height: 4),
-            const Text('- Multi-vehicle support'),
-            const Text('- Side-ledger (Diesel, PVC, Bit, Hammer)'),
-            const Text('- Offline-first operation'),
-            const Text('- CSV import/export'),
-            const Text('- PDF report generation'),
-            const Text('- Agent management'),
-            const Text('- Statistics and charts'),
-            const SizedBox(height: 16),
-            const Text(
-              'Developer:',
-              style: TextStyle(fontWeight: FontWeight.w500),
-            ),
-            const SizedBox(height: 4),
-            GestureDetector(
-              onTap: () {
-                // Could add URL launcher here if needed
-              },
-              child: const Text(
-                'github.com/ashwinsdk',
-                style: TextStyle(
-                  color: AppColors.primary,
-                  decoration: TextDecoration.underline,
-                ),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
-          ),
-        ],
-      ),
-    );
   }
 }
 

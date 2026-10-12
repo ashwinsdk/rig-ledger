@@ -60,14 +60,14 @@ Depends: none
 Resume notes: isSideBoreProvider; PVC hidden for side bore in bill cards, depth label, side ledger summary and category cards, add-entry sheet/dialog, filter sheet, stats charts/details, PDF columns and summary, CSV type list, Portfolio expenses. New shared AddressAutocompleteField used by both forms (side bore now has location suggestions; also removes a listener leak in the main form's old autocomplete). Payee bug: fixed by the payment dialog (T-V202). Verified on the emulator (side bore rig).
 Commit: Remove PVC for side bore rigs and add location suggestions
 
-## T-V207 App information, private license [IN_PROGRESS]
+## T-V207 App information, private license [DONE]
 Goal: About screen (version from build, package id, data and privacy facts verifiable from the code, third-party licenses via Flutter license page), proprietary LICENSE file, font OFL notices.
 Files: lib/features/settings/about_screen.dart, settings_screen.dart, LICENSE, assets/fonts/*
 Depends: none
-Resume notes:
-Commit:
+Resume notes: root LICENSE (proprietary, copyright line from the git author and first commit year; owner must confirm it, governing law and a contact address are intentionally omitted), declared as an asset; AppInfo (every value traceable to the repo); About screen (version from package_info_plus, data and Drive facts, Android permissions from the manifest, license text, Flutter license page with Noto OFL notices registered, developer link); replaced the old About dialog that hardcoded 'Version 1.0.7' / 'Version: 7' (pubspec said 1.0.4+4). Widget test added.
+Commit: Add About screen, proprietary license and verified app information
 
-## T-V208 Version bump to 2.0.0 [PENDING]
+## T-V208 Version bump to 2.0.0 [IN_PROGRESS]
 Goal: pubspec version 2.0.0+N, MEMORY.md, docs.
 Files: pubspec.yaml
 Depends: all feature tasks

@@ -1,0 +1,57 @@
+RigLedger Proprietary License
+
+Copyright (c) 2025-2026 Ashwin Sudhakar. All rights reserved.
+
+This license applies to the RigLedger application (Android and macOS), its
+source code, and its documentation (together, the "Software"). It does not
+apply to third-party components listed in section 6.
+
+1. Ownership
+   The Software is licensed, not sold. The copyright holder named above keeps
+   all rights, title and interest in the Software. No rights are granted except
+   those stated in this license.
+
+2. Permitted use
+   You may install the compiled Software on devices you own or control and use
+   it for your own business or personal record keeping. This permission is
+   personal, non-exclusive, non-transferable and revocable.
+
+3. Restrictions
+   Unless the copyright holder gives written permission, you must not:
+   a) copy, publish, distribute, sell, rent, lease or sublicense the Software;
+   b) modify the Software or create derivative works from it;
+   c) reverse engineer, decompile or disassemble the Software, except to the
+      extent the law allows this despite this restriction;
+   d) remove or change any copyright, license or attribution notice;
+   e) use the Software or its name, icon or artwork to identify another
+      product or service.
+
+4. Your data
+   Records you enter are stored on your own device. If you turn on Google Drive
+   backup or sync, one backup file is stored in your own Google Drive account.
+   You are responsible for keeping backups of your data. The copyright holder
+   does not receive or host your data through the Software.
+
+5. No warranty
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+   IMPLIED, INCLUDING THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+   PARTICULAR PURPOSE AND NON-INFRINGEMENT. Calculated values (totals,
+   balances, commission, profit) are aids for record keeping and must be
+   checked by you before they are used for billing, tax or legal purposes.
+
+6. Third-party components
+   The Software includes components that are licensed separately by their
+   authors, including the Flutter framework, Dart packages listed in
+   pubspec.yaml, and the fonts Noto Sans and Noto Sans Tamil (SIL Open Font
+   License 1.1, see assets/fonts). Their license texts are shown in the app
+   under Settings > About > Open source licenses. Those licenses apply to those
+   components only.
+
+7. Limitation of liability
+   To the maximum extent the law allows, the copyright holder is not liable for
+   any indirect, incidental or consequential loss, or for loss of data or
+   profit, arising from the use of or inability to use the Software.
+
+8. Termination
+   This license ends automatically if you break any of its terms. When it ends
+   you must stop using the Software and delete all copies of it.

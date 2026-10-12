@@ -15,6 +15,7 @@ import 'core/services/sync_service.dart';
 import 'core/services/payment_link_service.dart';
 import 'core/providers/sync_provider.dart';
 import 'core/utils/platform_helper.dart';
+import 'core/utils/app_info.dart';
 import 'features/navigation/main_navigation.dart';
 import 'features/navigation/desktop_shell.dart';
 
@@ -54,6 +55,7 @@ void main() async {
   await Hive.initFlutter();
 
   // Initialize database
+  registerAppLicenses();
   await DatabaseService.initialize();
   await PaymentLinkService.reconcileAll();
 
