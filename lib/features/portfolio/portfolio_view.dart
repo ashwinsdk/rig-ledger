@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import '../../core/database/database_service.dart';
-import '../../core/models/vehicle.dart';
-import '../../core/providers/ledger_provider.dart';
-import '../../core/providers/side_ledger_provider.dart';
+import '../../core/providers/portfolio_provider.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/portfolio_calculator.dart';
 
@@ -30,25 +27,9 @@ class _PortfolioViewState extends ConsumerState<PortfolioView> {
 
   @override
   Widget build(BuildContext context) {
-    // Watching keeps the screen live when data changes.
-    final myBills = ref.watch(ledgerEntriesProvider);
-    final myDiesel = ref.watch(dieselEntriesProvider);
-    final myPvc = ref.watch(pvcEntriesProvider);
-    final myBit = ref.watch(bitEntriesProvider);
-    final myHammer = ref.watch(hammerEntriesProvider);
-
-    final bills =
-        _allRigs ? DatabaseService.ledgerBox.values.toList() : myBills;
-    final diesel =
-        _allRigs ? DatabaseService.dieselBox.values.toList() : myDiesel;
-    final pvc = _allRigs ? DatabaseService.pvcBox.values.toList() : myPvc;
-    final bit = _allRigs ? DatabaseService.bitBox.values.toList() : myBit;
-    final hammer =
-        _allRigs ? DatabaseService.hammerBox.values.toList() : myHammer;
-    final sideBoreIds = DatabaseService.vehicleBox.values
-        .where((v) => v.vehicleType == VehicleType.sideBore)
-        .map((v) => v.id)
-        .toSet();
+    final src = ref.watch(portfolioSourceProvider(_allRigs));
+    final bills = src.bills;
+    final sideBoreIds = src.sideBoreVehicleIds;
 
     // Agents that have bills in the scope (any period) for the filter chips.
     final agentNames = <String, String>{};
@@ -61,10 +42,10 @@ class _PortfolioViewState extends ConsumerState<PortfolioView> {
 
     final s = PortfolioCalculator.compute(
       bills: bills,
-      diesel: diesel,
-      pvc: pvc,
-      bit: bit,
-      hammer: hammer,
+      diesel: src.diesel,
+      pvc: src.pvc,
+      bit: src.bit,
+      hammer: src.hammer,
       start: widget.start,
       end: widget.end,
       agentId: _agentId,

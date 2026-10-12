@@ -153,7 +153,16 @@ class DatabaseService {
     // Don't delete if it's the only vehicle
     if (_vehicleBox.length <= 1) return;
 
-    // Delete all associated data
+    // Delete all associated data (the confirmation dialog promises ledger
+    // entries, side ledger data and agents of this vehicle).
+    for (final entry
+        in _ledgerBox.values.where((e) => e.vehicleId == id).toList()) {
+      await deleteLedgerEntry(entry.id);
+    }
+    for (final agent
+        in _agentBox.values.where((a) => a.vehicleId == id).toList()) {
+      await deleteAgent(agent.id);
+    }
     await _deleteSideLedgerByVehicle(id);
     await _deleteMiniLedgerByVehicle(id);
     await recordTombstone(id, vehicleBoxName);

@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../database/database_service.dart';
 import '../models/vehicle.dart';
+import '../services/payment_link_service.dart';
 
 /// Provider for the list of all vehicles
 class VehiclesNotifier extends StateNotifier<List<Vehicle>> {
@@ -23,6 +24,11 @@ class VehiclesNotifier extends StateNotifier<List<Vehicle>> {
   }
 
   Future<void> deleteVehicle(String id) async {
+    // Incomes created from this rig's bill payments go to the trash too.
+    for (final bill
+        in DatabaseService.ledgerBox.values.where((e) => e.vehicleId == id)) {
+      await PaymentLinkService.onBillDeleted(bill.id);
+    }
     await DatabaseService.deleteVehicle(id);
     loadVehicles();
   }

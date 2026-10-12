@@ -6,6 +6,7 @@ import '../../../core/providers/vehicle_provider.dart';
 import '../../../core/providers/ledger_provider.dart';
 import '../../../core/providers/side_ledger_provider.dart';
 import '../../../core/providers/agent_provider.dart';
+import '../../../core/providers/cashbook_provider.dart';
 import '../../../core/theme/app_colors.dart';
 
 class VehicleManagementScreen extends ConsumerStatefulWidget {
@@ -121,6 +122,7 @@ class _VehicleManagementScreenState
       await ref.read(vehiclesProvider.notifier).deleteVehicle(vehicle.id);
 
       // Refresh all data providers
+      ref.read(cashEntriesProvider.notifier).refresh();
       ref.read(ledgerEntriesProvider.notifier).refresh();
       ref.read(dieselEntriesProvider.notifier).refresh();
       ref.read(pvcEntriesProvider.notifier).refresh();

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../../core/database/database_service.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/providers/ledger_provider.dart';
 import '../../../core/theme/app_colors.dart';
 
 /// Address / city field with suggestions from addresses used on earlier bills
@@ -7,7 +8,7 @@ import '../../../core/theme/app_colors.dart';
 ///
 /// The form owns [controller]; this widget never replaces its text, so the
 /// cursor does not jump and no listeners leak across rebuilds.
-class AddressAutocompleteField extends StatefulWidget {
+class AddressAutocompleteField extends ConsumerStatefulWidget {
   final TextEditingController controller;
   final String hintText;
   final IconData icon;
@@ -20,11 +21,12 @@ class AddressAutocompleteField extends StatefulWidget {
   });
 
   @override
-  State<AddressAutocompleteField> createState() =>
+  ConsumerState<AddressAutocompleteField> createState() =>
       _AddressAutocompleteFieldState();
 }
 
-class _AddressAutocompleteFieldState extends State<AddressAutocompleteField> {
+class _AddressAutocompleteFieldState
+    extends ConsumerState<AddressAutocompleteField> {
   final _focus = FocusNode();
 
   @override
@@ -41,7 +43,8 @@ class _AddressAutocompleteFieldState extends State<AddressAutocompleteField> {
       optionsBuilder: (value) {
         final q = value.text.trim().toLowerCase();
         if (q.isEmpty) return const Iterable<String>.empty();
-        return DatabaseService.getUniqueAddresses()
+        return ref
+            .read(uniqueAddressesProvider)
             .where((a) => a.toLowerCase().contains(q) && a.toLowerCase() != q);
       },
       fieldViewBuilder: (context, controller, focusNode, onSubmitted) {

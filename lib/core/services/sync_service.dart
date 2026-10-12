@@ -150,6 +150,12 @@ class SyncService {
 
   // ─── Merge Logic ──────────────────────────────────────────────────────
 
+  /// Exposed for tests.
+  @visibleForTesting
+  static Map<String, dynamic> mergeSnapshots(
+          Map<String, dynamic> local, Map<String, dynamic> remote) =>
+      _merge(local, remote);
+
   /// Merge two full backup snapshots, producing a merged snapshot.
   ///
   /// For each collection we:

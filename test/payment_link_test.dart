@@ -4,10 +4,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
 import 'package:rig_ledger/core/database/database_service.dart';
 import 'package:rig_ledger/core/models/cash_entry.dart';
+import 'package:rig_ledger/core/models/agent.dart';
 import 'package:rig_ledger/core/models/ledger_entry.dart';
+import 'package:rig_ledger/core/models/vehicle.dart';
 import 'package:rig_ledger/core/models/ledger_payment.dart';
 import 'package:rig_ledger/core/providers/cashbook_provider.dart';
 import 'package:rig_ledger/core/providers/ledger_provider.dart';
+import 'package:rig_ledger/core/providers/vehicle_provider.dart';
 import 'package:rig_ledger/core/services/payment_link_service.dart';
 
 LedgerEntry bill({
@@ -196,5 +199,54 @@ void main() {
     final b = DatabaseService.ledgerBox.get('bill1')!;
     expect(b.payments.single.amount, 1200);
     expect(b.receivedCash, 1200);
+  });
+
+  test('backup and restore keep payments, commission and links', () async {
+    final b = bill(payments: [pay('p1', 2500, receiver: receiverId)])
+      ..commission = 321.5
+      ..depthCommissionRate = 3
+      ..isCommissionManuallyEdited = true;
+    await c.read(ledgerEntriesProvider.notifier).addEntry(b);
+    final backup = await DatabaseService.createBackup();
+    await DatabaseService.restoreBackup(backup);
+    final restored = DatabaseService.ledgerBox.get('bill1')!;
+    expect(restored.payments.single.id, 'p1');
+    expect(restored.payments.single.receiverBookId, receiverId);
+    expect(restored.commission, 321.5);
+    expect(restored.depthCommissionRate, 3);
+    expect(restored.isCommissionManuallyEdited, isTrue);
+    expect(linked().length, 1);
+    expect(linked().single.sourcePaymentId, 'p1');
+    // Reconcile after a restore finds everything already consistent.
+    expect(await PaymentLinkService.reconcileAll(), 0);
+    expect(linked().length, 1);
+  });
+
+  test('deleting a vehicle removes its bills and agents and trashes incomes',
+      () async {
+    final now = DateTime(2026, 5, 1);
+    await DatabaseService.saveVehicle(Vehicle(
+        id: 'v2',
+        name: 'Rig 2',
+        vehicleTypeIndex: 0,
+        createdAt: now,
+        updatedAt: now));
+    await DatabaseService.saveAgent(Agent(
+        id: 'a-v2',
+        name: 'Agent v2',
+        createdAt: now,
+        updatedAt: now,
+        vehicleId: 'v2'));
+    final b =
+        bill(id: 'v2bill', payments: [pay('p1', 900, receiver: receiverId)])
+          ..vehicleId = 'v2';
+    await c.read(ledgerEntriesProvider.notifier).addEntry(b);
+    expect(linked().length, 1);
+
+    await c.read(vehiclesProvider.notifier).deleteVehicle('v2');
+    expect(DatabaseService.ledgerBox.get('v2bill'), isNull);
+    expect(DatabaseService.getAgent('a-v2'), isNull);
+    expect(linked().single.isDeleted, isTrue);
+    expect(DatabaseService.vehicleBox.containsKey('v2'), isFalse);
   });
 }

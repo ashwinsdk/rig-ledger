@@ -365,3 +365,9 @@ final phonePeNamesProvider = Provider<List<String>>((ref) {
 
 /// Generate new entry ID
 String generateEntryId() => _uuid.v4();
+
+/// Distinct addresses used on bills of the current rig (location suggestions).
+final uniqueAddressesProvider = Provider<List<String>>((ref) {
+  ref.watch(ledgerEntriesProvider); // recompute when bills change
+  return DatabaseService.getUniqueAddresses();
+});
