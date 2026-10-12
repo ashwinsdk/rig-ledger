@@ -85,12 +85,12 @@ Depends: T-CB08
 Resume notes: edit/copy/delete live in the entry form (T-CB07); this task added the Deleted Transactions screen (Restore/Delete per row, Delete All, 30 day note, restore into another book when the book is gone) and its hub entry.
 Commit: Add cashbook Deleted Transactions screen
 
-## T-CB11 Transfer [PENDING]
+## T-CB11 Transfer [DONE]
 Goal: PARITY-057..060 with transferGroupId.
 Files: cashbook_transfer_screen.dart
 Depends: T-CB06
-Resume notes:
-Commit:
+Resume notes: Transfer screen + hub entry; logic (linked pair, notes format, same-book refusal) covered by provider tests.
+Commit: Add cashbook Transfer screen
 
 ## T-CB12 Summaries and calendar [PENDING]
 Goal: PARITY-061..064.
