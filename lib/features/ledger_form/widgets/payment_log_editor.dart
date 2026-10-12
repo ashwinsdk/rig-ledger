@@ -7,6 +7,7 @@ import '../../../core/models/ledger_payment.dart';
 import '../../../core/providers/cashbook_provider.dart';
 import '../../../core/providers/ledger_provider.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../cashbook/widgets/cashbook_common.dart';
 
 final _money = NumberFormat('#,##0.00');
 final _dateFmt = DateFormat('dd MMM yyyy');
@@ -65,43 +66,14 @@ class PaymentLogEditor extends ConsumerWidget {
   }
 
   Future<void> _editBase(BuildContext context) async {
-    final cash = TextEditingController(text: baseCash == 0 ? '' : '$baseCash');
-    final pe =
-        TextEditingController(text: basePhonePe == 0 ? '' : '$basePhonePe');
-    final ok = await showDialog<bool>(
+    final result = await showDialog<(double, double)>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Earlier received'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text(
-              'Amount received before payments were logged. It has no receiver.',
-              style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
-            ),
-            const SizedBox(height: 12),
-            _amountField(cash, 'Cash (₹)'),
-            if (allowPhonePe) ...[
-              const SizedBox(height: 12),
-              _amountField(pe, 'PhonePe (₹)'),
-            ],
-          ],
-        ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel')),
-          ElevatedButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Save')),
-        ],
-      ),
+      builder: (_) => _BaseDialog(
+          cash: baseCash, phonePe: basePhonePe, allowPhonePe: allowPhonePe),
     );
-    final c = double.tryParse(cash.text) ?? 0;
-    final p = double.tryParse(pe.text) ?? 0;
-    cash.dispose();
-    pe.dispose();
-    if (ok == true) onBaseChanged(c, allowPhonePe ? p : 0);
+    if (result != null) {
+      onBaseChanged(result.$1, allowPhonePe ? result.$2 : 0);
+    }
   }
 
   @override
@@ -202,6 +174,66 @@ class PaymentLogEditor extends ConsumerWidget {
   }
 }
 
+/// "Earlier received" editor. Controllers live in the State (see
+/// showCashTextPrompt for why).
+class _BaseDialog extends StatefulWidget {
+  final double cash;
+  final double phonePe;
+  final bool allowPhonePe;
+  const _BaseDialog(
+      {required this.cash, required this.phonePe, required this.allowPhonePe});
+
+  @override
+  State<_BaseDialog> createState() => _BaseDialogState();
+}
+
+class _BaseDialogState extends State<_BaseDialog> {
+  late final _cash =
+      TextEditingController(text: widget.cash == 0 ? '' : '${widget.cash}');
+  late final _pe = TextEditingController(
+      text: widget.phonePe == 0 ? '' : '${widget.phonePe}');
+
+  @override
+  void dispose() {
+    _cash.dispose();
+    _pe.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Earlier received'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text(
+            'Amount received before payments were logged. It has no receiver.',
+            style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+          ),
+          const SizedBox(height: 12),
+          _amountField(_cash, 'Cash (₹)'),
+          if (widget.allowPhonePe) ...[
+            const SizedBox(height: 12),
+            _amountField(_pe, 'PhonePe (₹)'),
+          ],
+        ],
+      ),
+      actions: [
+        TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel')),
+        ElevatedButton(
+            onPressed: () => Navigator.pop(context, (
+                  double.tryParse(_cash.text) ?? 0,
+                  double.tryParse(_pe.text) ?? 0
+                )),
+            child: const Text('Save')),
+      ],
+    );
+  }
+}
+
 Widget _amountField(TextEditingController c, String label) => TextField(
       controller: c,
       keyboardType: const TextInputType.numberWithOptions(decimal: true),
@@ -259,29 +291,13 @@ class _PaymentDialogState extends ConsumerState<_PaymentDialog> {
   }
 
   Future<void> _newReceiver() async {
-    final c = TextEditingController();
-    final name = await showDialog<String>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('New receiver'),
-        content: TextField(
-          controller: c,
-          autofocus: true,
-          textCapitalization: TextCapitalization.words,
-          decoration: const InputDecoration(
-              labelText: 'Name',
-              helperText: 'Creates a book in Account Ledger'),
-        ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-          ElevatedButton(
-              onPressed: () => Navigator.pop(ctx, c.text.trim()),
-              child: const Text('Add')),
-        ],
-      ),
+    final name = await showCashTextPrompt(
+      context,
+      title: 'New receiver',
+      label: 'Name',
+      helper: 'Creates a book in Account Ledger',
+      confirmLabel: 'Add',
     );
-    c.dispose();
     if (name == null || name.isEmpty) return;
     final (book, error) =
         await ref.read(cashBooksProvider.notifier).addBook(name: name, kind: 1);
@@ -382,6 +398,9 @@ class _PaymentDialogState extends ConsumerState<_PaymentDialog> {
             ),
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(
+              // A new key makes the field pick up programmatic changes (a
+              // receiver created from this dialog).
+              key: ValueKey(_receiverId),
               initialValue: validReceiver ? _receiverId : '',
               decoration: const InputDecoration(
                   labelText: 'Received by',

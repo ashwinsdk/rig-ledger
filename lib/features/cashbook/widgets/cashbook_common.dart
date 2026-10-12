@@ -241,3 +241,89 @@ Future<CashDateRange?> pickCashDateRange(
   }
   return CashDateRange(a, DateTime(b.year, b.month, b.day + 1));
 }
+
+/// Single text field prompt. The controller lives in the dialog's State, so it
+/// is disposed only after the dialog has fully left the tree (disposing it
+/// right after `await showDialog` crashes during the exit transition).
+/// Returns the trimmed text, or null when cancelled.
+Future<String?> showCashTextPrompt(
+  BuildContext context, {
+  required String title,
+  required String label,
+  String initial = '',
+  String? helper,
+  String confirmLabel = 'Save',
+  int maxLines = 1,
+  TextCapitalization capitalization = TextCapitalization.words,
+}) {
+  return showDialog<String>(
+    context: context,
+    builder: (_) => _TextPromptDialog(
+      title: title,
+      label: label,
+      initial: initial,
+      helper: helper,
+      confirmLabel: confirmLabel,
+      maxLines: maxLines,
+      capitalization: capitalization,
+    ),
+  );
+}
+
+class _TextPromptDialog extends StatefulWidget {
+  final String title;
+  final String label;
+  final String initial;
+  final String? helper;
+  final String confirmLabel;
+  final int maxLines;
+  final TextCapitalization capitalization;
+
+  const _TextPromptDialog({
+    required this.title,
+    required this.label,
+    required this.initial,
+    required this.helper,
+    required this.confirmLabel,
+    required this.maxLines,
+    required this.capitalization,
+  });
+
+  @override
+  State<_TextPromptDialog> createState() => _TextPromptDialogState();
+}
+
+class _TextPromptDialogState extends State<_TextPromptDialog> {
+  late final TextEditingController _c =
+      TextEditingController(text: widget.initial);
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(widget.title),
+      content: TextField(
+        controller: _c,
+        autofocus: true,
+        maxLines: widget.maxLines,
+        textCapitalization: widget.capitalization,
+        decoration:
+            InputDecoration(labelText: widget.label, helperText: widget.helper),
+        onSubmitted: (_) => Navigator.pop(context, _c.text.trim()),
+      ),
+      actions: [
+        TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel')),
+        ElevatedButton(
+            onPressed: () => Navigator.pop(context, _c.text.trim()),
+            child: Text(widget.confirmLabel)),
+      ],
+    );
+  }
+}

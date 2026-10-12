@@ -113,35 +113,15 @@ class _AddBookDialogState extends ConsumerState<_AddBookDialog> {
 /// Rename dialog (PARITY-008).
 Future<void> showRenameCashBookDialog(
     BuildContext context, WidgetRef ref, CashBook book) async {
-  final controller = TextEditingController(text: book.name);
-  final ok = await showDialog<bool>(
-    context: context,
-    builder: (ctx) => AlertDialog(
-      title: const Text('Edit Account'),
-      content: TextField(
-        controller: controller,
-        autofocus: true,
-        textCapitalization: TextCapitalization.words,
-        decoration: const InputDecoration(labelText: 'Name'),
-      ),
-      actions: [
-        TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel')),
-        TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Save')),
-      ],
-    ),
+  final name = await showCashTextPrompt(
+    context,
+    title: 'Edit Account',
+    label: 'Name',
+    initial: book.name,
   );
-  if (ok != true || !context.mounted) {
-    controller.dispose();
-    return;
-  }
-  final (success, error) = await ref
-      .read(cashBooksProvider.notifier)
-      .renameBook(book.id, controller.text);
-  controller.dispose();
+  if (name == null || !context.mounted) return;
+  final (success, error) =
+      await ref.read(cashBooksProvider.notifier).renameBook(book.id, name);
   if (!success && context.mounted && error != null) {
     showCashSnack(context, error, error: true);
   }
@@ -160,64 +140,101 @@ Future<void> showOpeningBalanceDialog(
       .toList()
     ..sort(CashbookCalculator.compareChronological);
   final first = existing.isEmpty ? null : existing.first;
-  final controller = TextEditingController(
-      text: first == null ? '' : CashbookCalculator.formatNumber(first.amount));
-  var positive = first?.isCashIn ?? true;
-  var date = first?.date ?? DateTime.now();
-  final settings = ref.read(cashSettingsProvider);
-
-  final ok = await showDialog<bool>(
+  final result = await showDialog<_OpeningResult>(
     context: context,
-    builder: (ctx) => StatefulBuilder(
-      builder: (ctx, setState) => AlertDialog(
-        title: const Text('Opening Balance'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: controller,
-                autofocus: true,
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
-                inputFormatters: [AmountInputFormatter()],
-                decoration: const InputDecoration(labelText: 'Amount'),
-              ),
-              const SizedBox(height: 12),
-              CashSignToggle(
-                  positive: positive,
-                  onChanged: (v) => setState(() => positive = v)),
-              const SizedBox(height: 12),
-              CashDateField(
-                  value: date,
-                  format: settings.formatDate,
-                  onChanged: (d) => setState(() => date = d)),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel')),
-          TextButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Save')),
-        ],
-      ),
+    builder: (_) => _OpeningBalanceDialog(
+      amount: first?.amount,
+      positive: first?.isCashIn ?? true,
+      date: first?.date ?? DateTime.now(),
     ),
   );
-  final amount = parseAmount(controller.text) ?? 0;
-  controller.dispose();
-  if (ok != true || !context.mounted) return;
+  if (result == null || !context.mounted) return;
   final (success, error) =
       await ref.read(cashBooksProvider.notifier).setOpeningBalance(
             bookId: book.id,
-            amount: amount,
-            isPositive: positive,
-            date: date,
+            amount: result.amount,
+            isPositive: result.positive,
+            date: result.date,
           );
   if (!success && context.mounted && error != null) {
     showCashSnack(context, error, error: true);
+  }
+}
+
+class _OpeningResult {
+  final double amount;
+  final bool positive;
+  final DateTime date;
+  const _OpeningResult(this.amount, this.positive, this.date);
+}
+
+class _OpeningBalanceDialog extends ConsumerStatefulWidget {
+  final double? amount;
+  final bool positive;
+  final DateTime date;
+  const _OpeningBalanceDialog(
+      {required this.amount, required this.positive, required this.date});
+
+  @override
+  ConsumerState<_OpeningBalanceDialog> createState() =>
+      _OpeningBalanceDialogState();
+}
+
+class _OpeningBalanceDialogState extends ConsumerState<_OpeningBalanceDialog> {
+  late final _controller = TextEditingController(
+      text: widget.amount == null
+          ? ''
+          : CashbookCalculator.formatNumber(widget.amount!, group: false));
+  late bool _positive = widget.positive;
+  late DateTime _date = widget.date;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final settings = ref.watch(cashSettingsProvider);
+    return AlertDialog(
+      title: const Text('Opening Balance'),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: _controller,
+              autofocus: true,
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
+              inputFormatters: [AmountInputFormatter()],
+              decoration: const InputDecoration(labelText: 'Amount'),
+            ),
+            const SizedBox(height: 12),
+            CashSignToggle(
+                positive: _positive,
+                onChanged: (v) => setState(() => _positive = v)),
+            const SizedBox(height: 12),
+            CashDateField(
+                value: _date,
+                format: settings.formatDate,
+                onChanged: (d) => setState(() => _date = d)),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel')),
+        TextButton(
+            onPressed: () => Navigator.pop(
+                context,
+                _OpeningResult(
+                    parseAmount(_controller.text) ?? 0, _positive, _date)),
+            child: const Text('Save')),
+      ],
+    );
   }
 }
 

@@ -47,31 +47,15 @@ class _CashbookHomeScreenState extends ConsumerState<CashbookHomeScreen> {
   }
 
   Future<void> _notesDialog() async {
-    final c =
-        TextEditingController(text: ref.read(cashViewConfigProvider).query);
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Notes'),
-        content: TextField(
-          controller: c,
-          autofocus: true,
-          decoration: const InputDecoration(hintText: 'Search notes'),
-          onSubmitted: (_) => Navigator.pop(ctx, true),
-        ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel')),
-          TextButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Search')),
-        ],
-      ),
+    final text = await showCashTextPrompt(
+      context,
+      title: 'Notes',
+      label: 'Search notes',
+      initial: ref.read(cashViewConfigProvider).query,
+      confirmLabel: 'Search',
+      capitalization: TextCapitalization.none,
     );
-    final text = c.text;
-    c.dispose();
-    if (ok != true || !mounted) return;
+    if (text == null || !mounted) return;
     _searchController.text = text;
     ref.read(cashViewConfigProvider.notifier).setQuery(text);
     setState(() => _searching = text.trim().isNotEmpty);

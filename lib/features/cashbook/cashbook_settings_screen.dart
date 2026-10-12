@@ -161,20 +161,12 @@ class CashbookSettingsScreen extends ConsumerWidget {
 /// Dialog to edit the name and address printed on reports. Returns the new
 /// text or null when cancelled.
 Future<String?> showReporterNameDialog(BuildContext context, String current) {
-  final c = TextEditingController(text: current);
-  return showDialog<String>(
-    context: context,
-    builder: (ctx) => AlertDialog(
-      title: const Text('Your Name and Address'),
-      content:
-          TextField(controller: c, autofocus: true, minLines: 1, maxLines: 4),
-      actions: [
-        TextButton(
-            onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-        TextButton(
-            onPressed: () => Navigator.pop(ctx, c.text.trim()),
-            child: const Text('Save')),
-      ],
-    ),
-  ).whenComplete(c.dispose);
+  return showCashTextPrompt(
+    context,
+    title: 'Your Name and Address',
+    label: 'Name and address',
+    initial: current,
+    maxLines: 4,
+    capitalization: TextCapitalization.sentences,
+  );
 }
