@@ -178,10 +178,19 @@ class PaymentLinkService {
   static Future<bool> onCashEntryRestored(CashEntry e) async {
     if (!isLinked(e) || e.isDeleted) return false;
     final bill = _bill(e.sourceId!);
-    if (bill == null) return false;
-    final list = bill.payments;
+    final list = bill?.payments ?? <LedgerPayment>[];
     final i = list.indexWhere((p) => p.id == e.sourcePaymentId);
-    if (i < 0) return false;
+    if (bill == null || i < 0) {
+      // The bill or the payment is gone: the entry becomes a normal income
+      // instead of being trashed again by the next reconcile.
+      e
+        ..sourceType = null
+        ..sourceId = null
+        ..sourcePaymentId = null
+        ..updatedAt = DateTime.now();
+      await DatabaseService.saveCashEntry(e);
+      return false;
+    }
     list[i] = list[i]
         .copyWith(receiverBookId: e.bookId, amount: e.amount, date: e.date);
     await _applyPayments(bill, list);

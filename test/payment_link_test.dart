@@ -249,4 +249,21 @@ void main() {
     expect(linked().single.isDeleted, isTrue);
     expect(DatabaseService.vehicleBox.containsKey('v2'), isFalse);
   });
+
+  test('restoring an income whose payment is gone makes it a normal income',
+      () async {
+    final n = c.read(ledgerEntriesProvider.notifier);
+    await n.addEntry(bill(payments: [pay('p1', 100, receiver: receiverId)]));
+    final id = linked().first.id;
+    await c.read(cashEntriesProvider.notifier).moveToTrash(id);
+    // The payment is removed from the bill while the income is in the trash.
+    await n.updateEntry(bill(payments: []));
+    await c.read(cashEntriesProvider.notifier).restore(id);
+    final e = DatabaseService.getCashEntry(id)!;
+    expect(e.isDeleted, isFalse);
+    expect(e.sourceType, isNull);
+    // A later reconcile leaves it alone.
+    await PaymentLinkService.reconcileAll();
+    expect(DatabaseService.getCashEntry(id)!.isDeleted, isFalse);
+  });
 }
