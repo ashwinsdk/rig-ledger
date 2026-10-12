@@ -78,12 +78,12 @@ Depends: T-CB08
 Resume notes: search (toolbar, live, ignores period), overflow menu (Notes, Date, Select Date Range, asc/desc, Income, Expense, Clear filters), active-filter bar. 11 provider/DB integration tests in test/cashbook_provider_test.dart pass (Hive in a temp dir). 'Your Name and Address' and Print/Report come with T-CB14/T-CB15.
 Commit: Add cashbook search, filters, sort and date range with tests
 
-## T-CB10 Edit, copy, delete, trash screen [PENDING]
+## T-CB10 Edit, copy, delete, trash screen [DONE]
 Goal: PARITY-048..056.
 Files: cashbook_entry_form_screen.dart, cashbook_trash_screen.dart
 Depends: T-CB08
-Resume notes:
-Commit:
+Resume notes: edit/copy/delete live in the entry form (T-CB07); this task added the Deleted Transactions screen (Restore/Delete per row, Delete All, 30 day note, restore into another book when the book is gone) and its hub entry.
+Commit: Add cashbook Deleted Transactions screen
 
 ## T-CB11 Transfer [PENDING]
 Goal: PARITY-057..060 with transferGroupId.

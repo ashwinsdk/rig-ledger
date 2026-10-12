@@ -6,6 +6,7 @@ import '../../core/utils/platform_helper.dart';
 import 'cashbook_books_screen.dart';
 import 'cashbook_home_screen.dart';
 import 'cashbook_entry_form_screen.dart';
+import 'cashbook_trash_screen.dart';
 
 class _HubItem {
   final IconData icon;
@@ -18,6 +19,8 @@ class _HubItem {
 final List<_HubItem> _hubItems = [
   _HubItem(Icons.account_balance_wallet_outlined, 'Accounts',
       (_) => const CashbookBooksScreen()),
+  _HubItem(Icons.delete_sweep_outlined, 'Deleted Transactions',
+      (_) => const CashbookTrashScreen()),
 ];
 
 /// Account Ledger tab root (PARITY-077, 083). Mobile: ledger home with a
