@@ -338,6 +338,10 @@ final phonePeNamesProvider = Provider<List<String>>((ref) {
     if (entry.phonePeName != null && entry.phonePeName!.isNotEmpty) {
       names.add(entry.phonePeName!);
     }
+    for (final p in entry.payments) {
+      final n = p.payerName;
+      if (n != null && n.isNotEmpty) names.add(n);
+    }
   }
   return names.toList()
     ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));

@@ -5,6 +5,8 @@ import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/models/ledger_entry.dart';
+import '../../core/models/ledger_payment.dart';
+import 'widgets/payment_log_editor.dart';
 import '../../core/models/agent.dart';
 import '../../core/database/database_service.dart';
 import '../../core/providers/ledger_provider.dart';
@@ -39,14 +41,13 @@ class _SideBoreFormScreenState extends ConsumerState<SideBoreFormScreen> {
   // Payment fields
   late TextEditingController _totalController;
   bool _isTotalManuallyEdited = false;
-  late TextEditingController _cashController;
-  late TextEditingController _phonePeController;
+  // Payment log (v2.0.0)
+  List<LedgerPayment> _payments = [];
+  double _baseCash = 0; // received before payments were logged
+  double _basePhonePe = 0;
   late TextEditingController _balanceController;
   late TextEditingController _lessController;
   late TextEditingController _notesController;
-
-  // PhonePe name dropdown
-  String? _selectedPhonePeName;
 
   bool get isEditing => widget.entry != null;
   bool _isBillNumberDuplicate = false;
@@ -71,16 +72,14 @@ class _SideBoreFormScreenState extends ConsumerState<SideBoreFormScreen> {
     _totalController =
         TextEditingController(text: entry?.total.toString() ?? '0');
     _isTotalManuallyEdited = entry?.isTotalManuallyEdited ?? false;
-    _cashController =
-        TextEditingController(text: entry?.receivedCash.toString() ?? '0');
-    _phonePeController =
-        TextEditingController(text: entry?.receivedPhonePe.toString() ?? '0');
+    _payments = entry?.payments ?? [];
+    _baseCash = entry?.unloggedCash ?? 0;
+    _basePhonePe = entry?.unloggedPhonePe ?? 0;
     _balanceController =
         TextEditingController(text: entry?.balance.toString() ?? '0');
     _lessController =
         TextEditingController(text: entry?.less.toString() ?? '0');
     _notesController = TextEditingController(text: entry?.notes ?? '');
-    _selectedPhonePeName = entry?.phonePeName;
 
     // Set selected agent after build
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -98,8 +97,6 @@ class _SideBoreFormScreenState extends ConsumerState<SideBoreFormScreen> {
     // Add listeners for calculation
     _depthInFeetController.addListener(_recalculate);
     _depthPerFeetRateController.addListener(_recalculate);
-    _cashController.addListener(_updateBalance);
-    _phonePeController.addListener(_updateBalance);
     _lessController.addListener(_updateBalance);
     _billNumberController.addListener(_checkBillNumberDuplicate);
   }
@@ -111,8 +108,6 @@ class _SideBoreFormScreenState extends ConsumerState<SideBoreFormScreen> {
     _depthInFeetController.dispose();
     _depthPerFeetRateController.dispose();
     _totalController.dispose();
-    _cashController.dispose();
-    _phonePeController.dispose();
     _balanceController.dispose();
     _lessController.dispose();
     _notesController.dispose();
@@ -132,20 +127,19 @@ class _SideBoreFormScreenState extends ConsumerState<SideBoreFormScreen> {
 
   void _updateBalance() {
     final total = double.tryParse(_totalController.text) ?? 0;
-    final cash = double.tryParse(_cashController.text) ?? 0;
-    final phonePe = double.tryParse(_phonePeController.text) ?? 0;
-    final received = cash + phonePe;
+    final received = _totalReceived;
     final less = double.tryParse(_lessController.text) ?? 0;
     final balance = total - received - less;
     _balanceController.text = balance.toStringAsFixed(2);
     setState(() {});
   }
 
-  double get _totalReceived {
-    final cash = double.tryParse(_cashController.text) ?? 0;
-    final phonePe = double.tryParse(_phonePeController.text) ?? 0;
-    return cash + phonePe;
-  }
+  double get _cashReceived => _baseCash + LedgerPayment.totalCash(_payments);
+
+  double get _phonePeReceived =>
+      _basePhonePe + LedgerPayment.totalPhonePe(_payments);
+
+  double get _totalReceived => _cashReceived + _phonePeReceived;
 
   void _checkBillNumberDuplicate() {
     final billNumber = _billNumberController.text.trim();
@@ -231,9 +225,14 @@ class _SideBoreFormScreenState extends ConsumerState<SideBoreFormScreen> {
       return;
     }
 
-    final cash = double.tryParse(_cashController.text) ?? 0;
-    final phonePe = double.tryParse(_phonePeController.text) ?? 0;
+    final cash = _cashReceived;
+    final phonePe = _phonePeReceived;
     final totalReceived = cash + phonePe;
+    // Entry-level PhonePe name keeps the latest payer for older screens.
+    final lastPayer = _payments
+        .where((p) => !p.isCash && (p.payerName ?? '').isNotEmpty)
+        .map((p) => p.payerName)
+        .lastOrNull;
 
     final entry = LedgerEntry(
       id: widget.entry?.id ?? _uuid.v4(),
@@ -260,7 +259,8 @@ class _SideBoreFormScreenState extends ConsumerState<SideBoreFormScreen> {
       received: totalReceived,
       receivedCash: cash,
       receivedPhonePe: phonePe,
-      phonePeName: _selectedPhonePeName,
+      phonePeName: lastPayer ?? widget.entry?.phonePeName,
+      paymentsJson: LedgerPayment.encodeList(_payments),
       balance: double.tryParse(_balanceController.text) ?? 0,
       less: double.tryParse(_lessController.text) ?? 0,
       notes: _notesController.text.trim().isNotEmpty
@@ -285,42 +285,6 @@ class _SideBoreFormScreenState extends ConsumerState<SideBoreFormScreen> {
           backgroundColor: AppColors.success,
         ),
       );
-    }
-  }
-
-  Future<void> _showAddPhonePeNameDialog() async {
-    final nameController = TextEditingController();
-
-    final result = await showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Add PhonePe Name'),
-        content: TextField(
-          controller: nameController,
-          autofocus: true,
-          decoration: const InputDecoration(
-            labelText: 'Name',
-            hintText: 'Enter payer name',
-          ),
-          textCapitalization: TextCapitalization.words,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, nameController.text.trim()),
-            child: const Text('Add'),
-          ),
-        ],
-      ),
-    );
-
-    if (result != null && result.isNotEmpty) {
-      setState(() {
-        _selectedPhonePeName = result;
-      });
     }
   }
 
@@ -649,140 +613,22 @@ class _SideBoreFormScreenState extends ConsumerState<SideBoreFormScreen> {
               // Payment Section
               _buildSectionTitle('Payment'),
 
-              // Cash Amount
-              TextFormField(
-                controller: _cashController,
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
-                inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
-                ],
-                decoration: InputDecoration(
-                  labelText: 'Cash Received (₹)',
-                  prefixIcon: const Icon(Icons.money, color: AppColors.success),
-                  filled: true,
-                  fillColor: AppColors.success.withOpacity(0.05),
-                ),
-              ),
-              const SizedBox(height: 12),
-
-              // PhonePe Amount and Name
-              Row(
-                children: [
-                  Expanded(
-                    flex: 2,
-                    child: TextFormField(
-                      controller: _phonePeController,
-                      keyboardType:
-                          const TextInputType.numberWithOptions(decimal: true),
-                      inputFormatters: [
-                        FilteringTextInputFormatter.allow(
-                            RegExp(r'^\d*\.?\d*')),
-                      ],
-                      decoration: InputDecoration(
-                        labelText: 'PhonePe (₹)',
-                        prefixIcon: const Icon(Icons.phone_android,
-                            color: AppColors.primary),
-                        filled: true,
-                        fillColor: AppColors.primary.withOpacity(0.05),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    flex: 3,
-                    child: Consumer(
-                      builder: (context, ref, child) {
-                        final phonePeNames = ref.watch(phonePeNamesProvider);
-                        final items = <DropdownMenuItem<String>>[
-                          const DropdownMenuItem(
-                            value: '',
-                            child: Text('Select name',
-                                style:
-                                    TextStyle(color: AppColors.textSecondary)),
-                          ),
-                          ...phonePeNames.map((name) => DropdownMenuItem(
-                                value: name,
-                                child: Text(name),
-                              )),
-                          const DropdownMenuItem(
-                            value: '__add_new__',
-                            child: Row(
-                              children: [
-                                Icon(Icons.add,
-                                    size: 18, color: AppColors.primary),
-                                SizedBox(width: 8),
-                                Text('Add new',
-                                    style: TextStyle(color: AppColors.primary)),
-                              ],
-                            ),
-                          ),
-                        ];
-
-                        return DropdownButtonFormField<String>(
-                          value: phonePeNames.contains(_selectedPhonePeName)
-                              ? _selectedPhonePeName
-                              : '',
-                          decoration: InputDecoration(
-                            labelText: 'PhonePe Name',
-                            prefixIcon: const Icon(Icons.person_outline),
-                            filled: true,
-                            fillColor: AppColors.primary.withOpacity(0.05),
-                          ),
-                          items: items,
-                          onChanged: (value) {
-                            if (value == '__add_new__') {
-                              _showAddPhonePeNameDialog();
-                            } else {
-                              setState(() {
-                                _selectedPhonePeName = value ?? '';
-                              });
-                            }
-                          },
-                        );
-                      },
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-
-              // Total Received Display
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                decoration: BoxDecoration(
-                  color: AppColors.success.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.success.withOpacity(0.3)),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Row(
-                      children: [
-                        Icon(Icons.payments_outlined,
-                            color: AppColors.success, size: 20),
-                        SizedBox(width: 8),
-                        Text(
-                          'Total Received',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                    ),
-                    Text(
-                      currencyFormat.format(_totalReceived),
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.success,
-                      ),
-                    ),
-                  ],
-                ),
+              PaymentLogEditor(
+                payments: _payments,
+                baseCash: _baseCash,
+                basePhonePe: _basePhonePe,
+                allowPhonePe: true,
+                onChanged: (list) {
+                  setState(() => _payments = list);
+                  _updateBalance();
+                },
+                onBaseChanged: (cash, phonePe) {
+                  setState(() {
+                    _baseCash = cash;
+                    _basePhonePe = phonePe;
+                  });
+                  _updateBalance();
+                },
               ),
               const SizedBox(height: 12),
 

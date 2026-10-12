@@ -25,14 +25,14 @@ Depends: T-CB02
 Resume notes: LedgerPayment, LedgerEntry fields 32-37 (defaultValue on new non-null fields), Agent fields 7-9, schemaVersion 5. 9 tests including a binary compat test (records written by pre-2.0.0 adapters load with defaults). CSV/PDF columns come with T-V204.
 Commit: Add payment log and commission fields to ledger models
 
-## T-V202 Payment log editor in main and side bore forms [IN_PROGRESS]
+## T-V202 Payment log editor in main and side bore forms [DONE]
 Goal: replace the single Cash/PhonePe inputs with a payment log (amount, mode, date, receiver book, payer name, note); totals = unlogged base + logs; fixes the payee-add bug in the side bore form.
 Files: lib/features/ledger_form/widgets/payment_log_editor.dart, ledger_form_screen.dart, side_bore_form_screen.dart
 Depends: T-V201
-Resume notes:
-Commit:
+Resume notes: PaymentLogEditor widget (list, add/edit dialog with mode, date, receiver book incl. New receiver, payer name autocomplete; Earlier received row for legacy unlogged amounts). Both forms use it; entry totals = base + logs; entry.phonePeName keeps the latest payer. phonePeNamesProvider also reads payment payers. This replaces the old PhonePe name dropdown (the payee-not-shown-until-saved bug cannot occur any more). The receiver link (Income entry in the book) is T-V203; until then payments only live on the bill.
+Commit: Add payment log editor to main and side bore forms
 
-## T-V203 Payment to receiver book link (T-CB19) [PENDING]
+## T-V203 Payment to receiver book link (T-CB19) [IN_PROGRESS]
 Goal: PaymentLinkService creates, updates and trashes Income entries in receiver books from ledger payments; editing in the book updates the bill; reconcile after sync; receiver books are created from the payment dialog.
 Files: lib/core/services/payment_link_service.dart, ledger_provider.dart, cashbook_provider.dart, sync_provider.dart
 Depends: T-V202, T-CB05

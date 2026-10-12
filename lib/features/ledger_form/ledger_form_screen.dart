@@ -5,6 +5,8 @@ import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/models/ledger_entry.dart';
+import '../../core/models/ledger_payment.dart';
+import 'widgets/payment_log_editor.dart';
 import '../../core/models/agent.dart';
 import '../../core/database/database_service.dart';
 import '../../core/providers/ledger_provider.dart';
@@ -50,16 +52,14 @@ class _LedgerFormScreenState extends ConsumerState<LedgerFormScreen> {
   late TextEditingController _extraChargesController;
   late TextEditingController _totalController;
   bool _isTotalManuallyEdited = false;
-  late TextEditingController _cashController;
-  // Main-bore: Cash only, no PhonePe
+  // Payment log (v2.0.0): main bore receives cash only.
+  List<LedgerPayment> _payments = [];
+  double _baseCash = 0; // received before payments were logged
   late TextEditingController _balanceController;
   late TextEditingController _lessController;
   late TextEditingController _notesController;
 
-  double get _totalReceived {
-    final cash = double.tryParse(_cashController.text) ?? 0;
-    return cash;
-  }
+  double get _totalReceived => _baseCash + LedgerPayment.totalCash(_payments);
 
   bool get isEditing => widget.entry != null;
   bool _isBillNumberDuplicate = false;
@@ -104,9 +104,8 @@ class _LedgerFormScreenState extends ConsumerState<LedgerFormScreen> {
     _totalController =
         TextEditingController(text: entry?.total.toString() ?? '0');
     _isTotalManuallyEdited = entry?.isTotalManuallyEdited ?? false;
-    _cashController =
-        TextEditingController(text: entry?.receivedCash.toString() ?? '0');
-    // Main-bore: Cash only, no PhonePe
+    _payments = entry?.payments ?? [];
+    _baseCash = entry?.unloggedCash ?? 0;
     _balanceController =
         TextEditingController(text: entry?.balance.toString() ?? '0');
     _lessController =
@@ -135,7 +134,6 @@ class _LedgerFormScreenState extends ConsumerState<LedgerFormScreen> {
     _msPipeInFeetController.addListener(_onCalculationFieldChanged);
     _msPipePerFeetRateController.addListener(_onCalculationFieldChanged);
     _extraChargesController.addListener(_onCalculationFieldChanged);
-    _cashController.addListener(_onBalanceFieldChanged);
     _lessController.addListener(_onBalanceFieldChanged);
     _billNumberController.addListener(_checkBillNumberDuplicate);
   }
@@ -153,7 +151,6 @@ class _LedgerFormScreenState extends ConsumerState<LedgerFormScreen> {
     _msPipePerFeetRateController.dispose();
     _extraChargesController.dispose();
     _totalController.dispose();
-    _cashController.dispose();
     _balanceController.dispose();
     _lessController.dispose();
     _notesController.dispose();
@@ -361,8 +358,7 @@ class _LedgerFormScreenState extends ConsumerState<LedgerFormScreen> {
       return;
     }
 
-    final cash = double.tryParse(_cashController.text) ?? 0;
-    // Main-bore: Cash only, no PhonePe
+    final cash = _totalReceived;
     final totalReceived = cash;
 
     final entry = LedgerEntry(
@@ -391,6 +387,7 @@ class _LedgerFormScreenState extends ConsumerState<LedgerFormScreen> {
       receivedCash: cash,
       receivedPhonePe: 0, // Main-bore: No PhonePe
       phonePeName: null, // Main-bore: No PhonePe name
+      paymentsJson: LedgerPayment.encodeList(_payments),
       balance: double.tryParse(_balanceController.text) ?? 0,
       less: double.tryParse(_lessController.text) ?? 0,
       notes: _notesController.text.trim().isNotEmpty
@@ -970,20 +967,20 @@ class _LedgerFormScreenState extends ConsumerState<LedgerFormScreen> {
               // Payment Section Header
               _buildSectionTitle('Payment'),
 
-              // Cash Amount
-              TextFormField(
-                controller: _cashController,
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
-                inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
-                ],
-                decoration: InputDecoration(
-                  labelText: 'Cash Received (₹)',
-                  prefixIcon: const Icon(Icons.money, color: AppColors.success),
-                  filled: true,
-                  fillColor: AppColors.success.withOpacity(0.05),
-                ),
+              // Payment log: each payment with date and receiver
+              PaymentLogEditor(
+                payments: _payments,
+                baseCash: _baseCash,
+                basePhonePe: 0,
+                allowPhonePe: false,
+                onChanged: (list) {
+                  setState(() => _payments = list);
+                  _updateBalance();
+                },
+                onBaseChanged: (cash, _) {
+                  setState(() => _baseCash = cash);
+                  _updateBalance();
+                },
               ),
               const SizedBox(height: 16),
 
