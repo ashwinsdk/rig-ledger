@@ -104,6 +104,13 @@ Side Bore drilling job record (simplified version of LedgerEntry).
 
 Computed getter: `totalReceived` = receivedCash + receivedPhonePe.
 
+**Orphaned**: no screen or provider references `MiniLedgerEntry`. Side Bore
+jobs are actually saved as plain `LedgerEntry` records via
+`ledgerEntriesProvider` (see `SideBoreFormScreen`). This model's Hive box,
+`DatabaseService` CRUD, and `SyncService` backup/merge are all still live --
+only the UI path is missing. See `BACKLOG.md` for the wire-up-or-remove
+decision.
+
 ---
 
 ## Agent (typeId: 1) -- lib/core/models/agent.dart
