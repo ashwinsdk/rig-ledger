@@ -4,6 +4,7 @@ import '../../core/models/cash_entry.dart';
 import '../../core/providers/cashbook_provider.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/cashbook_calculator.dart';
+import '../../core/utils/platform_helper.dart';
 import 'cashbook_book_picker_dialog.dart';
 import 'cashbook_entry_form_screen.dart';
 import 'widgets/cashbook_common.dart';
@@ -25,6 +26,172 @@ class CashbookHomeScreen extends ConsumerStatefulWidget {
 }
 
 class _CashbookHomeScreenState extends ConsumerState<CashbookHomeScreen> {
+  bool _searching = false;
+  final _searchController = TextEditingController();
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _startSearch() => setState(() => _searching = true);
+
+  void _stopSearch() {
+    _searchController.clear();
+    ref.read(cashViewConfigProvider.notifier).setQuery('');
+    setState(() => _searching = false);
+  }
+
+  Future<void> _notesDialog() async {
+    final c =
+        TextEditingController(text: ref.read(cashViewConfigProvider).query);
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Notes'),
+        content: TextField(
+          controller: c,
+          autofocus: true,
+          decoration: const InputDecoration(hintText: 'Search notes'),
+          onSubmitted: (_) => Navigator.pop(ctx, true),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Search')),
+        ],
+      ),
+    );
+    final text = c.text;
+    c.dispose();
+    if (ok != true || !mounted) return;
+    _searchController.text = text;
+    ref.read(cashViewConfigProvider.notifier).setQuery(text);
+    setState(() => _searching = text.trim().isNotEmpty);
+  }
+
+  Future<void> _pickDay() async {
+    final d = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+    );
+    if (d != null) ref.read(cashViewConfigProvider.notifier).setDay(d);
+  }
+
+  Future<void> _pickRange() async {
+    final settings = ref.read(cashSettingsProvider);
+    var start = DateTime.now();
+    var end = DateTime.now();
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setLocal) => AlertDialog(
+          title: const Text('Select Date Range'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Align(
+                  alignment: Alignment.centerLeft, child: Text('Start Date')),
+              const SizedBox(height: 4),
+              CashDateField(
+                  value: start,
+                  format: settings.formatDate,
+                  onChanged: (d) => setLocal(() => start = d)),
+              const SizedBox(height: 12),
+              const Align(
+                  alignment: Alignment.centerLeft, child: Text('End Date')),
+              const SizedBox(height: 4),
+              CashDateField(
+                  value: end,
+                  format: settings.formatDate,
+                  onChanged: (d) => setLocal(() => end = d)),
+            ],
+          ),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('Cancel')),
+            TextButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text('OK')),
+          ],
+        ),
+      ),
+    );
+    if (ok != true) return;
+    var a = CashbookCalculator.dateOnly(start);
+    var b = CashbookCalculator.dateOnly(end);
+    if (b.isBefore(a)) {
+      final t = a;
+      a = b;
+      b = t;
+    }
+    ref
+        .read(cashViewConfigProvider.notifier)
+        .setCustomRange(CashDateRange(a, DateTime(b.year, b.month, b.day + 1)));
+  }
+
+  Widget _overflow(CashViewConfig cfg) {
+    final notifier = ref.read(cashViewConfigProvider.notifier);
+    return PopupMenuButton<String>(
+      tooltip: 'More options',
+      onSelected: (v) {
+        switch (v) {
+          case 'notes':
+            _notesDialog();
+          case 'date':
+            _pickDay();
+          case 'range':
+            _pickRange();
+          case 'asc':
+            notifier.setAscending(true);
+          case 'desc':
+            notifier.setAscending(false);
+          case 'income':
+            notifier.setType(cfg.type == CashTypeFilter.income
+                ? CashTypeFilter.all
+                : CashTypeFilter.income);
+          case 'expense':
+            notifier.setType(cfg.type == CashTypeFilter.expense
+                ? CashTypeFilter.all
+                : CashTypeFilter.expense);
+          case 'clear':
+            _searchController.clear();
+            notifier.clearFilters();
+            setState(() => _searching = false);
+        }
+      },
+      itemBuilder: (_) => [
+        const PopupMenuItem(value: 'notes', child: Text('Notes')),
+        const PopupMenuItem(value: 'date', child: Text('Date')),
+        const PopupMenuItem(value: 'range', child: Text('Select Date Range')),
+        CheckedPopupMenuItem(
+            value: 'asc',
+            checked: cfg.ascending,
+            child: const Text('Date Ascending')),
+        CheckedPopupMenuItem(
+            value: 'desc',
+            checked: !cfg.ascending,
+            child: const Text('Date Descending')),
+        CheckedPopupMenuItem(
+            value: 'income',
+            checked: cfg.type == CashTypeFilter.income,
+            child: const Text(CashLabels.income)),
+        CheckedPopupMenuItem(
+            value: 'expense',
+            checked: cfg.type == CashTypeFilter.expense,
+            child: const Text(CashLabels.expense)),
+        const PopupMenuItem(value: 'clear', child: Text('Clear filters')),
+      ],
+    );
+  }
+
   Future<void> _pickBook() async {
     final book = await showCashBookPicker(context);
     if (book != null) {
@@ -68,29 +235,67 @@ class _CashbookHomeScreenState extends ConsumerState<CashbookHomeScreen> {
     return Column(
       children: [
         CashHeader(
-          leading: widget.onMenu == null
-              ? null
-              : IconButton(
-                  tooltip: 'Menu',
-                  icon: const Icon(Icons.menu),
-                  onPressed: widget.onMenu),
-          title: InkWell(
-            onTap: _pickBook,
-            borderRadius: BorderRadius.circular(8),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 6),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Flexible(
-                    child: Text(book?.name ?? 'Account Ledger',
-                        overflow: TextOverflow.ellipsis),
+          leading: _searching
+              ? IconButton(
+                  tooltip: 'Close search',
+                  icon: const Icon(Icons.arrow_back),
+                  onPressed: _stopSearch)
+              : (widget.onMenu == null
+                  ? null
+                  : IconButton(
+                      tooltip: 'Menu',
+                      icon: const Icon(Icons.menu),
+                      onPressed: widget.onMenu)),
+          title: _searching
+              ? TextField(
+                  controller: _searchController,
+                  autofocus: true,
+                  style: TextStyle(
+                      color: PlatformHelper.isDesktop
+                          ? AppColors.textPrimary
+                          : Colors.white),
+                  cursorColor: PlatformHelper.isDesktop
+                      ? AppColors.textPrimary
+                      : Colors.white,
+                  decoration: InputDecoration(
+                    hintText: 'Search',
+                    hintStyle: TextStyle(
+                        color: PlatformHelper.isDesktop
+                            ? AppColors.textHint
+                            : Colors.white70),
+                    filled: false,
+                    border: InputBorder.none,
+                    enabledBorder: InputBorder.none,
+                    focusedBorder: InputBorder.none,
                   ),
-                  const Icon(Icons.arrow_drop_down),
-                ],
-              ),
-            ),
-          ),
+                  onChanged: (v) =>
+                      ref.read(cashViewConfigProvider.notifier).setQuery(v),
+                )
+              : InkWell(
+                  onTap: _pickBook,
+                  borderRadius: BorderRadius.circular(8),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Flexible(
+                          child: Text(book?.name ?? 'Account Ledger',
+                              overflow: TextOverflow.ellipsis),
+                        ),
+                        const Icon(Icons.arrow_drop_down),
+                      ],
+                    ),
+                  ),
+                ),
+          actions: [
+            if (!_searching)
+              IconButton(
+                  tooltip: 'Search',
+                  icon: const Icon(Icons.search),
+                  onPressed: _startSearch),
+            _overflow(cfg),
+          ],
         ),
         CashbookPeriodTabs(
           selected: cfg.customRange != null ? CashPeriod.all : cfg.period,
@@ -105,6 +310,35 @@ class _CashbookHomeScreenState extends ConsumerState<CashbookHomeScreen> {
               ? null
               : (d) => ref.read(cashViewConfigProvider.notifier).shift(d),
         ),
+        if (cfg.type != CashTypeFilter.all || cfg.ascending || searching)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 6, 12, 0),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    [
+                      if (searching) 'Search: "${cfg.query.trim()}"',
+                      if (cfg.type == CashTypeFilter.income) CashLabels.income,
+                      if (cfg.type == CashTypeFilter.expense)
+                        CashLabels.expense,
+                      if (cfg.ascending) 'Oldest first',
+                    ].join('  |  '),
+                    style: const TextStyle(
+                        fontSize: 12, color: AppColors.textSecondary),
+                  ),
+                ),
+                TextButton(
+                  onPressed: () {
+                    _searchController.clear();
+                    ref.read(cashViewConfigProvider.notifier).clearFilters();
+                    setState(() => _searching = false);
+                  },
+                  child: const Text('Clear'),
+                ),
+              ],
+            ),
+          ),
         const SizedBox(height: 6),
         const Padding(
           padding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),

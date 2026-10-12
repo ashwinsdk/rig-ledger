@@ -71,12 +71,12 @@ Depends: T-CB05, T-CB07
 Resume notes: home screen with header/book selector, tabs, period bar, grouped list, Previous Balance row, Income/Expense buttons, totals strip; row tap opens edit. Search/overflow come in T-CB09. Deviation: shows a muted 'No transactions' hint on empty lists (PARITY-080 said none). T-CB16 (hub/tab) is being done next so the screens can be run.
 Commit: Add Account Ledger home screen with list, tabs and totals
 
-## T-CB09 Search, filters, sort, date range [PENDING]
+## T-CB09 Search, filters, sort, date range [DONE]
 Goal: PARITY-042..047.
 Files: cashbook_home_screen.dart, cashbook_provider.dart
 Depends: T-CB08
-Resume notes:
-Commit:
+Resume notes: search (toolbar, live, ignores period), overflow menu (Notes, Date, Select Date Range, asc/desc, Income, Expense, Clear filters), active-filter bar. 11 provider/DB integration tests in test/cashbook_provider_test.dart pass (Hive in a temp dir). 'Your Name and Address' and Print/Report come with T-CB14/T-CB15.
+Commit: Add cashbook search, filters, sort and date range with tests
 
 ## T-CB10 Edit, copy, delete, trash screen [PENDING]
 Goal: PARITY-048..056.
