@@ -13,6 +13,7 @@ import '../../core/models/vehicle.dart';
 import '../ledger_form/ledger_form_screen.dart';
 import '../ledger_form/side_bore_form_screen.dart';
 import '../side_ledger/diesel/diesel_form_screen.dart';
+import '../side_ledger/other/other_expense_form_screen.dart';
 import '../side_ledger/pvc/pvc_form_screen.dart';
 import '../side_ledger/bit/bit_form_screen.dart';
 import '../side_ledger/hammer/hammer_form_screen.dart';
@@ -160,8 +161,10 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
               ),
             ),
             const SizedBox(height: 20),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
+            Wrap(
+              alignment: WrapAlignment.spaceAround,
+              runSpacing: 16,
+              spacing: 8,
               children: [
                 _buildAddOption(
                   context,
@@ -202,6 +205,16 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
                   () => Navigator.of(context).push(
                     MaterialPageRoute(
                         builder: (context) => const HammerFormScreen()),
+                  ),
+                ),
+                _buildAddOption(
+                  context,
+                  'Other',
+                  Icons.receipt_long,
+                  Colors.purple,
+                  () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                        builder: (context) => const OtherExpenseFormScreen()),
                   ),
                 ),
               ],

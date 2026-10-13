@@ -16,6 +16,8 @@ import 'widgets/summary_row.dart';
 import 'widgets/search_sheet.dart';
 import 'widgets/filter_sheet.dart';
 import '../side_ledger/diesel/diesel_list_screen.dart';
+import '../side_ledger/other/other_expense_list_screen.dart';
+import '../../core/models/other_expense_entry.dart';
 import '../side_ledger/pvc/pvc_list_screen.dart';
 import '../side_ledger/bit/bit_list_screen.dart';
 import '../side_ledger/hammer/hammer_list_screen.dart';
@@ -507,6 +509,7 @@ class _CombinedHomeScreenState extends ConsumerState<CombinedHomeScreen>
     final allPvcEntries = ref.watch(pvcEntriesProvider);
     final allBitEntries = ref.watch(bitEntriesProvider);
     final allHammerEntries = ref.watch(hammerEntriesProvider);
+    final allOtherEntries = ref.watch(otherExpenseEntriesProvider);
 
     // Filter entries based on time period
     final dieselEntries = _filterByTimePeriod(
@@ -538,8 +541,17 @@ class _CombinedHomeScreenState extends ConsumerState<CombinedHomeScreen>
         sideLedgerCustomStartDate,
         sideLedgerCustomEndDate);
 
+    final otherEntries = _filterByTimePeriod(
+        allOtherEntries,
+        sideLedgerTimePeriod,
+        sideLedgerSelectedMonth,
+        sideLedgerSelectedYear,
+        sideLedgerCustomStartDate,
+        sideLedgerCustomEndDate);
+
     // Calculate totals
     final format = NumberFormat('#,##0.00');
+    const Color otherColor = Colors.purple;
     const Color hammerColor = Color(0xFF8B4513); // Brown color for hammer
 
     double dieselTotal = 0;
@@ -576,6 +588,13 @@ class _CombinedHomeScreenState extends ConsumerState<CombinedHomeScreen>
       hammerTotal += e.total;
       hammerPending += e.pending;
       hammerCount += e.count;
+    }
+
+    double otherTotal = 0;
+    double otherPending = 0;
+    for (final e in otherEntries) {
+      otherTotal += e.total;
+      otherPending += e.pending;
     }
 
     return Padding(
@@ -735,6 +754,19 @@ class _CombinedHomeScreenState extends ConsumerState<CombinedHomeScreen>
                     ],
                   ],
                 ),
+                if (isSideBore) ...[
+                  const SizedBox(height: 12),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      _buildMiniStatDouble(
+                          'Other',
+                          '${otherEntries.length} entries',
+                          '₹${format.format(otherTotal)}',
+                          otherColor),
+                    ],
+                  ),
+                ],
                 if (!isSideBore) ...[
                   const SizedBox(height: 12),
                   Row(
@@ -744,6 +776,11 @@ class _CombinedHomeScreenState extends ConsumerState<CombinedHomeScreen>
                           '₹${format.format(bitTotal)}', AppColors.success),
                       _buildMiniStatDouble('Hammer', '$hammerCount pcs',
                           '₹${format.format(hammerTotal)}', hammerColor),
+                      _buildMiniStatDouble(
+                          'Other',
+                          '${otherEntries.length} entries',
+                          '₹${format.format(otherTotal)}',
+                          otherColor),
                     ],
                   ),
                 ],
@@ -822,6 +859,22 @@ class _CombinedHomeScreenState extends ConsumerState<CombinedHomeScreen>
                     context,
                     MaterialPageRoute(
                       builder: (context) => const HammerListScreen(),
+                    ),
+                  ),
+                ),
+                _buildCategoryCard(
+                  'Other expenses',
+                  Icons.receipt_long,
+                  otherColor,
+                  '${otherEntries.length} entries',
+                  '₹${format.format(otherTotal)}',
+                  otherPending > 0
+                      ? '₹${format.format(otherPending)} pending'
+                      : null,
+                  () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const OtherExpenseListScreen(),
                     ),
                   ),
                 ),
@@ -993,6 +1046,7 @@ class _CombinedHomeScreenState extends ConsumerState<CombinedHomeScreen>
     if (entry is PvcEntry) return entry.date;
     if (entry is BitEntry) return entry.date;
     if (entry is HammerEntry) return entry.date;
+    if (entry is OtherExpenseEntry) return entry.date;
     return DateTime.now();
   }
 
