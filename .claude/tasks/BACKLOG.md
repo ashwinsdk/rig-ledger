@@ -18,7 +18,7 @@ Known gaps and tech debt live here, not in CURRENT.md or MEMORY.md.
 - Make `restoreBackup` atomic (it clears all boxes before rewriting them).
 - Queue UI writes during a sync merge; prune tombstones relative to the oldest device sync.
 - Auto backup should refuse to push over a remote snapshot with a higher version.
-- macOS build needs `macos/Runner/GoogleService-Info.plist` (not in the repo): document it. [done]
+- macOS build needs `macos/Runner/GoogleService-Info.plist` (not in the repo): document it.
 - UI still calls `DatabaseService` directly in places (bill number duplicate check).
 - `PlatformHelper.isDesktop` includes Windows and Linux; Cmd+F handler is empty.
 - 210 analyzer infos (mostly `withOpacity` and `prefer_const_constructors`).
