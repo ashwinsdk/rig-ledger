@@ -349,8 +349,9 @@ class OtherExpenseEntriesNotifier
   void refresh() => loadEntries();
 }
 
-final otherExpenseEntriesProvider = StateNotifierProvider<
-    OtherExpenseEntriesNotifier, List<OtherExpenseEntry>>((ref) {
+final otherExpenseEntriesProvider =
+    StateNotifierProvider<OtherExpenseEntriesNotifier, List<OtherExpenseEntry>>(
+        (ref) {
   return OtherExpenseEntriesNotifier();
 });
 
