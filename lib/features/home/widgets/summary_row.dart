@@ -27,151 +27,114 @@ class SummaryRow extends ConsumerWidget {
     final currencyFormat = NumberFormat('#,##0.00');
     final feetFormat = NumberFormat('#,##0');
 
-    return Column(
-      children: [
-        // Financial Summary Row
-        Container(
-          margin: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.shadow.withOpacity(0.1),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
+    Widget divider() => Container(
+          width: 1,
+          height: 36,
+          margin: const EdgeInsets.symmetric(horizontal: 4),
+          color: AppColors.divider,
+        );
+
+    // One slim card, scrolls sideways: money totals first, then the feet of
+    // every depth and PVC type (user-defined) and MS pipe.
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.shadow.withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
-          child: Row(
-            children: [
-              Expanded(
-                child: _SummaryItem(
-                  label: 'Total',
-                  value: '₹${currencyFormat.format(stats['total'] ?? 0)}',
-                  color: AppColors.primary,
-                  icon: Icons.account_balance_wallet_outlined,
+        ],
+      ),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            SizedBox(
+              width: 120,
+              child: _SummaryItem(
+                label: 'Total',
+                value: '₹${currencyFormat.format(stats['total'] ?? 0)}',
+                color: AppColors.primary,
+                icon: Icons.account_balance_wallet_outlined,
+              ),
+            ),
+            divider(),
+            SizedBox(
+              width: 120,
+              child: _SummaryItem(
+                label: 'Received',
+                value: '₹${currencyFormat.format(stats['received'] ?? 0)}',
+                color: AppColors.success,
+                icon: Icons.check_circle_outline,
+              ),
+            ),
+            divider(),
+            SizedBox(
+              width: 120,
+              child: _SummaryItem(
+                label: 'Balance',
+                value: '₹${currencyFormat.format(stats['balance'] ?? 0)}',
+                color: AppColors.warning,
+                icon: Icons.pending_outlined,
+              ),
+            ),
+            divider(),
+            SizedBox(
+              width: 120,
+              child: _SummaryItem(
+                label: 'Commission',
+                value: '₹${currencyFormat.format(stats['commission'] ?? 0)}',
+                color: AppColors.accent,
+                icon: Icons.handshake_outlined,
+              ),
+            ),
+            divider(),
+            // Side bore: only the total depth (no type split)
+            if (isSideBore)
+              SizedBox(
+                width: 84,
+                child: _FeetItem(
+                  label: 'Total Depth',
+                  value: '${feetFormat.format(feetTotals.depthTotal)} ft',
+                  color: Colors.blue,
                 ),
-              ),
-              Container(
-                width: 1,
-                height: 40,
-                color: AppColors.divider,
-              ),
-              Expanded(
-                child: _SummaryItem(
-                  label: 'Received',
-                  value: '₹${currencyFormat.format(stats['received'] ?? 0)}',
-                  color: AppColors.success,
-                  icon: Icons.check_circle_outline,
-                ),
-              ),
-              Container(
-                width: 1,
-                height: 40,
-                color: AppColors.divider,
-              ),
-              Expanded(
-                child: _SummaryItem(
-                  label: 'Balance',
-                  value: '₹${currencyFormat.format(stats['balance'] ?? 0)}',
-                  color: AppColors.warning,
-                  icon: Icons.pending_outlined,
-                ),
-              ),
-              Container(
-                width: 1,
-                height: 40,
-                color: AppColors.divider,
-              ),
-              Expanded(
-                child: _SummaryItem(
-                  label: 'Commission',
-                  value: '₹${currencyFormat.format(stats['commission'] ?? 0)}',
-                  color: AppColors.accent,
-                  icon: Icons.handshake_outlined,
-                ),
-              ),
-            ],
-          ),
-        ),
-        // Feet Totals Row
-        Container(
-          margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: AppColors.divider),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                padding: const EdgeInsets.only(left: 8, bottom: 8),
-                child: Text(
-                  isSideBore ? 'Depth Totals' : 'Feet Totals',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textSecondary,
+              )
+            else ...[
+              for (final (i, e) in feetTotals.depth.entries.indexed)
+                SizedBox(
+                  width: 72,
+                  child: _FeetItem(
+                    label: '${LedgerTypes.shortLabel(e.key)} Depth',
+                    value: '${feetFormat.format(e.value)} ft',
+                    color: _depthColors[i % _depthColors.length],
                   ),
                 ),
-              ),
-              // One tile per depth and PVC type (user-defined), then MS pipe.
-              // Scrolls sideways when there are many types.
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: [
-                    // Side bore: only the total depth (no type split)
-                    if (isSideBore)
-                      SizedBox(
-                        width: 96,
-                        child: _FeetItem(
-                          label: 'Total Depth',
-                          value:
-                              '${feetFormat.format(feetTotals.depthTotal)} ft',
-                          color: Colors.blue,
-                        ),
-                      )
-                    else ...[
-                      for (final (i, e) in feetTotals.depth.entries.indexed)
-                        SizedBox(
-                          width: 84,
-                          child: _FeetItem(
-                            label: '${LedgerTypes.shortLabel(e.key)} Depth',
-                            value: '${feetFormat.format(e.value)} ft',
-                            color: _depthColors[i % _depthColors.length],
-                          ),
-                        ),
-                      for (final (i, e) in feetTotals.pvc.entries.indexed)
-                        SizedBox(
-                          width: 84,
-                          child: _FeetItem(
-                            label: '${LedgerTypes.shortLabel(e.key)} PVC',
-                            value: '${feetFormat.format(e.value)} ft',
-                            color: _pvcColors[i % _pvcColors.length],
-                          ),
-                        ),
-                      SizedBox(
-                        width: 84,
-                        child: _FeetItem(
-                          label: 'MS Pipe',
-                          value:
-                              '${feetFormat.format(feetTotals.msPipeTotal)} ft',
-                          color: Colors.orange,
-                        ),
-                      ),
-                    ],
-                  ],
+              for (final (i, e) in feetTotals.pvc.entries.indexed)
+                SizedBox(
+                  width: 72,
+                  child: _FeetItem(
+                    label: '${LedgerTypes.shortLabel(e.key)} PVC',
+                    value: '${feetFormat.format(e.value)} ft',
+                    color: _pvcColors[i % _pvcColors.length],
+                  ),
+                ),
+              SizedBox(
+                width: 72,
+                child: _FeetItem(
+                  label: 'MS Pipe',
+                  value: '${feetFormat.format(feetTotals.msPipeTotal)} ft',
+                  color: Colors.orange,
                 ),
               ),
             ],
-          ),
+          ],
         ),
-      ],
+      ),
     );
   }
 }
@@ -199,12 +162,16 @@ class _SummaryItem extends StatelessWidget {
           children: [
             Icon(icon, size: 14, color: color),
             const SizedBox(width: 4),
-            Text(
-              label,
-              style: const TextStyle(
-                color: AppColors.textSecondary,
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
+            Flexible(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
             ),
           ],
@@ -244,6 +211,8 @@ class _FeetItem extends StatelessWidget {
       children: [
         Text(
           label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
           style: const TextStyle(
             color: AppColors.textSecondary,
             fontSize: 10,

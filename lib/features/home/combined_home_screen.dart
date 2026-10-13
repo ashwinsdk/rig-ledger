@@ -83,7 +83,7 @@ class _CombinedHomeScreenState extends ConsumerState<CombinedHomeScreen>
                   // App Bar Row
                   Padding(
                     padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                     child: Row(
                       children: [
                         IconButton(
@@ -191,8 +191,8 @@ class _CombinedHomeScreenState extends ConsumerState<CombinedHomeScreen>
                         fontSize: 14,
                       ),
                       tabs: const [
-                        Tab(text: 'Ledger'),
-                        Tab(text: 'Side Ledger'),
+                        Tab(text: 'Ledger', height: 34),
+                        Tab(text: 'Side Ledger', height: 34),
                       ],
                     ),
                   ),
@@ -244,7 +244,7 @@ class _CombinedHomeScreenState extends ConsumerState<CombinedHomeScreen>
                             SingleChildScrollView(
                               scrollDirection: Axis.horizontal,
                               padding: const EdgeInsets.symmetric(
-                                  horizontal: 12, vertical: 4),
+                                  horizontal: 12, vertical: 2),
                               child: Row(
                                 children: [
                                   _buildPeriodChip(context, ref, 'Month',
@@ -263,203 +263,31 @@ class _CombinedHomeScreenState extends ConsumerState<CombinedHomeScreen>
                               ),
                             ),
 
-                            if (timePeriod == TimePeriod.custom)
-                              Padding(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 16, vertical: 4),
-                                child: Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text(
-                                      '${DateFormat('dd MMM yyyy').format(customStartDate)} - '
-                                      '${DateFormat('dd MMM yyyy').format(customEndDate)}',
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                    TextButton.icon(
-                                      onPressed: () async {
-                                        await _pickMainLedgerDateRange(
-                                            context, ref);
-                                      },
-                                      icon: const Icon(Icons.edit_calendar,
-                                          size: 16, color: Colors.white),
-                                      label: const Text(
-                                        'Edit',
-                                        style: TextStyle(color: Colors.white),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-
-                            // Month Navigation Row (only show for month view)
-                            if (timePeriod == TimePeriod.month)
-                              Padding(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 16, vertical: 4),
-                                child: Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    IconButton(
-                                      icon: const Icon(Icons.chevron_left,
-                                          color: Colors.white),
-                                      onPressed: () {
-                                        ref
-                                            .read(
-                                                selectedMonthProvider.notifier)
-                                            .state = DateTime(
-                                          selectedMonth.year,
-                                          selectedMonth.month - 1,
-                                        );
-                                      },
-                                    ),
-                                    Text(
-                                      DateFormat('MMMM yyyy')
-                                          .format(selectedMonth),
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                    IconButton(
-                                      icon: const Icon(Icons.chevron_right,
-                                          color: Colors.white),
-                                      onPressed: () {
-                                        ref
-                                            .read(
-                                                selectedMonthProvider.notifier)
-                                            .state = DateTime(
-                                          selectedMonth.year,
-                                          selectedMonth.month + 1,
-                                        );
-                                      },
-                                    ),
-                                  ],
-                                ),
-                              ),
-
-                            // Year Navigation Row (only show for year view)
-                            if (timePeriod == TimePeriod.year)
-                              Padding(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 16, vertical: 4),
-                                child: Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    IconButton(
-                                      icon: const Icon(Icons.chevron_left,
-                                          color: Colors.white),
-                                      onPressed: () {
-                                        ref
-                                            .read(selectedYearProvider.notifier)
-                                            .state = selectedYear - 1;
-                                      },
-                                    ),
-                                    Text(
-                                      selectedYear.toString(),
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                    IconButton(
-                                      icon: const Icon(Icons.chevron_right,
-                                          color: Colors.white),
-                                      onPressed: () {
-                                        ref
-                                            .read(selectedYearProvider.notifier)
-                                            .state = selectedYear + 1;
-                                      },
-                                    ),
-                                  ],
-                                ),
-                              ),
-
-                            // View Toggle
-                            Container(
-                              margin: const EdgeInsets.symmetric(
-                                  horizontal: 16, vertical: 8),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.2),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
+                            // One slim row: range or month/year navigation on
+                            // the left, Daily / Calendar toggle on the right.
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(8, 2, 16, 8),
                               child: Row(
                                 children: [
                                   Expanded(
-                                    child: GestureDetector(
-                                      onTap: () {
-                                        ref
-                                            .read(isDailyViewProvider.notifier)
-                                            .state = true;
-                                      },
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(
-                                            vertical: 10),
-                                        decoration: BoxDecoration(
-                                          color: isDailyView
-                                              ? Colors.white
-                                              : Colors.transparent,
-                                          borderRadius:
-                                              BorderRadius.circular(12),
-                                        ),
-                                        child: Text(
-                                          'Daily',
-                                          textAlign: TextAlign.center,
-                                          style: TextStyle(
-                                            color: isDailyView
-                                                ? AppColors.primary
-                                                : Colors.white,
-                                            fontWeight: FontWeight.w500,
-                                          ),
-                                        ),
-                                      ),
+                                    child: _buildPeriodNavigator(
+                                      context,
+                                      ref,
+                                      timePeriod,
+                                      selectedMonth,
+                                      selectedYear,
+                                      customStartDate,
+                                      customEndDate,
                                     ),
                                   ),
-                                  Expanded(
-                                    child: GestureDetector(
-                                      onTap: () {
-                                        ref
-                                            .read(isDailyViewProvider.notifier)
-                                            .state = false;
-                                      },
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(
-                                            vertical: 10),
-                                        decoration: BoxDecoration(
-                                          color: !isDailyView
-                                              ? Colors.white
-                                              : Colors.transparent,
-                                          borderRadius:
-                                              BorderRadius.circular(12),
-                                        ),
-                                        child: Text(
-                                          'Calendar',
-                                          textAlign: TextAlign.center,
-                                          style: TextStyle(
-                                            color: !isDailyView
-                                                ? AppColors.primary
-                                                : Colors.white,
-                                            fontWeight: FontWeight.w500,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
+                                  _buildViewToggle(ref, isDailyView),
                                 ],
                               ),
                             ),
                           ],
                         );
                       }
-                      return const SizedBox(height: 12);
+                      return const SizedBox(height: 8);
                     },
                   ),
                 ],
@@ -1175,6 +1003,118 @@ class _CombinedHomeScreenState extends ConsumerState<CombinedHomeScreen>
     ref.read(customStartDateProvider.notifier).state = range.start;
     ref.read(customEndDateProvider.notifier).state = range.end;
     ref.read(timePeriodProvider.notifier).state = TimePeriod.custom;
+  }
+
+  /// Left part of the slim control row: month or year arrows, the custom
+  /// range, or nothing for the other periods.
+  Widget _buildPeriodNavigator(
+    BuildContext context,
+    WidgetRef ref,
+    TimePeriod timePeriod,
+    DateTime selectedMonth,
+    int selectedYear,
+    DateTime customStart,
+    DateTime customEnd,
+  ) {
+    Widget arrow(IconData icon, VoidCallback onTap) => IconButton(
+          icon: Icon(icon, color: Colors.white, size: 22),
+          onPressed: onTap,
+          visualDensity: VisualDensity.compact,
+        );
+    const labelStyle = TextStyle(
+        color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500);
+
+    switch (timePeriod) {
+      case TimePeriod.month:
+        return Row(
+          children: [
+            arrow(
+                Icons.chevron_left,
+                () => ref.read(selectedMonthProvider.notifier).state =
+                    DateTime(selectedMonth.year, selectedMonth.month - 1)),
+            Flexible(
+              child: Text(DateFormat('MMM yyyy').format(selectedMonth),
+                  style: labelStyle, overflow: TextOverflow.ellipsis),
+            ),
+            arrow(
+                Icons.chevron_right,
+                () => ref.read(selectedMonthProvider.notifier).state =
+                    DateTime(selectedMonth.year, selectedMonth.month + 1)),
+          ],
+        );
+      case TimePeriod.year:
+        return Row(
+          children: [
+            arrow(
+                Icons.chevron_left,
+                () => ref.read(selectedYearProvider.notifier).state =
+                    selectedYear - 1),
+            Text(selectedYear.toString(), style: labelStyle),
+            arrow(
+                Icons.chevron_right,
+                () => ref.read(selectedYearProvider.notifier).state =
+                    selectedYear + 1),
+          ],
+        );
+      case TimePeriod.custom:
+        return GestureDetector(
+          onTap: () => _pickMainLedgerDateRange(context, ref),
+          child: Padding(
+            padding: const EdgeInsets.only(left: 8),
+            child: Row(
+              children: [
+                const Icon(Icons.edit_calendar, size: 16, color: Colors.white),
+                const SizedBox(width: 6),
+                Flexible(
+                  child: Text(
+                    '${DateFormat('dd MMM yy').format(customStart)} - '
+                    '${DateFormat('dd MMM yy').format(customEnd)}',
+                    style: labelStyle.copyWith(fontSize: 13),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      default:
+        return const SizedBox(height: 40);
+    }
+  }
+
+  /// Compact Daily / Calendar switch.
+  Widget _buildViewToggle(WidgetRef ref, bool isDailyView) {
+    Widget item(String label, bool selected, bool daily) => GestureDetector(
+          onTap: () => ref.read(isDailyViewProvider.notifier).state = daily,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: selected ? Colors.white : Colors.transparent,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Text(
+              label,
+              style: TextStyle(
+                color: selected ? AppColors.primary : Colors.white,
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        );
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.2),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          item('Daily', isDailyView, true),
+          item('Calendar', !isDailyView, false),
+        ],
+      ),
+    );
   }
 
   Widget _buildPeriodChip(BuildContext context, WidgetRef ref, String label,
