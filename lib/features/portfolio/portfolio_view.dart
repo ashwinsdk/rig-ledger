@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import '../../core/models/agent.dart';
+import '../../core/models/ledger_types.dart';
+import '../../core/providers/agent_provider.dart';
 import '../../core/providers/portfolio_provider.dart';
 import '../../core/providers/vehicle_provider.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/portfolio_calculator.dart';
+import '../agents/agent_dialogs.dart';
 
 final _money = NumberFormat('#,##0.00');
 
@@ -201,10 +205,8 @@ class _PortfolioViewState extends ConsumerState<PortfolioView> {
             const SizedBox(height: 16),
             _ExpensesCard(s: s),
           ],
-          if (_agentId == null && s.agents.isNotEmpty) ...[
-            const SizedBox(height: 16),
-            _AgentsCard(rows: s.agents),
-          ],
+          const SizedBox(height: 16),
+          _AgentsSection(rows: s.agents),
           const SizedBox(height: 16),
           const _DefinitionsCard(),
         ],
@@ -375,12 +377,23 @@ class _ExpensesCard extends StatelessWidget {
   }
 }
 
-class _AgentsCard extends StatelessWidget {
+/// Agents section (v2.0.1): every agent, including ones without bills in the
+/// period, with the period totals. Tap an agent for details, prices and edit.
+class _AgentsSection extends ConsumerWidget {
   final List<AgentPortfolioRow> rows;
-  const _AgentsCard({required this.rows});
+  const _AgentsSection({required this.rows});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final agents = ref.watch(agentsProvider);
+    final byId = {for (final r in rows) r.agentId: r};
+    final sorted = [...agents]..sort((a, b) {
+        final x = byId[a.id]?.total ?? 0;
+        final y = byId[b.id]?.total ?? 0;
+        final c = y.compareTo(x);
+        return c != 0 ? c : a.name.compareTo(b.name);
+      });
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -391,39 +404,88 @@ class _AgentsCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('By agent', style: TextStyle(fontWeight: FontWeight.w600)),
-          const SizedBox(height: 8),
-          for (final r in rows)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 6),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(children: [
-                    Expanded(
-                      child: Text(r.agentName,
-                          style: const TextStyle(fontWeight: FontWeight.w600)),
-                    ),
-                    Text('${r.bills} ${r.bills == 1 ? 'bill' : 'bills'}',
-                        style: const TextStyle(
-                            fontSize: 12, color: AppColors.textSecondary)),
-                  ]),
-                  const SizedBox(height: 2),
-                  Wrap(spacing: 14, children: [
-                    _kv('Total', r.total, AppColors.primary),
-                    _kv('Received', r.received, AppColors.success),
-                    _kv('Pending', r.pending, AppColors.warning),
-                    _kv('Commission', r.commission, AppColors.accent),
-                  ]),
-                ],
+          Row(
+            children: [
+              const Expanded(
+                child: Text('Agents',
+                    style: TextStyle(fontWeight: FontWeight.w600)),
               ),
+              TextButton.icon(
+                onPressed: () => showAddAgentDialog(context, ref),
+                icon: const Icon(Icons.add, size: 18),
+                label: const Text('Add agent'),
+              ),
+            ],
+          ),
+          if (sorted.isEmpty)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 12),
+              child: Text('No agents yet. Tap Add agent to create one.',
+                  style:
+                      TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+            ),
+          for (final agent in sorted)
+            _AgentRow(
+              agent: agent,
+              row: byId[agent.id],
+              onTap: () => _showAgentSheet(context, ref, agent, byId[agent.id]),
             ),
         ],
       ),
     );
   }
+}
 
-  Widget _kv(String k, double v, Color c) => Text.rich(TextSpan(children: [
+class _AgentRow extends StatelessWidget {
+  final Agent agent;
+  final AgentPortfolioRow? row;
+  final VoidCallback onTap;
+  const _AgentRow(
+      {required this.agent, required this.row, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final r = row;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(children: [
+              Expanded(
+                child: Text(agent.name,
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                    overflow: TextOverflow.ellipsis),
+              ),
+              Text(
+                  r == null
+                      ? 'no bills'
+                      : '${r.bills} ${r.bills == 1 ? 'bill' : 'bills'}',
+                  style: const TextStyle(
+                      fontSize: 12, color: AppColors.textSecondary)),
+              const Icon(Icons.chevron_right,
+                  size: 18, color: AppColors.textHint),
+            ]),
+            if (r != null) ...[
+              const SizedBox(height: 2),
+              Wrap(spacing: 14, children: [
+                _kv('Total', r.total, AppColors.primary),
+                _kv('Received', r.received, AppColors.success),
+                _kv('Pending', r.pending, AppColors.warning),
+                _kv('Commission', r.commission, AppColors.accent),
+              ]),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  static Widget _kv(String k, double v, Color c) =>
+      Text.rich(TextSpan(children: [
         TextSpan(
             text: '$k ',
             style:
@@ -433,6 +495,151 @@ class _AgentsCard extends StatelessWidget {
             style:
                 TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: c)),
       ]));
+}
+
+/// Detail sheet of one agent: contact, period totals, commission prices per
+/// type, and Edit / Delete (the same dialogs the Agents screen uses).
+void _showAgentSheet(
+    BuildContext context, WidgetRef ref, Agent agent, AgentPortfolioRow? row) {
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    ),
+    builder: (sheetContext) => _AgentSheet(agentId: agent.id, row: row),
+  );
+}
+
+class _AgentSheet extends ConsumerWidget {
+  final String agentId;
+  final AgentPortfolioRow? row;
+  const _AgentSheet({required this.agentId, required this.row});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final agents = ref.watch(agentsProvider);
+    final agent = agents.where((a) => a.id == agentId).firstOrNull;
+    if (agent == null) return const SizedBox(height: 80);
+    final prices = agent.commissionRates;
+    final defaults = {
+      'Depth': agent.depthCommissionRate,
+      'PVC': agent.pvcCommissionRate,
+      'MS pipe': agent.msPipeCommissionRate,
+    };
+
+    String label(String key) {
+      final parts = key.split(':');
+      final cat = switch (parts.first) {
+        'depth' => 'Depth',
+        'pvc' => 'PVC',
+        _ => 'MS pipe',
+      };
+      return '$cat ${parts.length > 1 ? LedgerTypes.shortLabel(parts[1]) : ''}';
+    }
+
+    return SafeArea(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.border,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(agent.name,
+                style:
+                    const TextStyle(fontSize: 20, fontWeight: FontWeight.w600)),
+            if (agent.phone != null && agent.phone!.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(agent.phone!,
+                    style: const TextStyle(color: AppColors.textSecondary)),
+              ),
+            if (agent.notes != null && agent.notes!.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(agent.notes!,
+                    style: const TextStyle(
+                        fontSize: 13, color: AppColors.textSecondary)),
+              ),
+            const SizedBox(height: 16),
+            const Text('This period',
+                style: TextStyle(fontWeight: FontWeight.w600)),
+            const SizedBox(height: 6),
+            if (row == null)
+              const Text('No bills in this period',
+                  style: TextStyle(color: AppColors.textSecondary))
+            else
+              Wrap(spacing: 14, runSpacing: 4, children: [
+                _AgentRow._kv('Total', row!.total, AppColors.primary),
+                _AgentRow._kv('Received', row!.received, AppColors.success),
+                _AgentRow._kv('Pending', row!.pending, AppColors.warning),
+                _AgentRow._kv('Commission', row!.commission, AppColors.accent),
+              ]),
+            const SizedBox(height: 16),
+            const Text('Commission per foot',
+                style: TextStyle(fontWeight: FontWeight.w600)),
+            const SizedBox(height: 6),
+            if (prices.isEmpty && defaults.values.every((v) => v == 0))
+              const Text('No prices set. Tap Edit to add them.',
+                  style: TextStyle(color: AppColors.textSecondary)),
+            for (final e in prices.entries) _priceLine(label(e.key), e.value),
+            for (final e in defaults.entries)
+              if (e.value > 0) _priceLine('${e.key} (other sizes)', e.value),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      showDeleteAgentDialog(context, ref, agent, agents);
+                    },
+                    style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.error),
+                    icon: const Icon(Icons.delete_outline),
+                    label: const Text('Delete'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      showEditAgentDialog(context, ref, agent);
+                    },
+                    icon: const Icon(Icons.edit_outlined),
+                    label: const Text('Edit'),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _priceLine(String label, double value) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 2),
+        child: Row(
+          children: [
+            Expanded(child: Text(label)),
+            Text('₹${_money.format(value)} / ft',
+                style: const TextStyle(fontWeight: FontWeight.w600)),
+          ],
+        ),
+      );
 }
 
 class _DefinitionsCard extends StatelessWidget {

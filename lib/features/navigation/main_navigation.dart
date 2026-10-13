@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../home/combined_home_screen.dart';
 import '../stats/stats_screen.dart';
-import '../agents/agents_screen.dart';
 import '../settings/settings_screen.dart';
 import '../cashbook/cashbook_hub_screen.dart';
 import '../../core/theme/app_colors.dart';
@@ -34,7 +33,6 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
   final List<Widget> _screens = const [
     CombinedHomeScreen(),
     StatsScreen(),
-    AgentsScreen(),
     CashbookRootScreen(),
     SettingsScreen(),
   ];
@@ -110,11 +108,6 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
                 icon: Icon(Icons.pie_chart_outline),
                 activeIcon: Icon(Icons.pie_chart),
                 label: 'Portfolio',
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.people_outlined),
-                activeIcon: Icon(Icons.people),
-                label: 'Agents',
               ),
               BottomNavigationBarItem(
                 icon: Icon(Icons.account_balance_wallet_outlined),
