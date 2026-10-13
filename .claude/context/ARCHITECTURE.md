@@ -38,6 +38,8 @@ All providers are hand-written StateNotifier style. `riverpod_generator` is inst
 lib/core/providers/
   ledger_provider.dart      -- ledger entries, filters, time period, stats, phonePeNames
   agent_provider.dart       -- agents list
+  ledger_types_provider.dart -- user-defined depth, PVC and MS pipe types
+  rig_switch.dart           -- switchRig (shared by Ledger, Portfolio and Vehicle Management)
   vehicle_provider.dart     -- vehicles list, current vehicle
   side_ledger_provider.dart -- diesel, pvc, bit, hammer entries
   sync_provider.dart        -- sync status (SyncNotifier, SyncState, SyncStatus enum)
@@ -74,9 +76,9 @@ Hive boxes:
   settings             -> Box<dynamic>   (key-value store)
 ```
 
-Settings keys: `schemaVersion`, `currentVehicleId`, `lastGoogleDriveBackup`, `autoGoogleDriveBackup`, `lastSyncTime`.
+Settings keys: `schemaVersion`, `currentVehicleId`, `lastGoogleDriveBackup`, `autoGoogleDriveBackup`, `lastSyncTime`, `ledgerTypes` (JSON, user-defined depth/PVC/MS pipe types, in the backup and merged on sync by `updatedAt`), `cashbook.*`.
 
-Schema version: 5 (4 added the Account Ledger boxes, 5 added the payment log and commission fields). Migration logic is a stub (_performMigrations bumps version only, no data transforms).
+Schema version: 6 (4 added the Account Ledger boxes, 5 added the payment log and commission fields, 6 added the `ledgerTypes` setting in the backup and more v2.0.1 data). Migration logic is a stub (_performMigrations bumps version only, no data transforms).
 
 ## Google Drive sync
 

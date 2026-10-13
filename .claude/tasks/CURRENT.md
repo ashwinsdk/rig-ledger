@@ -54,12 +54,12 @@ Depends: T-H04
 Resume notes: Portfolio header rig name is now a tappable pill opening showRigPickerSheet (changes the global rig); new portfolioAllRigsProvider (shared scope) and a _ScopeToggle (two pills with icons plus a line saying what is shown) replace the Material SegmentedButton; agent chip resets on scope change and on rig change. Metric card labels ellipsize. test/portfolio_scope_test.dart. Not verified on a device.
 Commit: Add rig switcher and scope control to Portfolio
 
-## T-H06 Ledger types: user-defined depth, PVC and MS pipe types (bug 2, part 1) [PENDING] [HIVE/SYNC FLAG]
+## T-H06 Ledger types: user-defined depth, PVC and MS pipe types (bug 2, part 1) [DONE] [HIVE/SYNC FLAG]
 Goal: depth types, PVC types and MS pipe types become user-editable lists (add any inch such as 9inch; rename; delete). Seeded with the current values (7inch, 8inch / 7inch, 8inch / 6inch) so nothing changes for existing data. Stored as JSON in the settings box under `ledgerTypes.depth|pvc|ms` with an updatedAt, exposed by `LedgerTypesNotifier` (load, add, rename, delete, refresh), added to backup, restore and the Drive merge (settings box is not synced today), schema 5 -> 6. Settings screen "Ledger types" to manage the lists. Rules (proposed): rename updates every bill and every agent rate that uses the type; delete is blocked while any bill uses it (shows the count); step rate for new types follows the decision below.
 Step rate decision (proposed, needs confirmation): the hardcoded 7 inch and 8 inch brackets stay; every other depth type gets NO step rate by default (0), with a per-type toggle "use the 7 inch table" or "use the 8 inch table"; no custom bracket editor in 2.0.1 (BACKLOG item stays).
 Files: new lib/core/providers/ledger_types_provider.dart, lib/features/settings/ledger_types_screen.dart, database_service.dart (backup, restore, schema), sync_service.dart, ledger_entry.dart (calculateStepRate lookup), settings_screen.dart entry, MODELS.md, ARCHITECTURE.md, tests
 Depends: none
-Resume notes:
+Resume notes: LedgerTypes model, DatabaseService (schema 6, get/save, countBillsWithType, renameBillType, backup and restore of `ledgerTypes`), SyncService._mergeLedgerTypes, LedgerTypesNotifier (add as a size in inches, rename updates bills and carries the table, delete blocked while in use and for the last), Settings > Ledger Types screen, calculateStepRate stepTable param (other types now 0 step), refresh hooks in sync_provider and settings_screen. The forms do not use the lists yet: that is T-H07 (dropdowns, filter, totals, exports, passing the step table). 86 tests pass, analyze 0 errors. The agent commission map rename hook comes with T-H08.
 Commit: Add user-defined ledger types with backup and sync
 
 ## T-H07 Ledger types used everywhere (bug 2, part 2) [PENDING] [EXPORT FLAG]

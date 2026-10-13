@@ -81,12 +81,24 @@ balance = total - received - less
 received = receivedCash + receivedPhonePe
 ```
 
+### Types are user-defined (v2.0.1)
+
+`depth`, `pvc` and `msPipe` stay plain Strings on the bill (`'9inch'`, `'9.5inch'`); old bills never depend on a list. The lists that the forms, filters and totals offer are `LedgerTypes` (below). A type is always a number of inches. Side bore bills keep the placeholders `'7inch'` / `'6inch'`, which never count as using a type.
+
 ### Step rate brackets (hardcoded in LedgerEntry.calculateStepRate -- not user-configurable yet)
 
 7 inch: 0-300ft = 0 extra, 300-400 = +10/ft, 400-500 = +20/ft, 500-600 = +30/ft, 600-700 = +50/ft, 700-800 = +70/ft, 800-900 = +90/ft. Beyond 900: +20 per 100ft bracket cumulative.
 8 inch: 0-300ft = 0 extra, 300-400 = +10/ft, 400-500 = +20/ft, 500-600 = +40/ft, 600-700 = +60/ft, 700-800 = +80/ft, 800-900 = +100/ft. Beyond 900: +20 per 100ft bracket cumulative.
 
 These are extra-per-foot rates for feet within each bracket, applied cumulatively.
+
+v2.0.1: `calculateStepRate(..., stepTable)` takes the table to use (`'7inch'`, `'8inch'`). Without it only the types `7inch` and `8inch` have a step rate; every other type has none (it used to fall back silently to the 8 inch table). A user-defined depth type picks its table in Settings > Ledger Types (`LedgerTypes.steps`, `stepTableFor`).
+
+---
+
+## LedgerTypes -- lib/core/models/ledger_types.dart (v2.0.1)
+
+Not a Hive model. Plain class stored as one JSON string in the settings box under the key `ledgerTypes` (absent means the built-in lists). Fields: `depth` (default `7inch`, `8inch`), `pvc` (`7inch`, `8inch`), `ms` (`6inch`), `steps` (depth type -> `'7inch'` | `'8inch'` | `'none'`), `updatedAt`. Included in the backup as `ledgerTypes`, merged on Drive sync by latest `updatedAt` (`SyncService._mergeLedgerTypes`), restored from a backup only when the key exists. `LedgerTypesNotifier` (lib/core/providers/ledger_types_provider.dart): add (a size in inches), rename (updates every main bore bill and carries the step table), delete (refused while a bill uses the type, and for the last one). A type used by bills but missing from the list is shown in memory (`withUsedTypes`). Settings screen: lib/features/settings/ledger_types_screen.dart.
 
 ---
 

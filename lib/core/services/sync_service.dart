@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../database/database_service.dart';
+import '../models/ledger_types.dart';
 import '../models/tombstone.dart';
 import 'payment_link_service.dart';
 import 'google_drive_service.dart';
@@ -150,6 +151,17 @@ class SyncService {
 
   // ─── Merge Logic ──────────────────────────────────────────────────────
 
+  /// The newer of two `ledgerTypes` objects (null when neither side has one).
+  static Map<String, dynamic>? _mergeLedgerTypes(
+      Object? local, Object? remote) {
+    if (local == null && remote == null) return null;
+    if (local == null) return LedgerTypes.fromJson(remote).toJson();
+    if (remote == null) return LedgerTypes.fromJson(local).toJson();
+    final l = LedgerTypes.fromJson(local);
+    final r = LedgerTypes.fromJson(remote);
+    return (r.updatedAt.isAfter(l.updatedAt) ? r : l).toJson();
+  }
+
   /// Exposed for tests.
   @visibleForTesting
   static Map<String, dynamic> mergeSnapshots(
@@ -242,6 +254,10 @@ class SyncService {
         getId: (m) => m['id'] as String,
         getUpdatedAt: (m) => DateTime.parse(m['updatedAt'] as String),
       ),
+      // Ledger types: one object, the side with the latest updatedAt wins.
+      if (_mergeLedgerTypes(local['ledgerTypes'], remote['ledgerTypes'])
+          case final merged?)
+        'ledgerTypes': merged,
       'cashBooks': _mergeCollection(
         localItems: local['cashBooks'] ?? [],
         remoteItems: remote['cashBooks'] ?? [],

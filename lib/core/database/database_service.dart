@@ -11,6 +11,7 @@ import '../models/tombstone.dart';
 import '../models/cash_book.dart';
 import '../models/cash_entry.dart';
 import '../models/cash_note.dart';
+import '../models/ledger_types.dart';
 
 class DatabaseService {
   static const String ledgerBoxName = 'ledger_entries';
@@ -28,7 +29,7 @@ class DatabaseService {
   static const String cashNoteBoxName = 'cash_notes';
   static const String defaultCashBookId = 'default_cash_book';
   static const Duration cashTrashRetention = Duration(days: 30);
-  static const int schemaVersion = 5;
+  static const int schemaVersion = 6;
 
   static late Box<LedgerEntry> _ledgerBox;
   static late Box<Agent> _agentBox;
@@ -111,6 +112,9 @@ class DatabaseService {
       // Version 5: LedgerEntry payment log + commission fields and Agent
       // default commission rates. New fields default to empty/0 on old data
       // (Hive defaultValue and fromMap defaults), so no transform is needed.
+      // Version 6 (v2.0.1): user-defined ledger types (settings key
+      // `ledgerTypes`, absent means the built-in lists) and, later in the same
+      // version, new Agent and Other expenses data. All default safely.
 
       await _settingsBox.put('schemaVersion', schemaVersion);
     }
@@ -329,6 +333,60 @@ class DatabaseService {
     }
   }
 
+  // ============ LEDGER TYPES (user-defined depth, PVC, MS pipe types) ============
+
+  static LedgerTypes getLedgerTypes() {
+    final raw = _settingsBox.get('ledgerTypes');
+    return raw == null ? LedgerTypes.defaults() : LedgerTypes.fromJson(raw);
+  }
+
+  static Future<void> saveLedgerTypes(LedgerTypes types) =>
+      _settingsBox.put('ledgerTypes', types.encode());
+
+  /// Bills of main bore rigs, across all rigs. Side bore bills carry placeholder
+  /// types (7inch, 6inch) that mean nothing, so they never count as using a type.
+  static Iterable<LedgerEntry> _mainBoreBills() {
+    final mainIds = _vehicleBox.values
+        .where((v) => v.vehicleType == VehicleType.mainBore)
+        .map((v) => v.id)
+        .toSet();
+    return _ledgerBox.values.where((e) => mainIds.contains(e.vehicleId));
+  }
+
+  static String _billType(LedgerEntry e, LedgerTypeCategory c) => switch (c) {
+        LedgerTypeCategory.depth => e.depth,
+        LedgerTypeCategory.pvc => e.pvc,
+        LedgerTypeCategory.ms => e.msPipe,
+      };
+
+  /// How many bills use [type] in category [c].
+  static int countBillsWithType(LedgerTypeCategory c, String type) =>
+      _mainBoreBills().where((e) => _billType(e, c) == type).length;
+
+  /// Types that bills actually use (a type may be missing from the list after a
+  /// sync of an older device).
+  static Set<String> usedLedgerTypes(LedgerTypeCategory c) => _mainBoreBills()
+      .map((e) => _billType(e, c))
+      .where((t) => t.isNotEmpty)
+      .toSet();
+
+  /// Renames a type on every bill that uses it. Returns how many bills changed.
+  static Future<int> renameBillType(
+      LedgerTypeCategory c, String from, String to) async {
+    final bills =
+        _mainBoreBills().where((e) => _billType(e, c) == from).toList();
+    final now = DateTime.now();
+    for (final b in bills) {
+      final updated = switch (c) {
+        LedgerTypeCategory.depth => b.copyWith(depth: to, updatedAt: now),
+        LedgerTypeCategory.pvc => b.copyWith(pvc: to, updatedAt: now),
+        LedgerTypeCategory.ms => b.copyWith(msPipe: to, updatedAt: now),
+      };
+      await saveLedgerEntry(updated);
+    }
+    return bills.length;
+  }
+
   // Backup and Restore
   static Future<Map<String, dynamic>> createBackup() async {
     // Get ALL data from all vehicles, not just current vehicle
@@ -364,6 +422,7 @@ class DatabaseService {
       'cashBooks': cashBooks,
       'cashEntries': cashEntries,
       'cashNotes': cashNotes,
+      'ledgerTypes': getLedgerTypes().toJson(),
       'tombstones': _tombstoneBox.values.map((t) => t.toJson()).toList(),
     };
   }
@@ -427,6 +486,12 @@ class DatabaseService {
       final entry =
           MiniLedgerEntry.fromJson(Map<String, dynamic>.from(entryMap));
       await saveMiniLedgerEntry(entry);
+    }
+
+    // Ledger types (absent in backups from older versions: keep the local lists)
+    final ledgerTypesData = backup['ledgerTypes'];
+    if (ledgerTypesData != null) {
+      await saveLedgerTypes(LedgerTypes.fromJson(ledgerTypesData));
     }
 
     // Restore Account Ledger (keys are absent in backups from older versions)

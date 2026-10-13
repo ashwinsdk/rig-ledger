@@ -172,15 +172,24 @@ class LedgerEntry extends HiveObject {
   ///   300-400: d+10 per feet, 400-500: d+20 per feet, 500-600: d+40 per feet,
   ///   600-700: d+60 per feet, 700-800: d+80 per feet, 800-900: d+100 per feet,
   ///   900+: continues with +20 per 100ft bracket
+  ///
+  /// [stepTable] picks the table for a user-defined depth type: '7inch' or
+  /// '8inch'. Without it only the types 7inch and 8inch have a step rate;
+  /// every other type has none (v2.0.1; it used to fall back to 8 inch).
   static double calculateStepRate({
     required String depthType,
     required double depthInFeet,
     required double baseRate,
+    String? stepTable,
   }) {
     if (depthInFeet <= 300) return 0;
 
+    final table = stepTable ??
+        ((depthType == '7inch' || depthType == '8inch') ? depthType : null);
+    if (table == null) return 0;
+
     double totalStepRate = 0;
-    final is7inch = depthType == '7inch';
+    final is7inch = table == '7inch';
 
     // Define cumulative rate additions per 100ft bracket
     // For 7inch: +10, +10, +10, +20, +20, +20 (cumulative: 10, 20, 30, 50, 70, 90)

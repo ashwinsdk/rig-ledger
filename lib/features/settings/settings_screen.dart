@@ -19,6 +19,8 @@ import '../export/csv_export_screen.dart';
 import '../export/csv_import_screen.dart';
 import '../export/pdf_export_screen.dart';
 import 'vehicle_management_screen.dart';
+import 'ledger_types_screen.dart';
+import '../../core/providers/ledger_types_provider.dart';
 import 'about_screen.dart';
 
 class SettingsScreen extends ConsumerWidget {
@@ -61,6 +63,18 @@ class SettingsScreen extends ConsumerWidget {
                           ),
                         );
                       },
+                    ),
+                    _SettingsTile(
+                      icon: Icons.straighten_outlined,
+                      title: 'Ledger Types',
+                      subtitle:
+                          'Depth, PVC and MS pipe sizes (7inch, 8inch, 9inch...)',
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const LedgerTypesScreen(),
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -278,6 +292,7 @@ class SettingsScreen extends ConsumerWidget {
       await DatabaseService.restoreBackup(backup);
       ref.read(ledgerEntriesProvider.notifier).refresh();
       ref.read(agentsProvider.notifier).refresh();
+      ref.read(ledgerTypesProvider.notifier).refresh();
       ref.read(vehiclesProvider.notifier).refresh();
       ref.read(dieselEntriesProvider.notifier).refresh();
       ref.read(pvcEntriesProvider.notifier).refresh();
@@ -361,6 +376,7 @@ class SettingsScreen extends ConsumerWidget {
       await DatabaseService.clearAllData();
       ref.read(ledgerEntriesProvider.notifier).refresh();
       ref.read(agentsProvider.notifier).refresh();
+      ref.read(ledgerTypesProvider.notifier).refresh();
       ref.read(vehiclesProvider.notifier).refresh();
       ref.read(dieselEntriesProvider.notifier).refresh();
       ref.read(pvcEntriesProvider.notifier).refresh();
@@ -583,6 +599,7 @@ class _GoogleDriveBackupCardState extends State<_GoogleDriveBackupCard> {
         ref.read(vehiclesProvider.notifier).refresh();
         ref.read(ledgerEntriesProvider.notifier).refresh();
         ref.read(agentsProvider.notifier).refresh();
+        ref.read(ledgerTypesProvider.notifier).refresh();
         ref.read(dieselEntriesProvider.notifier).refresh();
         ref.read(pvcEntriesProvider.notifier).refresh();
         ref.read(bitEntriesProvider.notifier).refresh();
