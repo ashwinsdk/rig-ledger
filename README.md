@@ -49,9 +49,20 @@ RigLedger syncs data between Android and macOS via Google Drive:
 
 ## Version
 
-Current: 2.0.0 (see `pubspec.yaml`)
+Current: 2.0.1 (see `pubspec.yaml`)
 
 ### Changelog
+
+v2.0.1
+- Ledger page: smaller header, one slim scrollable totals strip, and a drop down with feet for every depth, PVC and MS pipe type.
+- Ledger types: add, rename and delete depth, PVC and MS pipe sizes (any inch number) in Settings; changes apply across the app. Optional 7 or 8 inch step rate table per depth type.
+- Agents: commission price per foot for each depth, PVC and MS type. The Agents tab is replaced by an Agents section in Portfolio.
+- Commission breakdown (depth, PVC, MS, total) on the bill form, preview and bill cards.
+- New side ledger category "Other expenses" for both rig types, included in Portfolio, Stats and exports.
+- Portfolio: change the rig from the header and a clearer This rig / All rigs control.
+- Account Ledger: same look as the ledger pages, and Save returns to the ledger (Save and add another keeps the form).
+- Saving PDF, CSV and backups works without a storage permission (Share is the fallback).
+- Schema version 6.
 
 v2.0.0
 - Account Ledger: a cash book (Income and Expense, several books, running balances, period views, search, filters, summaries, calendar, notebook, transfers, trash with 30 day purge, PDF and CSV reports, one-time import from the cashbook app backup). It is the fifth tab and syncs with the rest of the data.
