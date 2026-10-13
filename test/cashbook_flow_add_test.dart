@@ -57,8 +57,8 @@ void main() {
     if (notes != null) {
       await t.enterText(find.widgetWithText(TextField, 'Notes'), notes);
     }
-    await t.tap(find.text('Save and exit'));
-    await pumpUntil(t, () => find.text('Save and exit').evaluate().isEmpty);
+    await t.tap(find.text('Save'));
+    await pumpUntil(t, () => find.text('Save').evaluate().isEmpty);
   }
 
   testWidgets('add income and expense, totals and running balance', (t) async {
@@ -95,9 +95,10 @@ void main() {
     await settle(t);
     await t.tap(find.widgetWithText(ElevatedButton, 'Income').first);
     await settle(t);
-    await t.tap(find.text('Save and exit'));
+    await t.tap(find.text('Save'));
     await settle(t);
     expect(find.text('Add Income'), findsOneWidget); // still on the form
+    expect(find.text('Enter an amount'), findsOneWidget); // says why
     expect(DatabaseService.getCashEntries().length, 3); // unchanged
   });
 }

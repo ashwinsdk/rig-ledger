@@ -95,10 +95,12 @@ double? parseAmount(String text) {
   return double.tryParse(t);
 }
 
-void showCashSnack(BuildContext context, String message, {bool error = false}) {
+void showCashSnack(BuildContext context, String message,
+    {bool error = false, Duration? duration}) {
   ScaffoldMessenger.of(context).showSnackBar(SnackBar(
     content: Text(message),
     backgroundColor: error ? AppColors.error : null,
+    duration: duration ?? const Duration(seconds: 4),
   ));
 }
 

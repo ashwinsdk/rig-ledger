@@ -49,6 +49,7 @@ class _CashbookEntryFormScreenState
   final _desc = TextEditingController();
   final _notesFocus = FocusNode();
   final _amountFocus = FocusNode();
+  String? _amountError;
   List<CashItem> _items = [];
   List<String> _attachments = [];
   late bool _showDesc;
@@ -177,7 +178,8 @@ class _CashbookEntryFormScreenState
   CashEntry? _buildForSave() {
     final amount = parseAmount(_amount.text);
     if (amount == null) {
-      // Empty amount blocks saving silently (PARITY-018).
+      // An empty amount blocks saving (PARITY-018) and says why.
+      setState(() => _amountError = 'Enter an amount');
       _amountFocus.requestFocus();
       return null;
     }
@@ -237,14 +239,15 @@ class _CashbookEntryFormScreenState
     if (exit || _isEdit) {
       Navigator.pop(context, true);
     } else {
-      // Save and continue: clear amount and notes, keep the form open.
+      // Save and add another: clear amount and notes, keep the form open.
       setState(() {
         _amount.clear();
         _notes.clear();
         _items = [];
         _attachments = [];
       });
-      showCashSnack(context, 'Saved');
+      // Short, so it does not sit on top of the Save buttons.
+      showCashSnack(context, 'Saved', duration: const Duration(seconds: 1));
       _amountFocus.requestFocus();
     }
   }
@@ -456,12 +459,18 @@ class _CashbookEntryFormScreenState
                         keyboardType: const TextInputType.numberWithOptions(
                             decimal: true),
                         inputFormatters: [AmountInputFormatter()],
+                        onChanged: (_) {
+                          if (_amountError != null) {
+                            setState(() => _amountError = null);
+                          }
+                        },
                         style: TextStyle(
                             color: activeColor,
                             fontSize: 20,
                             fontWeight: FontWeight.w600),
                         decoration: InputDecoration(
                           labelText: amountLabel,
+                          errorText: _amountError,
                           prefixText: 'Rs. ',
                           suffixIcon: IconButton(
                             tooltip: 'Calculator',
@@ -630,16 +639,17 @@ class _CashbookEntryFormScreenState
                     : Row(children: [
                         Expanded(
                           child: OutlinedButton(
-                            onPressed: _saving ? null : () => _save(exit: true),
-                            child: const Text('Save and exit'),
+                            onPressed:
+                                _saving ? null : () => _save(exit: false),
+                            child: const Text('Save and add another'),
                           ),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
+                          // The filled button saves and goes back to the ledger.
                           child: ElevatedButton(
-                            onPressed:
-                                _saving ? null : () => _save(exit: false),
-                            child: const Text('Save and continue'),
+                            onPressed: _saving ? null : () => _save(exit: true),
+                            child: const Text('Save'),
                           ),
                         ),
                       ]),

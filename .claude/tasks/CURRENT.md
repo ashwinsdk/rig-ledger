@@ -26,11 +26,11 @@ Depends: none
 Resume notes: FileSaveService rewritten (SAF only on Android, no second write, Share fallback on failure, UTF-8), main.dart permission request removed, manifest MANAGE_EXTERNAL_STORAGE and requestLegacyExternalStorage removed, READ/WRITE limited by maxSdkVersion. analyze 210 infos (unchanged), 68 tests pass. Not verifiable here: a real save on an Android 11+ device. BACKLOG.md entry for MANAGE_EXTERNAL_STORAGE left untouched (developer has uncommitted edits there); mark it done when convenient.
 Commit: Fix PDF and file saving without storage permission
 
-## T-H02 Account Ledger: return to the ledger after saving (bug 10) [PENDING]
+## T-H02 Account Ledger: return to the ledger after saving (bug 10) [DONE]
 Goal: a new entry returns to the Account Ledger home. Cause found: "Save and continue" is the filled primary button and by design keeps the form open; "Save and exit" is the outlined one. Proposal: filled "Save" = save and return, outlined "Save and add another" keeps the form (resets amount, notes, items, bills), and an empty amount shows an inline error instead of doing nothing.
 Files: lib/features/cashbook/cashbook_entry_form_screen.dart (lines about 199-259 and 624-646), test/cashbook_flow_add_test.dart
 Depends: none
-Resume notes:
+Resume notes: filled Save returns to the ledger, outlined Save and add another keeps the form (clears amount, notes, items, bills), empty amount shows an inline 'Enter an amount' error, the 'Saved' snackbar is 1 second so it does not cover the buttons (showCashSnack got a duration param). Tests: flow tests use Save, new test/cashbook_flow_save_test.dart. analyze 210 infos (unchanged), 69 tests pass.
 Commit: Return to Account Ledger after saving an entry
 
 ## T-H03 Account Ledger: same look as the ledger pages (bug 9) [PENDING]
