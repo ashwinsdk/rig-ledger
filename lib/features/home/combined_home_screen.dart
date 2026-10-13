@@ -5,7 +5,6 @@ import '../../core/theme/app_colors.dart';
 import '../../core/providers/ledger_provider.dart';
 import '../../core/providers/vehicle_provider.dart';
 import '../../core/providers/side_ledger_provider.dart';
-import '../../core/providers/agent_provider.dart';
 import '../../core/models/diesel_entry.dart';
 import '../../core/models/pvc_entry.dart';
 import '../../core/models/bit_entry.dart';
@@ -21,6 +20,7 @@ import '../side_ledger/pvc/pvc_list_screen.dart';
 import '../side_ledger/bit/bit_list_screen.dart';
 import '../side_ledger/hammer/hammer_list_screen.dart';
 import '../navigation/main_navigation.dart';
+import '../../core/widgets/rig_picker_sheet.dart';
 
 class CombinedHomeScreen extends ConsumerStatefulWidget {
   const CombinedHomeScreen({super.key});
@@ -1079,124 +1079,7 @@ class _CombinedHomeScreenState extends ConsumerState<CombinedHomeScreen>
   }
 
   void _showVehicleSwitcher(BuildContext context, WidgetRef ref) {
-    final vehicles = ref.read(vehiclesProvider);
-    final currentVehicle = ref.read(currentVehicleProvider);
-
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (sheetContext) => Container(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: AppColors.border,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
-            const Text(
-              'Switch Vehicle',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Select a vehicle to view its ledger',
-              style: TextStyle(
-                fontSize: 14,
-                color: AppColors.textSecondary,
-              ),
-            ),
-            const SizedBox(height: 16),
-            if (vehicles.isEmpty)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 24),
-                child: Center(
-                  child: Text('No vehicles found'),
-                ),
-              )
-            else
-              ...vehicles.map((vehicle) {
-                final isSelected = vehicle.id == currentVehicle?.id;
-                final isSideBore = vehicle.vehicleType == VehicleType.sideBore;
-                return ListTile(
-                  leading: Container(
-                    width: 48,
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: isSelected
-                          ? AppColors.primary.withValues(alpha: 0.1)
-                          : AppColors.background,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(
-                      isSideBore
-                          ? Icons.engineering_outlined
-                          : Icons.precision_manufacturing_outlined,
-                      color: isSelected
-                          ? AppColors.primary
-                          : AppColors.textSecondary,
-                    ),
-                  ),
-                  title: Text(
-                    vehicle.name,
-                    style: TextStyle(
-                      fontWeight:
-                          isSelected ? FontWeight.w600 : FontWeight.normal,
-                      color: isSelected ? AppColors.primary : null,
-                    ),
-                  ),
-                  subtitle: Text(
-                    isSideBore ? 'Side Bore' : 'Main Bore',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                  trailing: isSelected
-                      ? Icon(
-                          Icons.check_circle,
-                          color: AppColors.primary,
-                        )
-                      : null,
-                  onTap: () async {
-                    Navigator.pop(sheetContext);
-                    if (!isSelected) {
-                      await ref
-                          .read(currentVehicleProvider.notifier)
-                          .setCurrentVehicle(vehicle);
-                      // Clear filters and search when changing vehicles
-                      ref.read(searchQueryProvider.notifier).state = '';
-                      ref.read(ledgerFilterProvider.notifier).state =
-                          const LedgerFilter();
-                      // Refresh all providers
-                      ref.read(ledgerEntriesProvider.notifier).refresh();
-                      ref.read(dieselEntriesProvider.notifier).refresh();
-                      ref.read(pvcEntriesProvider.notifier).refresh();
-                      ref.read(bitEntriesProvider.notifier).refresh();
-                      ref.read(hammerEntriesProvider.notifier).refresh();
-                      ref.read(agentsProvider.notifier).refresh();
-                    }
-                  },
-                );
-              }),
-            const SizedBox(height: 8),
-          ],
-        ),
-      ),
-    );
+    showRigPickerSheet(context, ref);
   }
 
   void _showSearchSheet(BuildContext context) {

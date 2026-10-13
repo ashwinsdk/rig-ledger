@@ -40,11 +40,11 @@ Depends: none
 Resume notes: mobile header holds the pill chips and the white date navigator (desktop keeps them below the slim header); totals are a top card (radius 16, shadow, icons, rupee format) via the restyled CashbookTotalsStrip, which the other cashbook screens still show at the bottom; entries are floating cards with scaled amounts; plain day headers; icon empty state; CashColors now AppColors.success and error; money prefix is the rupee sign on screen (CashbookCalculator.formatMoney; exports use formatNumber and are unchanged). PlatformHelper.debugIsDesktopOverride added for tests; new test/cashbook_home_layout_test.dart caught and fixed an amount overflow. Pushed cashbook screens keep cashAppBar. 70 tests pass, analyze 210 infos. Not verified on a device.
 Commit: Restyle Account Ledger to match the ledger pages
 
-## T-H04 Shared rig switcher (LR-01) [PENDING]
+## T-H04 Shared rig switcher (LR-01) [DONE]
 Goal: one `switchRig(ref, vehicle)` (await setCurrentVehicle, clear search and ledger filter, refresh all providers) and one reusable rig picker sheet, used by the Ledger header and Vehicle Management (desktop shell keeps its own copy).
 Files: new lib/core/providers/rig_switch.dart and lib/core/widgets/rig_picker_sheet.dart, lib/features/home/combined_home_screen.dart (about 1081-1195), lib/features/settings/vehicle_management_screen.dart (about 141-162), test/switch_rig_test.dart
 Depends: none
-Resume notes:
+Resume notes: lib/core/providers/rig_switch.dart (switchRig: awaits setCurrentVehicle, clears search, ledger filter and the four side filters, refreshes ledger, diesel, pvc, bit, hammer, agents; returns false if already current) and lib/core/widgets/rig_picker_sheet.dart (showRigPickerSheet with onSwitched). Used by the Ledger header sheet and Vehicle Management. Desktop shell keeps its own copy (frozen). test/switch_rig_test.dart. 71 tests pass, analyze 0 errors.
 Commit: Extract shared switchRig and rig picker sheet
 
 ## T-H05 Portfolio: change rig and clearer All rigs / This rig (bugs 7, 8) [PENDING]

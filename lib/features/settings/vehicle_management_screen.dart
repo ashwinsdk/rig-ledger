@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import '../../../core/models/vehicle.dart';
 import '../../../core/providers/vehicle_provider.dart';
+import 'package:rig_ledger/core/providers/rig_switch.dart';
 import '../../../core/providers/ledger_provider.dart';
 import '../../../core/providers/side_ledger_provider.dart';
 import '../../../core/providers/agent_provider.dart';
@@ -139,19 +140,7 @@ class _VehicleManagementScreenState
   }
 
   Future<void> _switchVehicle(Vehicle vehicle) async {
-    await ref.read(currentVehicleProvider.notifier).setCurrentVehicle(vehicle);
-
-    // Clear filters and search when changing vehicles
-    ref.read(searchQueryProvider.notifier).state = '';
-    ref.read(ledgerFilterProvider.notifier).state = const LedgerFilter();
-
-    // Refresh all data providers for the new vehicle
-    ref.read(ledgerEntriesProvider.notifier).refresh();
-    ref.read(dieselEntriesProvider.notifier).refresh();
-    ref.read(pvcEntriesProvider.notifier).refresh();
-    ref.read(bitEntriesProvider.notifier).refresh();
-    ref.read(hammerEntriesProvider.notifier).refresh();
-    ref.read(agentsProvider.notifier).refresh();
+    await switchRig(ref, vehicle);
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
