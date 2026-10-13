@@ -7,6 +7,8 @@ import '../../core/providers/ledger_provider.dart';
 import '../../core/providers/side_ledger_provider.dart';
 import '../../core/providers/vehicle_provider.dart';
 import '../portfolio/portfolio_view.dart';
+import '../../core/models/vehicle.dart';
+import '../../core/widgets/rig_picker_sheet.dart';
 
 enum DateRangeOption {
   today,
@@ -82,11 +84,45 @@ class _StatsScreenState extends ConsumerState<StatsScreen>
                       ),
                     ),
                     if (currentVehicle != null)
-                      Text(
-                        currentVehicle.name,
-                        style: TextStyle(
-                          color: Colors.white.withOpacity(0.8),
-                          fontSize: 14,
+                      // Tap to change the rig (same picker as the Ledger header).
+                      InkWell(
+                        onTap: () => showRigPickerSheet(context, ref),
+                        borderRadius: BorderRadius.circular(20),
+                        child: Container(
+                          constraints: const BoxConstraints(minHeight: 40),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                currentVehicle.vehicleType ==
+                                        VehicleType.sideBore
+                                    ? Icons.engineering_outlined
+                                    : Icons.precision_manufacturing_outlined,
+                                size: 16,
+                                color: Colors.white,
+                              ),
+                              const SizedBox(width: 6),
+                              Flexible(
+                                child: Text(
+                                  currentVehicle.name,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                              const Icon(Icons.arrow_drop_down,
+                                  color: Colors.white),
+                            ],
+                          ),
                         ),
                       ),
                     const SizedBox(height: 12),

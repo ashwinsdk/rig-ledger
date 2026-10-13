@@ -2,10 +2,83 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../core/providers/portfolio_provider.dart';
+import '../../core/providers/vehicle_provider.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/portfolio_calculator.dart';
 
 final _money = NumberFormat('#,##0.00');
+
+/// This rig / All rigs: two big pills with icons and a line saying what is
+/// shown. The header above holds the rig picker.
+class _ScopeToggle extends ConsumerWidget {
+  final bool allRigs;
+  final ValueChanged<bool> onChanged;
+  const _ScopeToggle({required this.allRigs, required this.onChanged});
+
+  Widget _option(String label, IconData icon, bool selected, bool value) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => onChanged(value),
+        behavior: HitTestBehavior.opaque,
+        child: Container(
+          height: 48,
+          decoration: BoxDecoration(
+            color: selected ? AppColors.primary : Colors.transparent,
+            borderRadius: BorderRadius.circular(25),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon,
+                  size: 18,
+                  color: selected ? Colors.white : AppColors.textSecondary),
+              const SizedBox(width: 6),
+              Text(label,
+                  style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color:
+                          selected ? Colors.white : AppColors.textSecondary)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final rigs = ref.watch(vehiclesProvider);
+    final current = ref.watch(currentVehicleProvider);
+    final hint = allRigs
+        ? 'Showing all ${rigs.length} ${rigs.length == 1 ? 'rig' : 'rigs'} together'
+        : 'Showing ${current?.name ?? 'the current rig'} only';
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(3),
+          decoration: BoxDecoration(
+            color: AppColors.primary.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(28),
+          ),
+          child: Row(
+            children: [
+              _option('This rig', Icons.precision_manufacturing_outlined,
+                  !allRigs, false),
+              _option('All rigs', Icons.apps_rounded, allRigs, true),
+            ],
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(8, 6, 8, 0),
+          child: Text(hint,
+              style: const TextStyle(
+                  fontSize: 12, color: AppColors.textSecondary)),
+        ),
+      ],
+    );
+  }
+}
 
 /// Portfolio overview (v2.0.0 feature 3): total, received, pending,
 /// commission, expenses and profit for a period, optionally for one agent
@@ -23,11 +96,11 @@ class PortfolioView extends ConsumerStatefulWidget {
 
 class _PortfolioViewState extends ConsumerState<PortfolioView> {
   String? _agentId;
-  bool _allRigs = false;
 
   @override
   Widget build(BuildContext context) {
-    final src = ref.watch(portfolioSourceProvider(_allRigs));
+    final allRigs = ref.watch(portfolioAllRigsProvider);
+    final src = ref.watch(portfolioSourceProvider(allRigs));
     final bills = src.bills;
     final sideBoreIds = src.sideBoreVehicleIds;
 
@@ -57,23 +130,12 @@ class _PortfolioViewState extends ConsumerState<PortfolioView> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: SegmentedButton<bool>(
-                  segments: const [
-                    ButtonSegment(value: false, label: Text('This rig')),
-                    ButtonSegment(value: true, label: Text('All rigs')),
-                  ],
-                  selected: {_allRigs},
-                  onSelectionChanged: (v) => setState(() {
-                    _allRigs = v.first;
-                    _agentId = null;
-                  }),
-                  showSelectedIcon: false,
-                ),
-              ),
-            ],
+          _ScopeToggle(
+            allRigs: allRigs,
+            onChanged: (v) {
+              ref.read(portfolioAllRigsProvider.notifier).state = v;
+              setState(() => _agentId = null);
+            },
           ),
           const SizedBox(height: 12),
           SingleChildScrollView(
@@ -240,9 +302,13 @@ class _MetricCard extends StatelessWidget {
           Row(children: [
             Icon(icon, size: 16, color: color),
             const SizedBox(width: 6),
-            Text(label,
-                style: const TextStyle(
-                    fontSize: 12, color: AppColors.textSecondary)),
+            Flexible(
+              child: Text(label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                      fontSize: 12, color: AppColors.textSecondary)),
+            ),
           ]),
           const SizedBox(height: 6),
           FittedBox(
@@ -253,6 +319,8 @@ class _MetricCard extends StatelessWidget {
           ),
           if (subtitle != null)
             Text(subtitle!,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
                     fontSize: 11, color: AppColors.textSecondary)),
         ],

@@ -47,11 +47,11 @@ Depends: none
 Resume notes: lib/core/providers/rig_switch.dart (switchRig: awaits setCurrentVehicle, clears search, ledger filter and the four side filters, refreshes ledger, diesel, pvc, bit, hammer, agents; returns false if already current) and lib/core/widgets/rig_picker_sheet.dart (showRigPickerSheet with onSwitched). Used by the Ledger header sheet and Vehicle Management. Desktop shell keeps its own copy (frozen). test/switch_rig_test.dart. 71 tests pass, analyze 0 errors.
 Commit: Extract shared switchRig and rig picker sheet
 
-## T-H05 Portfolio: change rig and clearer All rigs / This rig (bugs 7, 8) [PENDING]
+## T-H05 Portfolio: change rig and clearer All rigs / This rig (bugs 7, 8) [DONE]
 Goal: the rig name in the Portfolio header is a tappable pill that opens the rig picker and changes the global rig; the This rig / All rigs choice becomes a clear two-option control next to it (new `portfolioScopeProvider` so header and body agree); the agent chip resets when the rig changes.
 Files: lib/features/stats/stats_screen.dart (header about 80-86), lib/features/portfolio/portfolio_view.dart (about 24-110), lib/core/providers/portfolio_provider.dart
 Depends: T-H04
-Resume notes:
+Resume notes: Portfolio header rig name is now a tappable pill opening showRigPickerSheet (changes the global rig); new portfolioAllRigsProvider (shared scope) and a _ScopeToggle (two pills with icons plus a line saying what is shown) replace the Material SegmentedButton; agent chip resets on scope change and on rig change. Metric card labels ellipsize. test/portfolio_scope_test.dart. Not verified on a device.
 Commit: Add rig switcher and scope control to Portfolio
 
 ## T-H06 Ledger types: user-defined depth, PVC and MS pipe types (bug 2, part 1) [PENDING] [HIVE/SYNC FLAG]

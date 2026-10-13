@@ -30,6 +30,10 @@ class PortfolioSource {
   });
 }
 
+/// Portfolio scope: false = the current rig, true = all rigs. Shared by the
+/// Portfolio header and the Overview so both agree.
+final portfolioAllRigsProvider = StateProvider<bool>((ref) => false);
+
 /// Portfolio records for the current rig, or for all rigs when the family
 /// argument is true. Watching the per-rig providers keeps it live.
 final portfolioSourceProvider =
