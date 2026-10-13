@@ -79,6 +79,63 @@ class CommissionSection extends StatelessWidget {
     );
   }
 
+  Widget _line(String label, double value, {bool bold = false, String? tag}) {
+    final money = NumberFormat('#,##0.##');
+    final style = TextStyle(
+      fontSize: 13,
+      fontWeight: bold ? FontWeight.w700 : FontWeight.w500,
+      color: bold ? AppColors.textPrimary : AppColors.textSecondary,
+    );
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        children: [
+          Expanded(child: Text(label, style: style)),
+          if (tag != null) ...[
+            Text(tag,
+                style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.warning)),
+            const SizedBox(width: 8),
+          ],
+          Text('₹${money.format(value)}', style: style),
+        ],
+      ),
+    );
+  }
+
+  /// Read-only totals: each part (feet x rate) and the commission of the bill.
+  Widget _breakdown() {
+    final depth = depthFeet * (double.tryParse(depthRate.text) ?? 0);
+    final pvc =
+        showPvcAndMs ? pvcFeet * (double.tryParse(pvcRate.text) ?? 0) : 0.0;
+    final ms = showPvcAndMs
+        ? msPipeFeet * (double.tryParse(msPipeRate.text) ?? 0)
+        : 0.0;
+    final total = double.tryParse(commission.text) ?? 0;
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        children: [
+          _line('Depth commission', depth),
+          if (showPvcAndMs) ...[
+            _line('PVC commission', pvc),
+            _line('MS pipe commission', ms),
+          ],
+          const Divider(height: 12),
+          _line('Total commission', total,
+              bold: true, tag: isManual ? 'manual' : null),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -118,6 +175,8 @@ class CommissionSection extends StatelessWidget {
               ],
             ],
           ),
+          const SizedBox(height: 12),
+          _breakdown(),
           const SizedBox(height: 16),
           Row(
             children: [

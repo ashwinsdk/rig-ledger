@@ -234,10 +234,10 @@ class _LedgerEntryCard extends ConsumerWidget {
                 ),
                 if (entry.commission > 0) ...[
                   const SizedBox(height: 10),
-                  _InfoChip(
-                    icon: Icons.handshake_outlined,
-                    label: 'Commission',
-                    value: '₹${currencyFormat.format(entry.commission)}',
+                  _CommissionStrip(
+                    entry: entry,
+                    isSideBore: isSideBore,
+                    format: currencyFormat,
                   ),
                 ],
               ],
@@ -257,6 +257,67 @@ class _LedgerEntryCard extends ConsumerWidget {
         builder: (context) => isSideBore
             ? SideBoreFormScreen(entry: entry)
             : LedgerFormScreen(entry: entry),
+      ),
+    );
+  }
+}
+
+/// Commission of a bill: the total and, per kind, feet x rate.
+class _CommissionStrip extends StatelessWidget {
+  final LedgerEntry entry;
+  final bool isSideBore;
+  final NumberFormat format;
+
+  const _CommissionStrip(
+      {required this.entry, required this.isSideBore, required this.format});
+
+  @override
+  Widget build(BuildContext context) {
+    final parts = <String, double>{
+      'Depth': entry.depthInFeet * entry.depthCommissionRate,
+      if (!isSideBore) 'PVC': entry.pvcInFeet * entry.pvcCommissionRate,
+      if (!isSideBore) 'MS': entry.msPipeInFeet * entry.msPipeCommissionRate,
+    }..removeWhere((_, v) => v <= 0);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: AppColors.accent.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.handshake_outlined,
+              size: 16, color: AppColors.accent),
+          const SizedBox(width: 6),
+          Text(
+            entry.isCommissionManuallyEdited
+                ? 'Commission (manual)'
+                : 'Commission',
+            style:
+                const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+          ),
+          const SizedBox(width: 8),
+          Text('₹${format.format(entry.commission)}',
+              style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.accent)),
+          if (parts.length > 1 && !entry.isCommissionManuallyEdited) ...[
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                parts.entries
+                    .map((e) => '${e.key} ₹${format.format(e.value)}')
+                    .join('  '),
+                style: const TextStyle(
+                    fontSize: 11, color: AppColors.textSecondary),
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.end,
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }

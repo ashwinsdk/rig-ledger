@@ -1175,6 +1175,31 @@ class _LedgerFormScreenState extends ConsumerState<LedgerFormScreen> {
             ))}',
             isBold: true,
           ),
+          const Divider(),
+          const Padding(
+            padding: EdgeInsets.only(bottom: 4),
+            child: Text('Commission (not in total)',
+                style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textSecondary)),
+          ),
+          _buildCalcRow(
+              'Depth ($depthInFeet ft × ₹${_depthCommissionController.text.isEmpty ? 0 : _depthCommissionController.text})',
+              '₹${format.format(depthInFeet * (double.tryParse(_depthCommissionController.text) ?? 0))}'),
+          _buildCalcRow(
+              'PVC ($pvcInFeet ft × ₹${_pvcCommissionController.text.isEmpty ? 0 : _pvcCommissionController.text})',
+              '₹${format.format(pvcInFeet * (double.tryParse(_pvcCommissionController.text) ?? 0))}'),
+          _buildCalcRow(
+              'MS Pipe ($msPipeInFeet ft × ₹${_msCommissionController.text.isEmpty ? 0 : _msCommissionController.text})',
+              '₹${format.format(msPipeInFeet * (double.tryParse(_msCommissionController.text) ?? 0))}'),
+          _buildCalcRow(
+            _isCommissionManuallyEdited
+                ? 'Total commission (manual)'
+                : 'Total commission',
+            '₹${format.format(double.tryParse(_commissionController.text) ?? 0)}',
+            isBold: true,
+          ),
         ],
       ),
     );
