@@ -1,7 +1,7 @@
 name: rig_ledger
 description: A fast, lightweight, production-ready ledger for borewell drilling entries, income and expenses, and agent management.
 publish_to: 'none'
-version: 2.0.0+5
+version: 2.0.1+6
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
