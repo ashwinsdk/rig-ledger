@@ -298,6 +298,7 @@ class SettingsScreen extends ConsumerWidget {
       ref.read(pvcEntriesProvider.notifier).refresh();
       ref.read(bitEntriesProvider.notifier).refresh();
       ref.read(hammerEntriesProvider.notifier).refresh();
+      ref.read(otherExpenseEntriesProvider.notifier).refresh();
       ref.read(cashBooksProvider.notifier).refresh();
       ref.read(cashEntriesProvider.notifier).refresh();
       ref.read(cashNotesProvider.notifier).refresh();
@@ -382,6 +383,7 @@ class SettingsScreen extends ConsumerWidget {
       ref.read(pvcEntriesProvider.notifier).refresh();
       ref.read(bitEntriesProvider.notifier).refresh();
       ref.read(hammerEntriesProvider.notifier).refresh();
+      ref.read(otherExpenseEntriesProvider.notifier).refresh();
       ref.read(cashBooksProvider.notifier).refresh();
       ref.read(cashEntriesProvider.notifier).refresh();
       ref.read(cashNotesProvider.notifier).refresh();
@@ -604,6 +606,7 @@ class _GoogleDriveBackupCardState extends State<_GoogleDriveBackupCard> {
         ref.read(pvcEntriesProvider.notifier).refresh();
         ref.read(bitEntriesProvider.notifier).refresh();
         ref.read(hammerEntriesProvider.notifier).refresh();
+        ref.read(otherExpenseEntriesProvider.notifier).refresh();
         ref.read(cashBooksProvider.notifier).refresh();
         ref.read(cashEntriesProvider.notifier).refresh();
         ref.read(cashNotesProvider.notifier).refresh();

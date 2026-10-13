@@ -117,6 +117,7 @@ class SyncNotifier extends StateNotifier<SyncState> {
     _ref.read(pvcEntriesProvider.notifier).refresh();
     _ref.read(bitEntriesProvider.notifier).refresh();
     _ref.read(hammerEntriesProvider.notifier).refresh();
+    _ref.read(otherExpenseEntriesProvider.notifier).refresh();
     refreshCashbookProviders(_ref);
   }
 

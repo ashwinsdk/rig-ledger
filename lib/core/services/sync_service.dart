@@ -247,6 +247,13 @@ class SyncService {
         getId: (m) => m['id'] as String,
         getUpdatedAt: (m) => DateTime.parse(m['updatedAt'] as String),
       ),
+      'otherExpenseEntries': _mergeCollection(
+        localItems: local['otherExpenseEntries'] ?? [],
+        remoteItems: remote['otherExpenseEntries'] ?? [],
+        tombstones: tombstoneMap,
+        getId: (m) => m['id'] as String,
+        getUpdatedAt: (m) => DateTime.parse(m['updatedAt'] as String),
+      ),
       'miniLedgerEntries': _mergeCollection(
         localItems: local['miniLedgerEntries'] ?? [],
         remoteItems: remote['miniLedgerEntries'] ?? [],

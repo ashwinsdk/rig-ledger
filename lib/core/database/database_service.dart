@@ -6,6 +6,7 @@ import '../models/diesel_entry.dart';
 import '../models/pvc_entry.dart';
 import '../models/bit_entry.dart';
 import '../models/hammer_entry.dart';
+import '../models/other_expense_entry.dart';
 import '../models/mini_ledger_entry.dart';
 import '../models/tombstone.dart';
 import '../models/cash_book.dart';
@@ -22,6 +23,7 @@ class DatabaseService {
   static const String pvcBoxName = 'pvc_entries';
   static const String bitBoxName = 'bit_entries';
   static const String hammerBoxName = 'hammer_entries';
+  static const String otherExpenseBoxName = 'other_expense_entries';
   static const String miniLedgerBoxName = 'mini_ledger_entries';
   static const String tombstoneBoxName = 'tombstones';
   static const String cashBookBoxName = 'cash_books';
@@ -39,6 +41,7 @@ class DatabaseService {
   static late Box<PvcEntry> _pvcBox;
   static late Box<BitEntry> _bitBox;
   static late Box<HammerEntry> _hammerBox;
+  static late Box<OtherExpenseEntry> _otherExpenseBox;
   static late Box<MiniLedgerEntry> _miniLedgerBox;
   static late Box<Tombstone> _tombstoneBox;
   static late Box<CashBook> _cashBookBox;
@@ -53,6 +56,7 @@ class DatabaseService {
   static Box<PvcEntry> get pvcBox => _pvcBox;
   static Box<BitEntry> get bitBox => _bitBox;
   static Box<HammerEntry> get hammerBox => _hammerBox;
+  static Box<OtherExpenseEntry> get otherExpenseBox => _otherExpenseBox;
   static Box<MiniLedgerEntry> get miniLedgerBox => _miniLedgerBox;
   static Box<Tombstone> get tombstoneBox => _tombstoneBox;
   static Box<CashBook> get cashBookBox => _cashBookBox;
@@ -68,6 +72,7 @@ class DatabaseService {
     Hive.registerAdapter(PvcEntryAdapter());
     Hive.registerAdapter(BitEntryAdapter());
     Hive.registerAdapter(HammerEntryAdapter());
+    Hive.registerAdapter(OtherExpenseEntryAdapter());
     Hive.registerAdapter(MiniLedgerEntryAdapter());
     Hive.registerAdapter(TombstoneAdapter());
     Hive.registerAdapter(CashBookAdapter());
@@ -83,6 +88,8 @@ class DatabaseService {
     _pvcBox = await Hive.openBox<PvcEntry>(pvcBoxName);
     _bitBox = await Hive.openBox<BitEntry>(bitBoxName);
     _hammerBox = await Hive.openBox<HammerEntry>(hammerBoxName);
+    _otherExpenseBox =
+        await Hive.openBox<OtherExpenseEntry>(otherExpenseBoxName);
     _miniLedgerBox = await Hive.openBox<MiniLedgerEntry>(miniLedgerBoxName);
     _tombstoneBox = await Hive.openBox<Tombstone>(tombstoneBoxName);
     _cashBookBox = await Hive.openBox<CashBook>(cashBookBoxName);
@@ -425,6 +432,8 @@ class DatabaseService {
     final pvcEntries = _pvcBox.values.map((e) => e.toJson()).toList();
     final bitEntries = _bitBox.values.map((e) => e.toJson()).toList();
     final hammerEntries = _hammerBox.values.map((e) => e.toJson()).toList();
+    final otherExpenseEntries =
+        _otherExpenseBox.values.map((e) => e.toJson()).toList();
     final miniLedgerEntries =
         _miniLedgerBox.values.map((e) => e.toJson()).toList();
 
@@ -446,6 +455,7 @@ class DatabaseService {
       'pvcEntries': pvcEntries,
       'bitEntries': bitEntries,
       'hammerEntries': hammerEntries,
+      'otherExpenseEntries': otherExpenseEntries,
       'miniLedgerEntries': miniLedgerEntries,
       'cashBooks': cashBooks,
       'cashEntries': cashEntries,
@@ -499,6 +509,14 @@ class DatabaseService {
     for (final entryMap in bitData) {
       final entry = BitEntry.fromJson(Map<String, dynamic>.from(entryMap));
       await saveBitEntry(entry);
+    }
+
+    // Restore other expense entries (missing in backups before 2.0.1)
+    final otherData = backup['otherExpenseEntries'] as List<dynamic>? ?? [];
+    for (final entryMap in otherData) {
+      final entry =
+          OtherExpenseEntry.fromJson(Map<String, dynamic>.from(entryMap));
+      await saveOtherExpenseEntry(entry);
     }
 
     // Restore hammer entries
@@ -567,6 +585,7 @@ class DatabaseService {
     await _pvcBox.clear();
     await _bitBox.clear();
     await _hammerBox.clear();
+    await _otherExpenseBox.clear();
     await _miniLedgerBox.clear();
     await _cashBookBox.clear();
     await _cashEntryBox.clear();
@@ -587,6 +606,7 @@ class DatabaseService {
     await _pvcBox.clear();
     await _bitBox.clear();
     await _hammerBox.clear();
+    await _otherExpenseBox.clear();
     await _miniLedgerBox.clear();
     await _cashBookBox.clear();
     await _cashEntryBox.clear();
@@ -711,6 +731,28 @@ class DatabaseService {
             e.vehicleId == vehicleId &&
             !e.date.isBefore(start) &&
             !e.date.isAfter(end))
+        .toList()
+      ..sort((a, b) => b.date.compareTo(a.date));
+  }
+
+  // ============ OTHER EXPENSE OPERATIONS ============
+  static Future<void> saveOtherExpenseEntry(OtherExpenseEntry entry) async {
+    await _otherExpenseBox.put(entry.id, entry);
+  }
+
+  static Future<void> deleteOtherExpenseEntry(String id) async {
+    await recordTombstone(id, otherExpenseBoxName);
+    await _otherExpenseBox.delete(id);
+  }
+
+  static List<OtherExpenseEntry> getAllOtherExpenseEntries() {
+    return _otherExpenseBox.values.toList();
+  }
+
+  static List<OtherExpenseEntry> getOtherExpenseEntriesByVehicle(
+      String vehicleId) {
+    return _otherExpenseBox.values
+        .where((e) => e.vehicleId == vehicleId)
         .toList()
       ..sort((a, b) => b.date.compareTo(a.date));
   }
@@ -919,6 +961,10 @@ class DatabaseService {
     final bitEntries = getBitEntriesByVehicle(vehicleId);
     for (final entry in bitEntries) {
       await deleteBitEntry(entry.id);
+    }
+    // Delete other expense entries
+    for (final entry in getOtherExpenseEntriesByVehicle(vehicleId)) {
+      await deleteOtherExpenseEntry(entry.id);
     }
     // Delete hammer entries
     final hammerEntries = getHammerEntriesByVehicle(vehicleId);

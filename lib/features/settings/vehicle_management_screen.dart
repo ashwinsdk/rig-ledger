@@ -129,6 +129,7 @@ class _VehicleManagementScreenState
       ref.read(pvcEntriesProvider.notifier).refresh();
       ref.read(bitEntriesProvider.notifier).refresh();
       ref.read(hammerEntriesProvider.notifier).refresh();
+      ref.read(otherExpenseEntriesProvider.notifier).refresh();
       ref.read(agentsProvider.notifier).refresh();
 
       if (mounted) {

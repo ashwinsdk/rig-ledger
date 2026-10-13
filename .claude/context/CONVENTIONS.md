@@ -91,6 +91,7 @@ ref.read(dieselEntriesProvider.notifier).refresh();
 ref.read(pvcEntriesProvider.notifier).refresh();
 ref.read(bitEntriesProvider.notifier).refresh();
 ref.read(hammerEntriesProvider.notifier).refresh();
+ref.read(otherExpenseEntriesProvider.notifier).refresh();
 ```
 
 ## Tombstone pattern on delete

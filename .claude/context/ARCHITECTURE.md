@@ -68,6 +68,7 @@ Hive boxes:
   pvc_entries          -> Box<PvcEntry>
   bit_entries          -> Box<BitEntry>
   hammer_entries       -> Box<HammerEntry>
+  other_expense_entries -> Box<OtherExpenseEntry>
   mini_ledger_entries  -> Box<MiniLedgerEntry>  (orphaned: no screen/provider uses it, see BACKLOG.md)
   cash_books           -> Box<CashBook>         (Account Ledger, global not vehicle-scoped)
   cash_entries         -> Box<CashEntry>
@@ -139,6 +140,7 @@ ref.read(dieselEntriesProvider.notifier).refresh();
 ref.read(pvcEntriesProvider.notifier).refresh();
 ref.read(bitEntriesProvider.notifier).refresh();
 ref.read(hammerEntriesProvider.notifier).refresh();
+ref.read(otherExpenseEntriesProvider.notifier).refresh();
 ```
 
 Always include all 8 refresh calls when a full data reload is needed.

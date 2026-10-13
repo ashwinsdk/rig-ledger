@@ -4,6 +4,7 @@ import '../models/diesel_entry.dart';
 import '../models/pvc_entry.dart';
 import '../models/bit_entry.dart';
 import '../models/hammer_entry.dart';
+import '../models/other_expense_entry.dart';
 
 // ============ DIESEL PROVIDERS ============
 
@@ -316,3 +317,52 @@ final sideLedgerCustomStartDateProvider = StateProvider<DateTime>((ref) {
 final sideLedgerCustomEndDateProvider = StateProvider<DateTime>((ref) {
   return DateTime.now();
 });
+
+// ============ OTHER EXPENSE PROVIDERS ============
+
+class OtherExpenseEntriesNotifier
+    extends StateNotifier<List<OtherExpenseEntry>> {
+  OtherExpenseEntriesNotifier() : super([]) {
+    loadEntries();
+  }
+
+  void loadEntries() {
+    final vehicleId = DatabaseService.currentVehicleId;
+    state = DatabaseService.getOtherExpenseEntriesByVehicle(vehicleId);
+  }
+
+  Future<void> addEntry(OtherExpenseEntry entry) async {
+    await DatabaseService.saveOtherExpenseEntry(entry);
+    loadEntries();
+  }
+
+  Future<void> updateEntry(OtherExpenseEntry entry) async {
+    await DatabaseService.saveOtherExpenseEntry(entry);
+    loadEntries();
+  }
+
+  Future<void> deleteEntry(String id) async {
+    await DatabaseService.deleteOtherExpenseEntry(id);
+    loadEntries();
+  }
+
+  void refresh() => loadEntries();
+}
+
+final otherExpenseEntriesProvider = StateNotifierProvider<
+    OtherExpenseEntriesNotifier, List<OtherExpenseEntry>>((ref) {
+  return OtherExpenseEntriesNotifier();
+});
+
+// Other expenses filter state
+class OtherExpenseFilter {
+  final DateTime? startDate;
+  final DateTime? endDate;
+
+  const OtherExpenseFilter({this.startDate, this.endDate});
+
+  bool get hasFilters => startDate != null || endDate != null;
+}
+
+final otherExpenseFilterProvider =
+    StateProvider<OtherExpenseFilter>((ref) => const OtherExpenseFilter());

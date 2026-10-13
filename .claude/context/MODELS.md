@@ -201,6 +201,22 @@ Available types: `PvcEntry.pvcTypes` = ['7 inch', '8 inch', '10 inch', 'MS'].
 
 BitEntry and HammerEntry follow the same pattern and schema as PvcEntry.
 
+## OtherExpenseEntry (typeId: 12) -- lib/core/models/other_expense_entry.dart
+
+v2.0.1 side ledger category "Other expenses" (both rig types). Box `other_expense_entries`, backup key `otherExpenseEntries` (missing key restores to none), Drive merge by updatedAt, tombstones on delete, removed with its rig.
+
+| Field | Type | Notes |
+|---|---|---|
+| id | String | UUID (0) |
+| vehicleId | String | FK (1) |
+| date | DateTime | (2) |
+| billNumber | String | optional, may be empty (3) |
+| description | String | required (4) |
+| total, paid, pending, balance | double | (5-8) |
+| paidDate | DateTime? | (9) |
+| notes | String? | (10) |
+| createdAt, updatedAt | DateTime | (11, 12) |
+
 ---
 
 ## TypeDetail -- lib/core/models/type_detail.dart
@@ -321,8 +337,9 @@ No stored balance: balances are computed. Getter `signedAmount`.
 | CashNote | 11 |
 | CashBook | 2 |
 | CashEntry | 3 |
+| OtherExpenseEntry | 12 |
 
 typeIds 2, 3 (CashBook, CashEntry) and 11 (CashNote) were claimed by the Account
-Ledger feature. Next free: 12.
+Ledger feature. Next free: 13.
 
 When adding a new Hive model, check existing typeIds to avoid collision. Use the next available integer.
