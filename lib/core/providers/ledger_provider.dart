@@ -1,3 +1,5 @@
+import '../utils/feet_totals.dart';
+import 'ledger_types_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import '../database/database_service.dart';
@@ -295,42 +297,11 @@ final monthlyStatsProvider = Provider<Map<String, double>>((ref) {
   };
 });
 
-/// Feet totals by type for 7inch/8inch
-final feetTotalsProvider = Provider<Map<String, double>>((ref) {
+/// Feet totals by type (the user-defined depth and PVC types, v2.0.1).
+final feetTotalsProvider = Provider<FeetTotals>((ref) {
   final entries = ref.watch(filteredLedgerEntriesProvider);
-
-  double depth7inch = 0;
-  double depth8inch = 0;
-  double pvc7inch = 0;
-  double pvc8inch = 0;
-  double msPipeTotal = 0;
-
-  for (final entry in entries) {
-    // Calculate depth feet by type
-    if (entry.depth == '7inch') {
-      depth7inch += entry.depthInFeet;
-    } else if (entry.depth == '8inch') {
-      depth8inch += entry.depthInFeet;
-    }
-
-    // Calculate PVC feet by type
-    if (entry.pvc == '7inch') {
-      pvc7inch += entry.pvcInFeet;
-    } else if (entry.pvc == '8inch') {
-      pvc8inch += entry.pvcInFeet;
-    }
-
-    // MS Pipe total
-    msPipeTotal += entry.msPipeInFeet;
-  }
-
-  return {
-    'depth7inch': depth7inch,
-    'depth8inch': depth8inch,
-    'pvc7inch': pvc7inch,
-    'pvc8inch': pvc8inch,
-    'msPipeTotal': msPipeTotal,
-  };
+  final types = ref.watch(ledgerTypesProvider);
+  return FeetTotals.compute(entries, types);
 });
 
 /// Calendar day totals

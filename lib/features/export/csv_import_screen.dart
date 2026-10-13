@@ -1,3 +1,5 @@
+import '../../core/models/ledger_types.dart';
+import '../../core/providers/ledger_types_provider.dart';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -585,6 +587,7 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
         }
 
         // Parse numeric values
+        final types = ref.read(ledgerTypesProvider);
         double parseNum(String field) {
           final value = getValue(field);
           return double.tryParse(value) ?? 0;
@@ -597,12 +600,12 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
           agentId: agentId,
           agentName: agentName,
           address: address,
-          depth: getValue('Depth').isNotEmpty ? getValue('Depth') : '7inch',
+          depth: _importType(getValue('Depth'), types.depth.first),
           depthInFeet: parseNum('Depth in feet'),
           depthPerFeetRate: parseNum('Depth per feet rate'),
-          pvc: getValue('PVC').isNotEmpty ? getValue('PVC') : '7inch',
+          pvc: _importType(getValue('PVC'), types.pvc.first),
           pvcRate: parseNum('PVC rate'),
-          msPipe: getValue('MS pipe'),
+          msPipe: _importType(getValue('MS pipe'), types.ms.first),
           msPipeRate: parseNum('MS pipe rate'),
           extraCharges: parseNum('Extra-chargers'),
           total: parseNum('TOTAL'),
@@ -624,6 +627,14 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
       _errors = errors;
       _validEntries = validEntries;
     });
+  }
+
+  /// A size written in the file ('8 inch', '8"', '8') becomes '8inch'; empty
+  /// gives the default; any other text is kept as it is.
+  String _importType(String raw, String fallback) {
+    final text = raw.trim();
+    if (text.isEmpty) return fallback;
+    return LedgerTypes.nameFromInches(text) ?? text;
   }
 
   Future<void> _importEntries() async {
@@ -668,6 +679,15 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
           _validEntries[i] = entry.copyWith(agentId: agent.id);
         }
       }
+
+      // Sizes that are new to the app join the type lists (v2.0.1).
+      final typesNotifier = ref.read(ledgerTypesProvider.notifier);
+      await typesNotifier.ensureTypes(
+          LedgerTypeCategory.depth, _validEntries.map((e) => e.depth));
+      await typesNotifier.ensureTypes(
+          LedgerTypeCategory.pvc, _validEntries.map((e) => e.pvc));
+      await typesNotifier.ensureTypes(
+          LedgerTypeCategory.ms, _validEntries.map((e) => e.msPipe));
 
       // Import entries
       await ref

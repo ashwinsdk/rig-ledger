@@ -110,6 +110,21 @@ class LedgerTypesNotifier extends StateNotifier<LedgerTypes> {
     return (true, null);
   }
 
+  /// Adds sizes that were imported (a CSV) and are not in the list yet.
+  /// Anything that is not a plain size is ignored; bills keep their text.
+  Future<void> ensureTypes(LedgerTypeCategory c, Iterable<String> names) async {
+    final missing = {
+      for (final n in names)
+        if (n.isNotEmpty &&
+            LedgerTypes.nameFromInches(n) == n &&
+            !state.forCategory(c).contains(n))
+          n
+    };
+    if (missing.isEmpty) return;
+    await _save(
+        state.withCategory(c, _sorted([...state.forCategory(c), ...missing])));
+  }
+
   /// Sets the step rate table of a depth type: '7inch', '8inch' or null.
   Future<void> setStepTable(String depthType, String? table) async {
     final steps = {...state.steps};

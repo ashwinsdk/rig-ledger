@@ -1,3 +1,5 @@
+import '../../core/models/ledger_types.dart';
+import '../../core/providers/ledger_types_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -113,7 +115,7 @@ class _LedgerFormScreenState extends ConsumerState<LedgerFormScreen> {
     _addressController = TextEditingController(text: entry?.address ?? '');
 
     // Depth
-    _depth = entry?.depth ?? '7inch';
+    _depth = entry?.depth ?? ref.read(ledgerTypesProvider).depth.first;
     _depthInFeetController =
         TextEditingController(text: entry?.depthInFeet.toString() ?? '0');
     _depthPerFeetRateController =
@@ -123,14 +125,14 @@ class _LedgerFormScreenState extends ConsumerState<LedgerFormScreen> {
     _isStepRateManuallyEdited = entry?.isStepRateManuallyEdited ?? false;
 
     // PVC
-    _pvc = entry?.pvc ?? '7inch';
+    _pvc = entry?.pvc ?? ref.read(ledgerTypesProvider).pvc.first;
     _pvcInFeetController =
         TextEditingController(text: entry?.pvcInFeet.toString() ?? '0');
     _pvcPerFeetRateController =
         TextEditingController(text: entry?.pvcPerFeetRate.toString() ?? '0');
 
     // MS Pipe
-    _msPipe = entry?.msPipe ?? '6inch';
+    _msPipe = entry?.msPipe ?? ref.read(ledgerTypesProvider).ms.first;
     _msPipeInFeetController =
         TextEditingController(text: entry?.msPipeInFeet.toString() ?? '0');
     _msPipePerFeetRateController =
@@ -263,6 +265,7 @@ class _LedgerFormScreenState extends ConsumerState<LedgerFormScreen> {
       depthType: _depth,
       depthInFeet: depthInFeet,
       baseRate: depthRate,
+      stepTable: ref.read(ledgerTypesProvider).stepTableFor(_depth),
     );
 
     _stepRateController.text = stepRate.toStringAsFixed(2);
@@ -686,7 +689,9 @@ class _LedgerFormScreenState extends ConsumerState<LedgerFormScreen> {
                       decoration: const InputDecoration(
                         labelText: 'Depth Type',
                       ),
-                      items: ['7inch', '8inch']
+                      items: ref
+                          .watch(ledgerTypesProvider)
+                          .withCurrent(LedgerTypeCategory.depth, _depth)
                           .map(
                               (d) => DropdownMenuItem(value: d, child: Text(d)))
                           .toList(),
@@ -797,7 +802,9 @@ class _LedgerFormScreenState extends ConsumerState<LedgerFormScreen> {
                       decoration: const InputDecoration(
                         labelText: 'PVC Type',
                       ),
-                      items: ['7inch', '8inch']
+                      items: ref
+                          .watch(ledgerTypesProvider)
+                          .withCurrent(LedgerTypeCategory.pvc, _pvc)
                           .map(
                               (p) => DropdownMenuItem(value: p, child: Text(p)))
                           .toList(),
@@ -852,7 +859,9 @@ class _LedgerFormScreenState extends ConsumerState<LedgerFormScreen> {
                       decoration: const InputDecoration(
                         labelText: 'MS Pipe Type',
                       ),
-                      items: ['6inch']
+                      items: ref
+                          .watch(ledgerTypesProvider)
+                          .withCurrent(LedgerTypeCategory.ms, _msPipe)
                           .map(
                               (m) => DropdownMenuItem(value: m, child: Text(m)))
                           .toList(),

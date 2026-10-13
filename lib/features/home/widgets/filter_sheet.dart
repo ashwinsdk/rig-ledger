@@ -1,3 +1,5 @@
+import '../../../core/models/ledger_types.dart';
+import '../../../core/providers/ledger_types_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/providers/vehicle_provider.dart';
@@ -146,19 +148,18 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
                 labelText: 'Depth Type',
                 prefixIcon: Icon(Icons.height),
               ),
-              items: const [
-                DropdownMenuItem<String>(
+              items: [
+                const DropdownMenuItem<String>(
                   value: null,
                   child: Text('All Depths'),
                 ),
-                DropdownMenuItem<String>(
-                  value: '7inch',
-                  child: Text('7 inch'),
-                ),
-                DropdownMenuItem<String>(
-                  value: '8inch',
-                  child: Text('8 inch'),
-                ),
+                for (final t in ref
+                    .watch(ledgerTypesProvider)
+                    .withCurrent(LedgerTypeCategory.depth, _selectedDepthType))
+                  DropdownMenuItem<String>(
+                    value: t,
+                    child: Text(LedgerTypes.display(t)),
+                  ),
               ],
               onChanged: (value) {
                 setState(() {
@@ -175,19 +176,18 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
                   labelText: 'PVC Type',
                   prefixIcon: Icon(Icons.plumbing),
                 ),
-                items: const [
-                  DropdownMenuItem<String>(
+                items: [
+                  const DropdownMenuItem<String>(
                     value: null,
                     child: Text('All PVC'),
                   ),
-                  DropdownMenuItem<String>(
-                    value: '7inch',
-                    child: Text('7 inch'),
-                  ),
-                  DropdownMenuItem<String>(
-                    value: '8inch',
-                    child: Text('8 inch'),
-                  ),
+                  for (final t in ref
+                      .watch(ledgerTypesProvider)
+                      .withCurrent(LedgerTypeCategory.pvc, _selectedPvcType))
+                    DropdownMenuItem<String>(
+                      value: t,
+                      child: Text(LedgerTypes.display(t)),
+                    ),
                 ],
                 onChanged: (value) {
                   setState(() {

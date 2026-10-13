@@ -62,11 +62,11 @@ Depends: none
 Resume notes: LedgerTypes model, DatabaseService (schema 6, get/save, countBillsWithType, renameBillType, backup and restore of `ledgerTypes`), SyncService._mergeLedgerTypes, LedgerTypesNotifier (add as a size in inches, rename updates bills and carries the table, delete blocked while in use and for the last), Settings > Ledger Types screen, calculateStepRate stepTable param (other types now 0 step), refresh hooks in sync_provider and settings_screen. The forms do not use the lists yet: that is T-H07 (dropdowns, filter, totals, exports, passing the step table). 86 tests pass, analyze 0 errors. The agent commission map rename hook comes with T-H08.
 Commit: Add user-defined ledger types with backup and sync
 
-## T-H07 Ledger types used everywhere (bug 2, part 2) [PENDING] [EXPORT FLAG]
+## T-H07 Ledger types used everywhere (bug 2, part 2) [DONE] [EXPORT FLAG]
 Goal: the lists drive every screen: main bore form dropdowns (value always unioned into the items so editing an old bill never crashes), filter sheet, ledger card chips, `feetTotalsProvider` made dynamic (map per type, an Other bucket for unknown strings; side bore total depth from all entries), both duplicated PDF totals blocks, CSV import (unknown imported types are offered to be added), CSV and PDF type columns unchanged.
 Files: ledger_form_screen.dart (about 683-867), filter_sheet.dart, ledger_provider.dart (about 298-333), summary_row.dart, ledger_list.dart, pdf_export_screen.dart (about 600-702 and 916-1093), csv_import_screen.dart (about 600-605), side_bore_form_screen.dart (placeholders), tests
 Depends: T-H06
-Resume notes:
+Resume notes: bill form dropdowns use the lists (the bill's own type is always selectable), defaults are the first of each list, step rate gets the chosen table; filter sheet lists the types; new lib/core/utils/feet_totals.dart (FeetTotals: per type in list order, unknown types kept, depthTotal for side bore) used by feetTotalsProvider, the summary row (tiles now scroll sideways) and both PDF summary blocks (pw.Wrap); CSV import normalises sizes ('8 inch' -> '8inch', empty -> list default) and adds new sizes to the lists; CSV and PDF type columns unchanged. Side bore form untouched (placeholders, total depth from all feet). test/ledger_types_use_test.dart. Not verified on a device.
 Commit: Use user-defined ledger types across screens and exports
 
 ## T-H08 Agent commission per type (bug 3) [PENDING] [HIVE FLAG]

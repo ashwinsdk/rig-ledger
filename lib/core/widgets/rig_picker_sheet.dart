@@ -91,8 +91,7 @@ Future<void> showRigPickerSheet(
                         fontSize: 12, color: AppColors.textSecondary),
                   ),
                   trailing: isSelected
-                      ? const Icon(Icons.check_circle,
-                          color: AppColors.primary)
+                      ? const Icon(Icons.check_circle, color: AppColors.primary)
                       : null,
                   onTap: () async {
                     Navigator.pop(sheetContext);

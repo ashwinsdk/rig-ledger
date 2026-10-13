@@ -5,6 +5,15 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/providers/ledger_provider.dart';
 import '../../../core/providers/vehicle_provider.dart';
 import '../../../core/models/vehicle.dart';
+import '../../../core/models/ledger_types.dart';
+
+const _depthColors = [
+  Colors.blue,
+  Colors.indigo,
+  Colors.purple,
+  Colors.deepPurple
+];
+const _pvcColors = [Colors.teal, Colors.cyan, Colors.green, Colors.lightGreen];
 
 class SummaryRow extends ConsumerWidget {
   const SummaryRow({super.key});
@@ -110,61 +119,54 @@ class SummaryRow extends ConsumerWidget {
                   ),
                 ),
               ),
-              Row(
-                children: [
-                  // For side-bore, show only total depth (no 7inch/8inch separation)
-                  if (isSideBore) ...[
-                    Expanded(
-                      child: _FeetItem(
-                        label: 'Total Depth',
-                        value:
-                            '${feetFormat.format((feetTotals['depth7inch'] ?? 0) + (feetTotals['depth8inch'] ?? 0))} ft',
-                        color: Colors.blue,
+              // One tile per depth and PVC type (user-defined), then MS pipe.
+              // Scrolls sideways when there are many types.
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    // Side bore: only the total depth (no type split)
+                    if (isSideBore)
+                      SizedBox(
+                        width: 96,
+                        child: _FeetItem(
+                          label: 'Total Depth',
+                          value:
+                              '${feetFormat.format(feetTotals.depthTotal)} ft',
+                          color: Colors.blue,
+                        ),
+                      )
+                    else ...[
+                      for (final (i, e) in feetTotals.depth.entries.indexed)
+                        SizedBox(
+                          width: 84,
+                          child: _FeetItem(
+                            label: '${LedgerTypes.shortLabel(e.key)} Depth',
+                            value: '${feetFormat.format(e.value)} ft',
+                            color: _depthColors[i % _depthColors.length],
+                          ),
+                        ),
+                      for (final (i, e) in feetTotals.pvc.entries.indexed)
+                        SizedBox(
+                          width: 84,
+                          child: _FeetItem(
+                            label: '${LedgerTypes.shortLabel(e.key)} PVC',
+                            value: '${feetFormat.format(e.value)} ft',
+                            color: _pvcColors[i % _pvcColors.length],
+                          ),
+                        ),
+                      SizedBox(
+                        width: 84,
+                        child: _FeetItem(
+                          label: 'MS Pipe',
+                          value:
+                              '${feetFormat.format(feetTotals.msPipeTotal)} ft',
+                          color: Colors.orange,
+                        ),
                       ),
-                    ),
-                  ] else ...[
-                    Expanded(
-                      child: _FeetItem(
-                        label: '7" Depth',
-                        value:
-                            '${feetFormat.format(feetTotals['depth7inch'] ?? 0)} ft',
-                        color: Colors.blue,
-                      ),
-                    ),
-                    Expanded(
-                      child: _FeetItem(
-                        label: '8" Depth',
-                        value:
-                            '${feetFormat.format(feetTotals['depth8inch'] ?? 0)} ft',
-                        color: Colors.indigo,
-                      ),
-                    ),
-                    Expanded(
-                      child: _FeetItem(
-                        label: '7" PVC',
-                        value:
-                            '${feetFormat.format(feetTotals['pvc7inch'] ?? 0)} ft',
-                        color: Colors.teal,
-                      ),
-                    ),
-                    Expanded(
-                      child: _FeetItem(
-                        label: '8" PVC',
-                        value:
-                            '${feetFormat.format(feetTotals['pvc8inch'] ?? 0)} ft',
-                        color: Colors.cyan,
-                      ),
-                    ),
-                    Expanded(
-                      child: _FeetItem(
-                        label: 'MS Pipe',
-                        value:
-                            '${feetFormat.format(feetTotals['msPipeTotal'] ?? 0)} ft',
-                        color: Colors.orange,
-                      ),
-                    ),
+                    ],
                   ],
-                ],
+                ),
               ),
             ],
           ),

@@ -1,3 +1,6 @@
+import '../../core/models/ledger_types.dart';
+import '../../core/providers/ledger_types_provider.dart';
+import '../../core/utils/feet_totals.dart';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -597,31 +600,15 @@ class _PdfExportScreenState extends ConsumerState<PdfExportScreen> {
     double receivedSum = 0;
     double balanceSum = 0;
     double commissionSum = 0; // informational, not part of total
-    double depth7inch = 0;
-    double depth8inch = 0;
-    double pvc7inch = 0;
-    double pvc8inch = 0;
-    double msPipeTotal = 0;
+    // Feet by the user-defined depth and PVC types (shared with the ledger).
+    final feet = FeetTotals.compute(entries, ref.read(ledgerTypesProvider));
+    final msPipeTotal = feet.msPipeTotal;
 
     for (final e in entries) {
       totalSum += e.total;
       receivedSum += e.received;
       balanceSum += e.balance;
       commissionSum += e.commission;
-
-      if (e.depth == '7inch') {
-        depth7inch += e.depthInFeet;
-      } else if (e.depth == '8inch') {
-        depth8inch += e.depthInFeet;
-      }
-
-      if (e.pvc == '7inch') {
-        pvc7inch += e.pvcInFeet;
-      } else if (e.pvc == '8inch') {
-        pvc8inch += e.pvcInFeet;
-      }
-
-      msPipeTotal += e.msPipeInFeet;
     }
 
     return Container(
@@ -690,14 +677,13 @@ class _PdfExportScreenState extends ConsumerState<PdfExportScreen> {
               ),
             ),
             const SizedBox(height: 8),
-            _buildSummaryRow(
-                '7" Depth', '${_feetFormat.format(depth7inch)} ft'),
-            _buildSummaryRow(
-                '8" Depth', '${_feetFormat.format(depth8inch)} ft'),
-            if (!_isSideBore) ...[
-              _buildSummaryRow('7" PVC', '${_feetFormat.format(pvc7inch)} ft'),
-              _buildSummaryRow('8" PVC', '${_feetFormat.format(pvc8inch)} ft'),
-            ],
+            for (final e in feet.depth.entries)
+              _buildSummaryRow('${LedgerTypes.shortLabel(e.key)} Depth',
+                  '${_feetFormat.format(e.value)} ft'),
+            if (!_isSideBore)
+              for (final e in feet.pvc.entries)
+                _buildSummaryRow('${LedgerTypes.shortLabel(e.key)} PVC',
+                    '${_feetFormat.format(e.value)} ft'),
             _buildSummaryRow(
                 'MS Pipe', '${_feetFormat.format(msPipeTotal)} ft'),
           ],
@@ -913,31 +899,15 @@ class _PdfExportScreenState extends ConsumerState<PdfExportScreen> {
     double receivedSum = 0;
     double balanceSum = 0;
     double commissionSum = 0; // informational, not part of total
-    double depth7inch = 0;
-    double depth8inch = 0;
-    double pvc7inch = 0;
-    double pvc8inch = 0;
-    double msPipeTotal = 0;
+    // Feet by the user-defined depth and PVC types (shared with the ledger).
+    final feet = FeetTotals.compute(entries, ref.read(ledgerTypesProvider));
+    final msPipeTotal = feet.msPipeTotal;
 
     for (final e in entries) {
       totalSum += e.total;
       receivedSum += e.received;
       balanceSum += e.balance;
       commissionSum += e.commission;
-
-      if (e.depth == '7inch') {
-        depth7inch += e.depthInFeet;
-      } else if (e.depth == '8inch') {
-        depth8inch += e.depthInFeet;
-      }
-
-      if (e.pvc == '7inch') {
-        pvc7inch += e.pvcInFeet;
-      } else if (e.pvc == '8inch') {
-        pvc8inch += e.pvcInFeet;
-      }
-
-      msPipeTotal += e.msPipeInFeet;
     }
 
     // Sort entries by date
@@ -1078,17 +1048,19 @@ class _PdfExportScreenState extends ConsumerState<PdfExportScreen> {
                               fontSize: 12, fontWeight: pw.FontWeight.bold),
                         ),
                         pw.SizedBox(height: 8),
-                        pw.Row(
-                          mainAxisAlignment: pw.MainAxisAlignment.spaceAround,
+                        pw.Wrap(
+                          alignment: pw.WrapAlignment.spaceAround,
+                          spacing: 14,
+                          runSpacing: 6,
                           children: [
-                            _buildPdfSummaryItem('7" Depth',
-                                '${_feetFormat.format(depth7inch)} ft'),
-                            _buildPdfSummaryItem('8" Depth',
-                                '${_feetFormat.format(depth8inch)} ft'),
-                            _buildPdfSummaryItem(
-                                '7" PVC', '${_feetFormat.format(pvc7inch)} ft'),
-                            _buildPdfSummaryItem(
-                                '8" PVC', '${_feetFormat.format(pvc8inch)} ft'),
+                            for (final e in feet.depth.entries)
+                              _buildPdfSummaryItem(
+                                  '${LedgerTypes.shortLabel(e.key)} Depth',
+                                  '${_feetFormat.format(e.value)} ft'),
+                            for (final e in feet.pvc.entries)
+                              _buildPdfSummaryItem(
+                                  '${LedgerTypes.shortLabel(e.key)} PVC',
+                                  '${_feetFormat.format(e.value)} ft'),
                             _buildPdfSummaryItem('MS Pipe',
                                 '${_feetFormat.format(msPipeTotal)} ft'),
                           ],

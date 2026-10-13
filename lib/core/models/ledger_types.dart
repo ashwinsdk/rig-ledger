@@ -174,4 +174,10 @@ class LedgerTypes {
 
   /// The number part for editing: `'9.5inch'` -> `'9.5'`.
   static String inchesOf(String type) => type.replaceAll('inch', '');
+
+  /// For menus: `'9inch'` -> `'9 inch'`.
+  static String display(String type) => '${inchesOf(type)} inch';
+
+  /// For tiles and reports: `'9inch'` -> `9"`.
+  static String shortLabel(String type) => '${inchesOf(type)}"';
 }
