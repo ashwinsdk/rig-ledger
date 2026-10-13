@@ -13,6 +13,118 @@ Resume notes:
 Commit:
 ```
 
+## v2.0.1 PLAN (source: developer bug list of 2026-10-13, Flutter app only, APPROVED 2026-10-13)
+
+Rules for this plan: no `macos/`, `desktop_shell.dart` or `desktop_auth_service.dart` edits (frozen; `agents_screen.dart` stays because the desktop shell imports it). One Hive schema bump for the whole release: 5 -> 6, done in the first task that needs it (T-H06 or T-H10, whichever runs first). Every task: `flutter analyze`, update MODELS.md/ARCHITECTURE.md when a model or box changes, commit, never push. Order is by dependency.
+
+DECISIONS CONFIRMED 2026-10-13: step rate for new types = none by default with an optional 7 or 8 inch table per type; rename updates all bills and agent prices, delete is blocked while in use; Account Ledger filled Save returns, outlined Add another keeps the form.
+
+## T-H01 File save and storage permission (bug 11) [DONE]
+Goal: saving a PDF, CSV or backup works on Android 11 and up. Remove the redundant `File(result).write...` after `FilePicker.saveFile` (the picker already writes through SAF; the second write hits Permission denied), remove the runtime storage permission gate and the launch-time request, drop `MANAGE_EXTERNAL_STORAGE` and the dead `requestLegacyExternalStorage` from the manifest (READ/WRITE_EXTERNAL_STORAGE limited with `maxSdkVersion`), catch save errors in `FileSaveService` and fall back to Share with a clear message, and encode CSV/JSON with `utf8.encode` (today `codeUnits` corrupts the rupee sign and Tamil text).
+Files: lib/core/services/file_save_service.dart, lib/main.dart, android/app/src/main/AndroidManifest.xml, callers in lib/features/export, cashbook_report_dialog.dart, settings_screen.dart, .claude/context/ARCHITECTURE.md (Android specifics), docs/v2.0.0-review.md note
+Depends: none
+Resume notes: FileSaveService rewritten (SAF only on Android, no second write, Share fallback on failure, UTF-8), main.dart permission request removed, manifest MANAGE_EXTERNAL_STORAGE and requestLegacyExternalStorage removed, READ/WRITE limited by maxSdkVersion. analyze 210 infos (unchanged), 68 tests pass. Not verifiable here: a real save on an Android 11+ device. BACKLOG.md entry for MANAGE_EXTERNAL_STORAGE left untouched (developer has uncommitted edits there); mark it done when convenient.
+Commit: Fix PDF and file saving without storage permission
+
+## T-H02 Account Ledger: return to the ledger after saving (bug 10) [PENDING]
+Goal: a new entry returns to the Account Ledger home. Cause found: "Save and continue" is the filled primary button and by design keeps the form open; "Save and exit" is the outlined one. Proposal: filled "Save" = save and return, outlined "Save and add another" keeps the form (resets amount, notes, items, bills), and an empty amount shows an inline error instead of doing nothing.
+Files: lib/features/cashbook/cashbook_entry_form_screen.dart (lines about 199-259 and 624-646), test/cashbook_flow_add_test.dart
+Depends: none
+Resume notes:
+Commit: Return to Account Ledger after saving an entry
+
+## T-H03 Account Ledger: same look as the ledger pages (bug 9) [PENDING]
+Goal: Account Ledger home uses the main ledger visual language. Period chips and date navigator move into the gradient header with the same pill style; the totals become a top summary card (radius 16, shadow, icons, rupee format) instead of the bottom strip; rows become floating cards (radius 16, soft shadow, 16 pt side margin) with day headers; Income and Expense colours use AppColors success and error; empty state with icon. Logic and providers unchanged.
+Files: lib/features/cashbook/cashbook_home_screen.dart, widgets/cashbook_header.dart, cashbook_period_bar.dart, cashbook_row.dart, cashbook_totals_strip.dart, cashbook_common.dart, pushed screens' cashAppBar (use AdaptiveHeader style)
+Depends: none
+Resume notes:
+Commit: Restyle Account Ledger to match the ledger pages
+
+## T-H04 Shared rig switcher (LR-01) [PENDING]
+Goal: one `switchRig(ref, vehicle)` (await setCurrentVehicle, clear search and ledger filter, refresh all providers) and one reusable rig picker sheet, used by the Ledger header and Vehicle Management (desktop shell keeps its own copy).
+Files: new lib/core/providers/rig_switch.dart and lib/core/widgets/rig_picker_sheet.dart, lib/features/home/combined_home_screen.dart (about 1081-1195), lib/features/settings/vehicle_management_screen.dart (about 141-162), test/switch_rig_test.dart
+Depends: none
+Resume notes:
+Commit: Extract shared switchRig and rig picker sheet
+
+## T-H05 Portfolio: change rig and clearer All rigs / This rig (bugs 7, 8) [PENDING]
+Goal: the rig name in the Portfolio header is a tappable pill that opens the rig picker and changes the global rig; the This rig / All rigs choice becomes a clear two-option control next to it (new `portfolioScopeProvider` so header and body agree); the agent chip resets when the rig changes.
+Files: lib/features/stats/stats_screen.dart (header about 80-86), lib/features/portfolio/portfolio_view.dart (about 24-110), lib/core/providers/portfolio_provider.dart
+Depends: T-H04
+Resume notes:
+Commit: Add rig switcher and scope control to Portfolio
+
+## T-H06 Ledger types: user-defined depth, PVC and MS pipe types (bug 2, part 1) [PENDING] [HIVE/SYNC FLAG]
+Goal: depth types, PVC types and MS pipe types become user-editable lists (add any inch such as 9inch; rename; delete). Seeded with the current values (7inch, 8inch / 7inch, 8inch / 6inch) so nothing changes for existing data. Stored as JSON in the settings box under `ledgerTypes.depth|pvc|ms` with an updatedAt, exposed by `LedgerTypesNotifier` (load, add, rename, delete, refresh), added to backup, restore and the Drive merge (settings box is not synced today), schema 5 -> 6. Settings screen "Ledger types" to manage the lists. Rules (proposed): rename updates every bill and every agent rate that uses the type; delete is blocked while any bill uses it (shows the count); step rate for new types follows the decision below.
+Step rate decision (proposed, needs confirmation): the hardcoded 7 inch and 8 inch brackets stay; every other depth type gets NO step rate by default (0), with a per-type toggle "use the 7 inch table" or "use the 8 inch table"; no custom bracket editor in 2.0.1 (BACKLOG item stays).
+Files: new lib/core/providers/ledger_types_provider.dart, lib/features/settings/ledger_types_screen.dart, database_service.dart (backup, restore, schema), sync_service.dart, ledger_entry.dart (calculateStepRate lookup), settings_screen.dart entry, MODELS.md, ARCHITECTURE.md, tests
+Depends: none
+Resume notes:
+Commit: Add user-defined ledger types with backup and sync
+
+## T-H07 Ledger types used everywhere (bug 2, part 2) [PENDING] [EXPORT FLAG]
+Goal: the lists drive every screen: main bore form dropdowns (value always unioned into the items so editing an old bill never crashes), filter sheet, ledger card chips, `feetTotalsProvider` made dynamic (map per type, an Other bucket for unknown strings; side bore total depth from all entries), both duplicated PDF totals blocks, CSV import (unknown imported types are offered to be added), CSV and PDF type columns unchanged.
+Files: ledger_form_screen.dart (about 683-867), filter_sheet.dart, ledger_provider.dart (about 298-333), summary_row.dart, ledger_list.dart, pdf_export_screen.dart (about 600-702 and 916-1093), csv_import_screen.dart (about 600-605), side_bore_form_screen.dart (placeholders), tests
+Depends: T-H06
+Resume notes:
+Commit: Use user-defined ledger types across screens and exports
+
+## T-H08 Agent commission per type (bug 3) [PENDING] [HIVE FLAG]
+Goal: an agent has a static price per foot for each depth type, each PVC type and each MS pipe type, plus the existing three numbers kept as the fallback for types without a price. New `Agent.commissionRatesJson` (HiveField 10, key `depth:7inch`), helpers `rateFor(category, type)`, new agent dialogs with a per-type editor, forms re-apply the agent price whenever the agent or a type changes (unless the rate was typed). Bills keep their three stored rates, so old bills, totals and exports are untouched. Rename and delete of a type update the map (T-H06 rules).
+Files: agent.dart (+ build_runner), agent_provider.dart, agents_screen.dart dialogs (extract to lib/features/agents/agent_dialogs.dart), ledger_form_screen.dart, side_bore_form_screen.dart, MODELS.md, tests (map round trip, fallback, old backup)
+Depends: T-H06
+Resume notes:
+Commit: Add per-type commission prices to agents
+
+## T-H09 Commission clearly visible on each ledger entry (bug 6) [PENDING]
+Goal: in the bill form the commission section shows separate totals (Depth, PVC, MS pipe, Total commission, marked "manual" when overridden) in a read-only breakdown, commission rows appear in the Calculation Preview under a "not in total" divider, and the bill card shows separate commission chips instead of one weak chip.
+Files: commission_section.dart, ledger_form_screen.dart (about 969-989 and 1088-1146), side_bore_form_screen.dart, ledger_list.dart (about 235-247)
+Depends: T-H08
+Resume notes:
+Commit: Show commission breakdown on bill form and card
+
+## T-H10 Other expenses: model, database, sync, providers (bug 5, part 1) [PENDING] [HIVE/SYNC FLAG]
+Goal: new side ledger category "Other expenses" for both rig types. `OtherExpenseEntry` (typeId 12; id, vehicleId, date, billNumber optional, description required, total, paid, pending, balance, paidDate, notes, createdAt, updatedAt), box `other_expense_entries`, CRUD with tombstones, backup and restore (missing key defaults to empty), clear-all, rig delete cascade, Drive merge, provider, 9th refresh call at every refresh site, schema 6 (if not already bumped).
+Files: new lib/core/models/other_expense_entry.dart (+ build_runner), database_service.dart, sync_service.dart, side_ledger_provider.dart, sync_provider.dart, settings_screen.dart, vehicle_management_screen.dart, combined_home_screen.dart, main_navigation.dart, MODELS.md, ARCHITECTURE.md, CONVENTIONS.md (refresh list), tests (model round trip, sync merge)
+Depends: none
+Resume notes:
+Commit: Add Other expenses model, storage and sync
+
+## T-H11 Other expenses: side ledger screens (bug 5, part 2) [PENDING]
+Goal: Other expenses card and mini stat on the Side Ledger tab, an Other option in the Add Entry sheet, form and list screens modelled on Diesel. Show for main bore and side bore. Fix `_getEntryDate` so the time filter works for the new type.
+Files: new lib/features/side_ledger/other/other_expense_form_screen.dart and other_expense_list_screen.dart, combined_home_screen.dart (about 493-830 and 990-996), main_navigation.dart (Add Entry sheet)
+Depends: T-H10
+Resume notes:
+Commit: Add Other expenses screens to the Side Ledger
+
+## T-H12 Other expenses in Portfolio, Stats and exports (bug 5, part 3) [PENDING] [EXPORT FLAG]
+Goal: Portfolio expenses breakdown and profit include Other expenses; Stats gets a pie and a stats card; CSV and PDF exports get the new type.
+Files: portfolio_provider.dart, portfolio_calculator.dart, portfolio_view.dart, stats_screen.dart, csv_export_screen.dart, pdf_export_screen.dart, test/portfolio_calculator_test.dart
+Depends: T-H11
+Resume notes:
+Commit: Include Other expenses in Portfolio, Stats and exports
+
+## T-H13 Ledger home: smaller header, scrollable pinned summary (bug 1) [PENDING]
+Goal: entries are clearly visible. The big header shrinks (one compact app bar row, period chips and month navigator merged into one row, smaller Daily/Calendar toggle). The pinned Total, Received, Balance, Commission and the feet totals per type become one horizontally scrollable strip. The list gets most of the screen.
+Files: combined_home_screen.dart (about 68-491), summary_row.dart (rewrite), ledger_list.dart if spacing changes; dead file home_screen.dart left alone
+Depends: T-H07
+Resume notes:
+Commit: Shrink ledger header and make pinned totals scrollable
+
+## T-H14 Agents inside Portfolio, remove the Agents tab (bug 4) [PENDING]
+Goal: mobile tabs become Ledger, Portfolio, Accounts, Settings. Portfolio gets an Agents section (all agents including ones with no bills, period totals and commission from the existing calculator, Add agent in the section header, tap opens a detail sheet to edit, delete with the existing reassign flow, and set per-type commission prices). `agents_screen.dart` stays for the frozen desktop shell and shares the extracted dialogs. Update UX docs that mention the Agents tab.
+Files: main_navigation.dart, portfolio_view.dart, agent_dialogs.dart, agents_screen.dart (use shared dialogs only), docs/design/UX_FLOWS.md
+Depends: T-H05, T-H08
+Resume notes:
+Commit: Move agents into Portfolio and remove the Agents tab
+
+## T-H15 Version 2.0.1 and release notes [PENDING]
+Goal: pubspec 2.0.1+6, MEMORY.md, BACKLOG.md, short release review of tested and untested areas.
+Files: pubspec.yaml, MEMORY.md, docs
+Depends: all
+Resume notes:
+Commit: Bump version to 2.0.1+6
+
 v2.0.0 plan (source: v2.0.0.md). Order: T-V201..T-V208, then T-CB19, T-CB17, T-CB18, T-V209 (final test, bug and improvement review).
 Assumption to confirm with the developer: commission = quantity (ft) x commission rate per unit (Rs per ft) for depth, PVC and MS pipe, never added to the bill total (v2.0.0.md example "1000 x 2", "150 x 40", "100 x 60" read as quantity x rate).
 

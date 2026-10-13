@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
@@ -5,58 +6,19 @@ import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:permission_handler/permission_handler.dart';
-import 'package:device_info_plus/device_info_plus.dart';
 import '../theme/app_colors.dart';
 
 enum SaveOption { share, saveToFiles }
 
+/// Saves exported files (PDF, CSV, backup JSON).
+///
+/// Android: "Save to Files" goes through the system file picker (Storage Access
+/// Framework). The picker writes the bytes itself and needs no storage
+/// permission on any Android version, so nothing is requested at runtime and
+/// the app does not write to the returned path a second time (that second
+/// write used to fail with "Permission denied" on Android 11 and later).
+/// If the picker fails, the file is shared instead so the export is never lost.
 class FileSaveService {
-  /// Request storage permissions based on Android version
-  static Future<bool> requestStoragePermission() async {
-    if (Platform.isAndroid) {
-      try {
-        final androidInfo = await DeviceInfoPlugin().androidInfo;
-        final sdkInt = androidInfo.version.sdkInt;
-
-        if (sdkInt >= 33) {
-          // Android 13+: No broad storage permission needed
-          // File picker uses SAF which doesn't require runtime permissions
-          debugPrint('Android 13+: Using SAF, no storage permission needed');
-          return true;
-        } else if (sdkInt >= 30) {
-          // Android 11-12: Need MANAGE_EXTERNAL_STORAGE
-          final status = await Permission.manageExternalStorage.status;
-          if (!status.isGranted) {
-            final result = await Permission.manageExternalStorage.request();
-            return result.isGranted;
-          }
-          return true;
-        } else {
-          // Android 10 and below: Use legacy storage permission
-          var status = await Permission.storage.status;
-          if (!status.isGranted) {
-            status = await Permission.storage.request();
-          }
-          return status.isGranted;
-        }
-      } catch (e) {
-        // Fallback if device_info_plus fails
-        debugPrint('Error detecting SDK version: $e');
-        try {
-          var status = await Permission.storage.status;
-          if (!status.isGranted) {
-            status = await Permission.storage.request();
-          }
-          return status.isGranted;
-        } catch (_) {
-          return true; // Proceed anyway, file picker may work
-        }
-      }
-    }
-    return true; // iOS handles permissions differently via file picker
-  }
-
   /// Shows a dialog to choose between sharing or saving to files
   static Future<SaveOption?> showSaveOptionsDialog(BuildContext context) async {
     return showDialog<SaveOption>(
@@ -75,7 +37,7 @@ class FileSaveService {
             ListTile(
               leading: const Icon(Icons.save_alt, color: AppColors.success),
               title: const Text('Save to Files'),
-              subtitle: const Text('Save to device storage'),
+              subtitle: const Text('Choose a folder on this device'),
               onTap: () => Navigator.pop(context, SaveOption.saveToFiles),
             ),
           ],
@@ -101,127 +63,69 @@ class FileSaveService {
     final option = await showSaveOptionsDialog(context);
     if (option == null) return false;
 
+    if (option == SaveOption.share) {
+      return _share(bytes, fileName, shareSubject);
+    }
+
     try {
-      if (option == SaveOption.share) {
-        // Save to temp and share
-        final directory = await getApplicationDocumentsDirectory();
-        final file = File('${directory.path}/$fileName');
-        await file.writeAsBytes(bytes);
-
-        await Share.shareXFiles(
-          [XFile(file.path)],
-          subject: shareSubject,
-        );
-        return true;
-      } else {
-        // Check permissions first
-        final hasPermission = await requestStoragePermission();
-        if (!hasPermission) {
-          if (context.mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: const Text(
-                    'Storage permission required. Please grant permission in Settings.'),
-                backgroundColor: AppColors.error,
-                action: SnackBarAction(
-                  label: 'Settings',
-                  textColor: Colors.white,
-                  onPressed: () => openAppSettings(),
-                ),
-              ),
-            );
-          }
-          return false;
-        }
-
-        // Save to user-selected location
-        final result = await FilePicker.platform.saveFile(
-          dialogTitle: dialogTitle ?? 'Save File',
-          fileName: fileName,
-          bytes: bytes,
-        );
-
-        if (result != null) {
-          // On some platforms, bytes are written automatically
-          // On others, we need to write manually
-          if (Platform.isAndroid || Platform.isIOS) {
-            final file = File(result);
-            await file.writeAsBytes(bytes);
-          }
-          return true;
-        }
-        return false;
+      final result = await FilePicker.platform.saveFile(
+        dialogTitle: dialogTitle ?? 'Save File',
+        fileName: fileName,
+        bytes: bytes,
+      );
+      if (result == null) return false; // user cancelled
+      // Android writes the bytes through the picker itself. iOS needs the
+      // manual write; desktop behaviour is unchanged.
+      if (Platform.isIOS) {
+        await File(result).writeAsBytes(bytes);
       }
+      return true;
     } catch (e) {
-      rethrow;
+      debugPrint('saveFile failed, falling back to share: $e');
+      return _shareAfterFailure(context, bytes, fileName, shareSubject);
     }
   }
 
-  /// Save string content to a file with option to share or save to files
+  /// Save string content (CSV, JSON) as UTF-8 with option to share or save
   static Future<bool> saveStringFile({
     required BuildContext context,
     required String content,
     required String fileName,
     required String shareSubject,
     String? dialogTitle,
-  }) async {
-    final option = await showSaveOptionsDialog(context);
-    if (option == null) return false;
+  }) {
+    // UTF-8, not UTF-16 code units: the rupee sign and Tamil text survive.
+    return saveFile(
+      context: context,
+      bytes: Uint8List.fromList(utf8.encode(content)),
+      fileName: fileName,
+      shareSubject: shareSubject,
+      dialogTitle: dialogTitle,
+    );
+  }
 
-    try {
-      if (option == SaveOption.share) {
-        // Save to temp and share
-        final directory = await getApplicationDocumentsDirectory();
-        final file = File('${directory.path}/$fileName');
-        await file.writeAsString(content);
+  static Future<bool> _share(
+      Uint8List bytes, String fileName, String shareSubject) async {
+    final directory = await getApplicationDocumentsDirectory();
+    final file = File('${directory.path}/$fileName');
+    await file.writeAsBytes(bytes);
+    await Share.shareXFiles(
+      [XFile(file.path)],
+      subject: shareSubject,
+    );
+    return true;
+  }
 
-        await Share.shareXFiles(
-          [XFile(file.path)],
-          subject: shareSubject,
-        );
-        return true;
-      } else {
-        // Check permissions first
-        final hasPermission = await requestStoragePermission();
-        if (!hasPermission) {
-          if (context.mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: const Text(
-                    'Storage permission required. Please grant permission in Settings.'),
-                backgroundColor: AppColors.error,
-                action: SnackBarAction(
-                  label: 'Settings',
-                  textColor: Colors.white,
-                  onPressed: () => openAppSettings(),
-                ),
-              ),
-            );
-          }
-          return false;
-        }
-
-        // Save to user-selected location
-        final bytes = Uint8List.fromList(content.codeUnits);
-        final result = await FilePicker.platform.saveFile(
-          dialogTitle: dialogTitle ?? 'Save File',
-          fileName: fileName,
-          bytes: bytes,
-        );
-
-        if (result != null) {
-          // On some platforms, bytes are written automatically
-          // On others, we need to write manually
-          if (Platform.isAndroid || Platform.isIOS) {
-            final file = File(result);
-            await file.writeAsString(content);
-          }
-          return true;
-        }
-        return false;
-      }
-    } catch (e) {
-      rethrow;
+  static Future<bool> _shareAfterFailure(BuildContext context, Uint8List bytes,
+      String fileName, String shareSubject) async {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+              'Could not save to the chosen location. Share the file instead.'),
+        ),
+      );
     }
+    return _share(bytes, fileName, shareSubject);
   }
 }

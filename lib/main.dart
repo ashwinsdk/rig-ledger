@@ -1,11 +1,7 @@
-import 'dart:io';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import 'package:permission_handler/permission_handler.dart';
-import 'package:device_info_plus/device_info_plus.dart';
 import 'package:window_manager/window_manager.dart';
 
 import 'core/theme/app_theme.dart';
@@ -59,10 +55,8 @@ void main() async {
   await DatabaseService.initialize();
   await PaymentLinkService.reconcileAll();
 
-  // Request storage permissions (Android only)
-  if (PlatformHelper.isAndroid) {
-    await _requestPermissions();
-  }
+  // No storage permission is requested: exports go through the system file
+  // picker (Storage Access Framework) or Share, which need none.
 
   // Initialize sync state (load last sync time from storage)
   SyncService.initialize();
@@ -75,40 +69,6 @@ void main() async {
       child: RigLedgerApp(),
     ),
   );
-}
-
-Future<void> _requestPermissions() async {
-  if (!Platform.isAndroid) return;
-
-  try {
-    final androidInfo = await DeviceInfoPlugin().androidInfo;
-    final sdkInt = androidInfo.version.sdkInt;
-
-    if (sdkInt >= 33) {
-      debugPrint(
-          'Android 13+: Using scoped storage, no broad permissions needed');
-    } else if (sdkInt >= 30) {
-      final manageStatus = await Permission.manageExternalStorage.status;
-      if (!manageStatus.isGranted) {
-        await Permission.manageExternalStorage.request();
-      }
-    } else {
-      final storageStatus = await Permission.storage.status;
-      if (!storageStatus.isGranted) {
-        await Permission.storage.request();
-      }
-    }
-  } catch (e) {
-    debugPrint('Error detecting SDK version: $e');
-    try {
-      final storageStatus = await Permission.storage.status;
-      if (!storageStatus.isGranted) {
-        await Permission.storage.request();
-      }
-    } catch (_) {
-      // Ignore - permissions will be handled when needed
-    }
-  }
 }
 
 class RigLedgerApp extends ConsumerStatefulWidget {

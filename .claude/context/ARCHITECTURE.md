@@ -122,7 +122,7 @@ applicationId: com.rigledger.app
 minSdkVersion: flutter default (21)
 Orientation locked: portraitUp/portraitDown.
 System UI: immersive sticky mode.
-Storage permissions per SDK: >=33 scoped (no request needed), 30-32 MANAGE_EXTERNAL_STORAGE, <30 READ/WRITE_EXTERNAL_STORAGE.
+Storage: no runtime storage permission is requested on any SDK. Exports use the system file picker (SAF, `FilePicker.saveFile` writes the bytes itself) or Share; `FileSaveService` falls back to Share if the picker fails and encodes text as UTF-8. The manifest keeps only READ_EXTERNAL_STORAGE (maxSdk 32) and WRITE_EXTERNAL_STORAGE (maxSdk 28); MANAGE_EXTERNAL_STORAGE was removed in v2.0.1.
 
 ## Riverpod provider refresh pattern
 
