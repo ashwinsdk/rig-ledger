@@ -75,6 +75,6 @@ void main() {
     await settle(t);
     expect(find.text('Alpha'), findsOneWidget);
     expect(find.text('Beta'), findsNothing);
-    expect(find.text('Rs. 1,000'), findsWidgets);
+    expect(find.text('₹1,000'), findsWidgets);
   });
 }

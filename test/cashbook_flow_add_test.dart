@@ -71,7 +71,7 @@ void main() {
 
     expect(find.text('Cash Book'), findsWidgets);
     expect(find.text('No transactions'), findsOneWidget);
-    expect(find.text('Rs. 0'), findsNWidgets(3));
+    expect(find.text('₹0'), findsNWidgets(3));
 
     await addEntry(t, button: 'Income', amount: '2500.5', notes: 'Advance');
     await addEntry(t, button: 'Expense', amount: '400', notes: 'Diesel');
@@ -80,8 +80,8 @@ void main() {
     expect(find.text('Advance'), findsOneWidget);
     expect(find.text('Diesel'), findsOneWidget);
     // Totals strip: income 2,500.50, expense 400, balance 2,100.50.
-    expect(find.text('Rs. 2,500.50'), findsWidgets);
-    expect(find.text('Rs. 2,100.50'), findsWidgets);
+    expect(find.text('₹2,500.50'), findsWidgets);
+    expect(find.text('₹2,100.50'), findsWidgets);
     expect(find.text('Balance 2,100.50'), findsWidgets);
     expect(DatabaseService.getCashEntries().length, 3);
   });

@@ -211,229 +211,240 @@ class _CashbookHomeScreenState extends ConsumerState<CashbookHomeScreen> {
     final searching = cfg.query.trim().isNotEmpty;
     final rangeLabel =
         view.range == null ? 'All' : CashbookCalculator.rangeLabel(view.range!);
+    final desktop = PlatformHelper.isDesktop;
 
-    return Column(
-      children: [
-        CashHeader(
-          leading: _searching
-              ? IconButton(
-                  tooltip: 'Close search',
-                  icon: const Icon(Icons.arrow_back),
-                  onPressed: _stopSearch)
-              : (widget.onMenu == null
-                  ? null
-                  : IconButton(
-                      tooltip: 'Menu',
-                      icon: const Icon(Icons.menu),
-                      onPressed: widget.onMenu)),
-          title: _searching
-              ? TextField(
-                  controller: _searchController,
-                  autofocus: true,
-                  style: TextStyle(
-                      color: PlatformHelper.isDesktop
-                          ? AppColors.textPrimary
-                          : Colors.white),
-                  cursorColor: PlatformHelper.isDesktop
-                      ? AppColors.textPrimary
-                      : Colors.white,
-                  decoration: InputDecoration(
-                    hintText: 'Search',
-                    hintStyle: TextStyle(
-                        color: PlatformHelper.isDesktop
-                            ? AppColors.textHint
-                            : Colors.white70),
-                    filled: false,
-                    border: InputBorder.none,
-                    enabledBorder: InputBorder.none,
-                    focusedBorder: InputBorder.none,
-                  ),
-                  onChanged: (v) =>
-                      ref.read(cashViewConfigProvider.notifier).setQuery(v),
-                )
-              : InkWell(
-                  onTap: _pickBook,
-                  borderRadius: BorderRadius.circular(8),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 6),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Flexible(
-                          child: Text(book?.name ?? 'Account Ledger',
-                              overflow: TextOverflow.ellipsis),
-                        ),
-                        const Icon(Icons.arrow_drop_down),
-                      ],
-                    ),
-                  ),
-                ),
-          actions: [
-            if (!_searching)
-              IconButton(
-                  tooltip: 'Search',
-                  icon: const Icon(Icons.search),
-                  onPressed: _startSearch),
-            IconButton(
-                tooltip: 'Report',
-                icon: const Icon(Icons.picture_as_pdf_outlined),
-                onPressed: _report),
-            _overflow(cfg),
-          ],
-        ),
-        CashbookPeriodTabs(
-          selected: cfg.customRange != null ? CashPeriod.all : cfg.period,
-          onSelected: (p) =>
-              ref.read(cashViewConfigProvider.notifier).setPeriod(p),
-        ),
-        CashbookPeriodBar(
-          label: rangeLabel,
-          onShift: (cfg.period == CashPeriod.all ||
-                  cfg.customRange != null ||
-                  searching)
+    final periodTabs = CashbookPeriodTabs(
+      selected: cfg.customRange != null ? CashPeriod.all : cfg.period,
+      onSelected: (p) => ref.read(cashViewConfigProvider.notifier).setPeriod(p),
+      onGradient: !desktop,
+    );
+    final periodBar = CashbookPeriodBar(
+      label: rangeLabel,
+      onGradient: !desktop,
+      onShift:
+          (cfg.period == CashPeriod.all || cfg.customRange != null || searching)
               ? null
               : (d) => ref.read(cashViewConfigProvider.notifier).shift(d),
-        ),
-        if (cfg.type != CashTypeFilter.all || cfg.ascending || searching)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 6, 12, 0),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    [
-                      if (searching) 'Search: "${cfg.query.trim()}"',
-                      if (cfg.type == CashTypeFilter.income) CashLabels.income,
-                      if (cfg.type == CashTypeFilter.expense)
-                        CashLabels.expense,
-                      if (cfg.ascending) 'Oldest first',
-                    ].join('  |  '),
-                    style: const TextStyle(
-                        fontSize: 12, color: AppColors.textSecondary),
+    );
+
+    return Container(
+      color: AppColors.background,
+      child: Column(
+        children: [
+          CashHeader(
+            // Mobile: period chips and the date navigator live in the gradient,
+            // like the main ledger. Desktop keeps them below the slim header.
+            bottom: desktop
+                ? null
+                : Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [periodTabs, periodBar],
                   ),
-                ),
-                TextButton(
-                  onPressed: () {
-                    _searchController.clear();
-                    ref.read(cashViewConfigProvider.notifier).clearFilters();
-                    setState(() => _searching = false);
-                  },
-                  child: const Text('Clear'),
-                ),
-              ],
-            ),
-          ),
-        const SizedBox(height: 6),
-        const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-          child: Row(
-            children: [
-              Expanded(
-                  flex: 5,
-                  child: Text('Date',
-                      style: TextStyle(fontWeight: FontWeight.w700))),
-              Expanded(
-                  flex: 3,
-                  child: Text(CashLabels.income,
-                      textAlign: TextAlign.right,
-                      style: TextStyle(
-                          color: CashColors.income,
-                          fontWeight: FontWeight.w700))),
-              Expanded(
-                  flex: 3,
-                  child: Text(CashLabels.expense,
-                      textAlign: TextAlign.right,
-                      style: TextStyle(
-                          color: CashColors.expense,
-                          fontWeight: FontWeight.w700))),
+            leading: _searching
+                ? IconButton(
+                    tooltip: 'Close search',
+                    icon: const Icon(Icons.arrow_back),
+                    onPressed: _stopSearch)
+                : (widget.onMenu == null
+                    ? null
+                    : IconButton(
+                        tooltip: 'Menu',
+                        icon: const Icon(Icons.menu),
+                        onPressed: widget.onMenu)),
+            title: _searching
+                ? TextField(
+                    controller: _searchController,
+                    autofocus: true,
+                    style: TextStyle(
+                        color: PlatformHelper.isDesktop
+                            ? AppColors.textPrimary
+                            : Colors.white),
+                    cursorColor: PlatformHelper.isDesktop
+                        ? AppColors.textPrimary
+                        : Colors.white,
+                    decoration: InputDecoration(
+                      hintText: 'Search',
+                      hintStyle: TextStyle(
+                          color: PlatformHelper.isDesktop
+                              ? AppColors.textHint
+                              : Colors.white70),
+                      filled: false,
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                    ),
+                    onChanged: (v) =>
+                        ref.read(cashViewConfigProvider.notifier).setQuery(v),
+                  )
+                : InkWell(
+                    onTap: _pickBook,
+                    borderRadius: BorderRadius.circular(8),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Flexible(
+                            child: Text(book?.name ?? 'Account Ledger',
+                                overflow: TextOverflow.ellipsis),
+                          ),
+                          const Icon(Icons.arrow_drop_down),
+                        ],
+                      ),
+                    ),
+                  ),
+            actions: [
+              if (!_searching)
+                IconButton(
+                    tooltip: 'Search',
+                    icon: const Icon(Icons.search),
+                    onPressed: _startSearch),
+              IconButton(
+                  tooltip: 'Report',
+                  icon: const Icon(Icons.picture_as_pdf_outlined),
+                  onPressed: _report),
+              _overflow(cfg),
             ],
           ),
-        ),
-        const Divider(height: 1),
-        Expanded(
-          child: CashPageBody(
-            child: items.isEmpty
-                ? const Center(
-                    child: Text('No transactions',
-                        style: TextStyle(color: AppColors.textHint)))
-                : ListView.builder(
-                    itemCount: items.length,
-                    itemBuilder: (_, i) {
-                      final item = items[i];
-                      if (item == 'prev') {
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 8),
-                          child: Row(
-                            children: [
-                              const Text('Previous Balance',
-                                  style: TextStyle(
-                                      fontStyle: FontStyle.italic,
-                                      fontWeight: FontWeight.w600)),
-                              const SizedBox(width: 12),
-                              Text(settings.formatMoney(view.previousBalance),
-                                  style: const TextStyle(
-                                      color: CashColors.balance,
-                                      fontWeight: FontWeight.w600)),
-                            ],
-                          ),
-                        );
-                      }
-                      if (item is DateTime) {
-                        return CashbookDayHeader(day: item, settings: settings);
-                      }
-                      final row = item as CashLedgerRow;
-                      return CashbookRow(
-                        row: row,
-                        settings: settings,
-                        onTap: () => _openEdit(row.entry),
-                      );
-                    },
+          if (desktop) ...[periodTabs, periodBar],
+          if (cfg.type != CashTypeFilter.all || cfg.ascending || searching)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 6, 12, 0),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      [
+                        if (searching) 'Search: "${cfg.query.trim()}"',
+                        if (cfg.type == CashTypeFilter.income)
+                          CashLabels.income,
+                        if (cfg.type == CashTypeFilter.expense)
+                          CashLabels.expense,
+                        if (cfg.ascending) 'Oldest first',
+                      ].join('  |  '),
+                      style: const TextStyle(
+                          fontSize: 12, color: AppColors.textSecondary),
+                    ),
                   ),
-          ),
-        ),
-        CashPageBody(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                            backgroundColor: CashColors.income),
-                        onPressed:
-                            book == null ? null : () => _openForm(income: true),
-                        child: const Text(CashLabels.income),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                            backgroundColor: CashColors.expense),
-                        onPressed: book == null
-                            ? null
-                            : () => _openForm(income: false),
-                        child: const Text(CashLabels.expense),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                CashbookTotalsStrip(
-                  totals: view.totals,
-                  settings: settings,
-                  previousBalance:
-                      view.hasPreviousBalance ? view.previousBalance : null,
-                ),
-              ],
+                  TextButton(
+                    onPressed: () {
+                      _searchController.clear();
+                      ref.read(cashViewConfigProvider.notifier).clearFilters();
+                      setState(() => _searching = false);
+                    },
+                    child: const Text('Clear'),
+                  ),
+                ],
+              ),
+            ),
+          // Totals on top as a card, like the ledger summary card.
+          CashPageBody(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+              child: CashbookTotalsStrip(
+                totals: view.totals,
+                settings: settings,
+                previousBalance:
+                    view.hasPreviousBalance ? view.previousBalance : null,
+              ),
             ),
           ),
-        ),
-      ],
+          Expanded(
+            child: CashPageBody(
+              child: items.isEmpty
+                  ? const Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.receipt_long_outlined,
+                              size: 64, color: AppColors.textHint),
+                          SizedBox(height: 12),
+                          Text('No transactions',
+                              style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w500,
+                                  color: AppColors.textSecondary)),
+                          SizedBox(height: 4),
+                          Text('Tap Income or Expense to add one',
+                              style: TextStyle(color: AppColors.textHint)),
+                        ],
+                      ),
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      itemCount: items.length,
+                      itemBuilder: (_, i) {
+                        final item = items[i];
+                        if (item == 'prev') {
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 8),
+                            child: Row(
+                              children: [
+                                const Text('Previous Balance',
+                                    style: TextStyle(
+                                        fontStyle: FontStyle.italic,
+                                        fontWeight: FontWeight.w600)),
+                                const SizedBox(width: 12),
+                                Text(settings.formatMoney(view.previousBalance),
+                                    style: const TextStyle(
+                                        color: CashColors.balance,
+                                        fontWeight: FontWeight.w600)),
+                              ],
+                            ),
+                          );
+                        }
+                        if (item is DateTime) {
+                          return CashbookDayHeader(
+                              day: item, settings: settings);
+                        }
+                        final row = item as CashLedgerRow;
+                        return CashbookRow(
+                          row: row,
+                          settings: settings,
+                          onTap: () => _openEdit(row.entry),
+                        );
+                      },
+                    ),
+            ),
+          ),
+          CashPageBody(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                              backgroundColor: CashColors.income),
+                          onPressed: book == null
+                              ? null
+                              : () => _openForm(income: true),
+                          child: const Text(CashLabels.income),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                              backgroundColor: CashColors.expense),
+                          onPressed: book == null
+                              ? null
+                              : () => _openForm(income: false),
+                          child: const Text(CashLabels.expense),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

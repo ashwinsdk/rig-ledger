@@ -5,9 +5,15 @@ import 'package:flutter/foundation.dart';
 class PlatformHelper {
   PlatformHelper._();
 
+  /// Tests run on the desktop host; set this to false to exercise the mobile
+  /// layout. Never set in app code.
+  @visibleForTesting
+  static bool? debugIsDesktopOverride;
+
   /// True on macOS, Windows, Linux
   static bool get isDesktop =>
-      !kIsWeb && (Platform.isMacOS || Platform.isWindows || Platform.isLinux);
+      debugIsDesktopOverride ??
+      (!kIsWeb && (Platform.isMacOS || Platform.isWindows || Platform.isLinux));
 
   /// True on iOS, Android
   static bool get isMobile => !kIsWeb && (Platform.isAndroid || Platform.isIOS);

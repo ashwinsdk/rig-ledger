@@ -10,11 +10,16 @@ class CashHeader extends StatelessWidget {
   final Widget title;
   final List<Widget> actions;
 
+  /// Extra rows inside the gradient (period chips and the date navigator),
+  /// like the main ledger header. Mobile only.
+  final Widget? bottom;
+
   const CashHeader({
     super.key,
     this.leading,
     required this.title,
     this.actions = const [],
+    this.bottom,
   });
 
   @override
@@ -52,7 +57,15 @@ class CashHeader extends StatelessWidget {
     }
     return Container(
       decoration: const BoxDecoration(gradient: AppColors.appBarGradient),
-      child: SafeArea(bottom: false, child: row),
+      child: SafeArea(
+        bottom: false,
+        child: bottom == null
+            ? row
+            : Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [row, bottom!, const SizedBox(height: 10)],
+              ),
+      ),
     );
   }
 }

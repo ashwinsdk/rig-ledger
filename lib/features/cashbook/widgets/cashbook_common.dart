@@ -7,8 +7,8 @@ import '../../../core/utils/platform_helper.dart';
 /// Colors with a functional meaning in the Account Ledger.
 class CashColors {
   CashColors._();
-  static const Color income = Color(0xFF059669);
-  static const Color expense = Color(0xFFDC2626);
+  static const Color income = AppColors.success;
+  static const Color expense = AppColors.error;
   static const Color balance = AppColors.primary;
 }
 

@@ -211,11 +211,11 @@ class CashbookCalculator {
     return f.format(r);
   }
 
-  /// "Rs. 1,000", "-Rs. 800", "Rs. 2,500.50".
+  /// "₹1,000", "-₹800", "₹2,500.50" (the rupee sign, as on the ledger pages).
   static String formatMoney(double v,
       {bool fixed2 = false, bool group = true}) {
     final r = roundMoney(v);
     final body = formatNumber(r.abs(), fixed2: fixed2, group: group);
-    return r < 0 ? '-Rs. $body' : 'Rs. $body';
+    return r < 0 ? '-₹$body' : '₹$body';
   }
 }

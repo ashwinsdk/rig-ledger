@@ -38,7 +38,7 @@ void main() {
     final t =
         CashbookCalculator.totals([e('o', DateTime(2026, 1, 1), 800, false)]);
     expect(t.balance, -800);
-    expect(CashbookCalculator.formatMoney(t.balance), '-Rs. 800');
+    expect(CashbookCalculator.formatMoney(t.balance), '-₹800');
   });
 
   test('running balance is chronological and newest first (PARITY-033)', () {
@@ -127,10 +127,10 @@ void main() {
     expect(CashbookCalculator.formatNumber(1.239), '1.24');
     expect(CashbookCalculator.formatNumber(99999999999), '99,999,999,999');
     expect(CashbookCalculator.formatNumber(1234, fixed2: true), '1,234.00');
-    expect(CashbookCalculator.formatMoney(2500.5), 'Rs. 2,500.50');
+    expect(CashbookCalculator.formatMoney(2500.5), '₹2,500.50');
     expect(CashbookCalculator.formatNumber(1234, group: false), '1234');
     expect(CashbookCalculator.formatNumber(1234.5, group: false), '1234.50');
     expect(CashbookCalculator.formatMoney(-1234, fixed2: true, group: false),
-        '-Rs. 1234.00');
+        '-₹1234.00');
   });
 }

@@ -33,11 +33,11 @@ Depends: none
 Resume notes: filled Save returns to the ledger, outlined Save and add another keeps the form (clears amount, notes, items, bills), empty amount shows an inline 'Enter an amount' error, the 'Saved' snackbar is 1 second so it does not cover the buttons (showCashSnack got a duration param). Tests: flow tests use Save, new test/cashbook_flow_save_test.dart. analyze 210 infos (unchanged), 69 tests pass.
 Commit: Return to Account Ledger after saving an entry
 
-## T-H03 Account Ledger: same look as the ledger pages (bug 9) [PENDING]
+## T-H03 Account Ledger: same look as the ledger pages (bug 9) [DONE]
 Goal: Account Ledger home uses the main ledger visual language. Period chips and date navigator move into the gradient header with the same pill style; the totals become a top summary card (radius 16, shadow, icons, rupee format) instead of the bottom strip; rows become floating cards (radius 16, soft shadow, 16 pt side margin) with day headers; Income and Expense colours use AppColors success and error; empty state with icon. Logic and providers unchanged.
 Files: lib/features/cashbook/cashbook_home_screen.dart, widgets/cashbook_header.dart, cashbook_period_bar.dart, cashbook_row.dart, cashbook_totals_strip.dart, cashbook_common.dart, pushed screens' cashAppBar (use AdaptiveHeader style)
 Depends: none
-Resume notes:
+Resume notes: mobile header holds the pill chips and the white date navigator (desktop keeps them below the slim header); totals are a top card (radius 16, shadow, icons, rupee format) via the restyled CashbookTotalsStrip, which the other cashbook screens still show at the bottom; entries are floating cards with scaled amounts; plain day headers; icon empty state; CashColors now AppColors.success and error; money prefix is the rupee sign on screen (CashbookCalculator.formatMoney; exports use formatNumber and are unchanged). PlatformHelper.debugIsDesktopOverride added for tests; new test/cashbook_home_layout_test.dart caught and fixed an amount overflow. Pushed cashbook screens keep cashAppBar. 70 tests pass, analyze 210 infos. Not verified on a device.
 Commit: Restyle Account Ledger to match the ledger pages
 
 ## T-H04 Shared rig switcher (LR-01) [PENDING]

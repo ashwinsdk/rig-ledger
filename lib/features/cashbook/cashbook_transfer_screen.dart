@@ -107,7 +107,7 @@ class _CashbookTransferScreenState
                         const TextInputType.numberWithOptions(decimal: true),
                     inputFormatters: [AmountInputFormatter()],
                     decoration: const InputDecoration(
-                        labelText: 'Amount', prefixText: 'Rs. '),
+                        labelText: 'Amount', prefixText: '₹ '),
                   ),
                   const SizedBox(height: 16),
                   picker('From', _from, (v) => setState(() => _from = v)),

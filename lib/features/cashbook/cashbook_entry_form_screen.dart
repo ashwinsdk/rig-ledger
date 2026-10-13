@@ -471,7 +471,7 @@ class _CashbookEntryFormScreenState
                         decoration: InputDecoration(
                           labelText: amountLabel,
                           errorText: _amountError,
-                          prefixText: 'Rs. ',
+                          prefixText: '₹ ',
                           suffixIcon: IconButton(
                             tooltip: 'Calculator',
                             icon: const Icon(Icons.calculate_outlined,

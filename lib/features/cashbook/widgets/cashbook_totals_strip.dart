@@ -19,23 +19,36 @@ class CashbookTotalsStrip extends StatelessWidget {
     this.previousBalance,
   });
 
-  Widget _cell(String label, double value, Color color) {
+  /// One summary column: icon and label, then the amount (same layout as the
+  /// ledger summary card).
+  Widget _cell(IconData icon, String label, double value, Color color) {
     return Expanded(
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 6),
         child: Column(
           children: [
-            Text(label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                    color: color, fontSize: 12, fontWeight: FontWeight.w600)),
-            const SizedBox(height: 2),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(icon, size: 14, color: color),
+                const SizedBox(width: 3),
+                Flexible(
+                  child: Text(label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500)),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
             FittedBox(
               fit: BoxFit.scaleDown,
               child: Text(settings.formatMoney(value),
                   style: TextStyle(
-                      color: color, fontSize: 15, fontWeight: FontWeight.w700)),
+                      color: color, fontSize: 16, fontWeight: FontWeight.w600)),
             ),
           ],
         ),
@@ -49,8 +62,11 @@ class CashbookTotalsStrip extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: AppColors.surface,
-        border: Border.all(color: AppColors.border),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: const [
+          BoxShadow(
+              color: AppColors.shadow, blurRadius: 10, offset: Offset(0, 4)),
+        ],
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -58,20 +74,21 @@ class CashbookTotalsStrip extends StatelessWidget {
           IntrinsicHeight(
             child: Row(
               children: [
-                _cell(CashLabels.totalIncome, totals.cashIn, CashColors.income),
-                const VerticalDivider(width: 1),
-                _cell(CashLabels.totalExpense, totals.cashOut,
+                _cell(Icons.south_west, CashLabels.totalIncome, totals.cashIn,
+                    CashColors.income),
+                const VerticalDivider(width: 1, color: AppColors.divider),
+                _cell(Icons.north_east, CashLabels.totalExpense, totals.cashOut,
                     CashColors.expense),
-                const VerticalDivider(width: 1),
-                _cell(CashLabels.balance, bal,
-                    bal < 0 ? CashColors.expense : CashColors.balance),
+                const VerticalDivider(width: 1, color: AppColors.divider),
+                _cell(Icons.account_balance_wallet_outlined, CashLabels.balance,
+                    bal, bal < 0 ? CashColors.expense : CashColors.balance),
               ],
             ),
           ),
           if (previousBalance != null) ...[
-            const Divider(height: 1),
+            const Divider(height: 1, color: AppColors.divider),
             _line('Previous Balance', previousBalance!),
-            const Divider(height: 1),
+            const Divider(height: 1, color: AppColors.divider),
             _line(CashLabels.balance,
                 CashbookCalculator.roundMoney(previousBalance! + bal),
                 bold: true),
