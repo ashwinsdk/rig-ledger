@@ -57,6 +57,7 @@ class _StatsScreenState extends ConsumerState<StatsScreen>
       ref.watch(pvcEntriesProvider),
       ref.watch(bitEntriesProvider),
       ref.watch(hammerEntriesProvider),
+      ref.watch(otherExpenseEntriesProvider),
     );
     final currentVehicle = ref.watch(currentVehicleProvider);
 
@@ -246,7 +247,7 @@ class _StatsScreenState extends ConsumerState<StatsScreen>
                           children: [
                             Expanded(child: _buildHammerPieChart()),
                             const SizedBox(width: 12),
-                            const Expanded(child: SizedBox()),
+                            Expanded(child: _buildOtherPieChart()),
                           ],
                         ),
                       ] else ...[
@@ -265,6 +266,15 @@ class _StatsScreenState extends ConsumerState<StatsScreen>
                             Expanded(child: _buildBitPieChart()),
                             const SizedBox(width: 12),
                             Expanded(child: _buildHammerPieChart()),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(child: _buildOtherPieChart()),
+                            const SizedBox(width: 12),
+                            const Expanded(child: SizedBox()),
                           ],
                         ),
                       ],
@@ -288,6 +298,8 @@ class _StatsScreenState extends ConsumerState<StatsScreen>
                       _buildBitStats(),
                       const SizedBox(height: 16),
                       _buildHammerStats(),
+                      const SizedBox(height: 16),
+                      _buildOtherStats(),
                     ],
                   ),
                 ),
@@ -841,6 +853,72 @@ class _StatsScreenState extends ConsumerState<StatsScreen>
       color: AppColors.error,
       paid: totalPaid,
       pending: totalPending,
+    );
+  }
+
+  Widget _buildOtherPieChart() {
+    final (startDate, endDate) = _getDateRange();
+    final allEntries = ref.watch(otherExpenseEntriesProvider);
+    final entries =
+        _filterByDateRange(allEntries, startDate, endDate, (e) => e.date);
+
+    if (entries.isEmpty) {
+      return _buildMiniEmptyChart('Other', Icons.receipt_long, Colors.purple);
+    }
+
+    double totalPaid = 0;
+    double totalPending = 0;
+    for (final e in entries) {
+      totalPaid += e.paid;
+      totalPending += e.pending;
+    }
+
+    return _buildMiniPieChart(
+      title: 'Other',
+      icon: Icons.receipt_long,
+      color: Colors.purple,
+      paid: totalPaid,
+      pending: totalPending,
+    );
+  }
+
+  Widget _buildOtherStats() {
+    final (startDate, endDate) = _getDateRange();
+    final allEntries = ref.watch(otherExpenseEntriesProvider);
+    final entries =
+        _filterByDateRange(allEntries, startDate, endDate, (e) => e.date);
+
+    if (entries.isEmpty) {
+      return _buildEmptyStatsCard(
+          'Other expenses', Icons.receipt_long, Colors.purple);
+    }
+
+    double totalAmount = 0;
+    double totalPaid = 0;
+    double totalPending = 0;
+    for (final e in entries) {
+      totalAmount += e.total;
+      totalPaid += e.paid;
+      totalPending += e.pending;
+    }
+
+    final format = NumberFormat('#,##0.00');
+    return _buildStatsCard(
+      title: 'Other expenses',
+      icon: Icons.receipt_long,
+      color: Colors.purple,
+      entries: entries.length,
+      stats: [
+        _StatRow(label: 'Total Value', value: '₹${format.format(totalAmount)}'),
+        _StatRow(
+            label: 'Paid',
+            value: '₹${format.format(totalPaid)}',
+            color: AppColors.success),
+        _StatRow(
+            label: 'Pending',
+            value: '₹${format.format(totalPending)}',
+            color: AppColors.warning),
+      ],
     );
   }
 

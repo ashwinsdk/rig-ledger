@@ -757,6 +757,17 @@ class DatabaseService {
       ..sort((a, b) => b.date.compareTo(a.date));
   }
 
+  static List<OtherExpenseEntry> getOtherExpenseEntriesByDateRange(
+      String vehicleId, DateTime start, DateTime end) {
+    return _otherExpenseBox.values
+        .where((e) =>
+            e.vehicleId == vehicleId &&
+            !e.date.isBefore(start) &&
+            !e.date.isAfter(end))
+        .toList()
+      ..sort((a, b) => b.date.compareTo(a.date));
+  }
+
   // ============ MINI LEDGER OPERATIONS ============
   static Future<void> saveMiniLedgerEntry(MiniLedgerEntry entry) async {
     await _miniLedgerBox.put(entry.id, entry);

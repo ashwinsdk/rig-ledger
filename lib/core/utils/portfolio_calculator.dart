@@ -2,6 +2,7 @@ import '../models/bit_entry.dart';
 import '../models/diesel_entry.dart';
 import '../models/hammer_entry.dart';
 import '../models/ledger_entry.dart';
+import '../models/other_expense_entry.dart';
 import '../models/pvc_entry.dart';
 
 /// Money totals of one agent inside a portfolio.
@@ -33,7 +34,8 @@ class AgentPortfolioRow {
 /// - received: money received on bills
 /// - pending: balance still owed (total - received - less)
 /// - commission: informational, never part of total
-/// - expenses: side ledger purchases (diesel, PVC, bit, hammer) in the period
+/// - expenses: side ledger purchases (diesel, PVC, bit, hammer, other
+///   expenses) in the period
 /// - realised profit = received - expenses - commission
 /// - expected profit = total - less - expenses - commission
 /// Expenses are not tracked per agent, so with an agent filter the expense
@@ -49,6 +51,7 @@ class PortfolioSummary {
   final double pvc;
   final double bit;
   final double hammer;
+  final double other;
   final bool expensesApply;
   final List<AgentPortfolioRow> agents;
 
@@ -63,12 +66,13 @@ class PortfolioSummary {
     required this.pvc,
     required this.bit,
     required this.hammer,
+    this.other = 0,
     required this.expensesApply,
     required this.agents,
   });
 
   double get expenses =>
-      PortfolioCalculator.round2(diesel + pvc + bit + hammer);
+      PortfolioCalculator.round2(diesel + pvc + bit + hammer + other);
   double get netBilled => PortfolioCalculator.round2(total - less);
   double get realisedProfit =>
       PortfolioCalculator.round2(received - expenses - commission);
@@ -94,6 +98,7 @@ class PortfolioCalculator {
     required Iterable<PvcEntry> pvc,
     required Iterable<BitEntry> bit,
     required Iterable<HammerEntry> hammer,
+    Iterable<OtherExpenseEntry> other = const [],
     DateTime? start,
     DateTime? end,
     String? agentId,
@@ -172,6 +177,11 @@ class PortfolioCalculator {
           : 0,
       hammer: noAgent
           ? sum(hammer
+              .where((e) => _inRange(e.date, start, end))
+              .map((e) => e.total))
+          : 0,
+      other: noAgent
+          ? sum(other
               .where((e) => _inRange(e.date, start, end))
               .map((e) => e.total))
           : 0,

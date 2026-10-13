@@ -4,6 +4,7 @@ import '../models/bit_entry.dart';
 import '../models/diesel_entry.dart';
 import '../models/hammer_entry.dart';
 import '../models/ledger_entry.dart';
+import '../models/other_expense_entry.dart';
 import '../models/pvc_entry.dart';
 import '../models/vehicle.dart';
 import 'ledger_provider.dart';
@@ -16,6 +17,7 @@ class PortfolioSource {
   final List<PvcEntry> pvc;
   final List<BitEntry> bit;
   final List<HammerEntry> hammer;
+  final List<OtherExpenseEntry> other;
 
   /// Side bore rigs (their PVC purchases are ignored).
   final Set<String> sideBoreVehicleIds;
@@ -26,6 +28,7 @@ class PortfolioSource {
     required this.pvc,
     required this.bit,
     required this.hammer,
+    this.other = const [],
     required this.sideBoreVehicleIds,
   });
 }
@@ -43,12 +46,14 @@ final portfolioSourceProvider =
   final myPvc = ref.watch(pvcEntriesProvider);
   final myBit = ref.watch(bitEntriesProvider);
   final myHammer = ref.watch(hammerEntriesProvider);
+  final myOther = ref.watch(otherExpenseEntriesProvider);
   return PortfolioSource(
     bills: allRigs ? DatabaseService.ledgerBox.values.toList() : myBills,
     diesel: allRigs ? DatabaseService.dieselBox.values.toList() : myDiesel,
     pvc: allRigs ? DatabaseService.pvcBox.values.toList() : myPvc,
     bit: allRigs ? DatabaseService.bitBox.values.toList() : myBit,
     hammer: allRigs ? DatabaseService.hammerBox.values.toList() : myHammer,
+    other: allRigs ? DatabaseService.otherExpenseBox.values.toList() : myOther,
     sideBoreVehicleIds: DatabaseService.vehicleBox.values
         .where((v) => v.vehicleType == VehicleType.sideBore)
         .map((v) => v.id)

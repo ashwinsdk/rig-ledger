@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:rig_ledger/core/models/bit_entry.dart';
 import 'package:rig_ledger/core/models/diesel_entry.dart';
 import 'package:rig_ledger/core/models/hammer_entry.dart';
+import 'package:rig_ledger/core/models/other_expense_entry.dart';
 import 'package:rig_ledger/core/models/ledger_entry.dart';
 import 'package:rig_ledger/core/models/pvc_entry.dart';
 import 'package:rig_ledger/core/utils/portfolio_calculator.dart';
@@ -94,6 +95,19 @@ HammerEntry hammer(DateTime d, double total) => HammerEntry(
       hammerName: 'h',
       count: 1,
       rate: total,
+      total: total,
+      paid: 0,
+      pending: total,
+      balance: 0,
+      createdAt: d,
+      updatedAt: d,
+    );
+
+OtherExpenseEntry otherE(DateTime d, double total) => OtherExpenseEntry(
+      id: 'o$total',
+      vehicleId: 'v1',
+      date: d,
+      description: 'Food',
       total: total,
       paid: 0,
       pending: total,
@@ -202,5 +216,32 @@ void main() {
         hammer: const []);
     expect(s.total, 1.0);
     expect(s.received, 1.0);
+  });
+
+  test('other expenses count as expenses and reduce profit', () {
+    final s = PortfolioCalculator.compute(
+      bills: [bill('1', 'a', d1, total: 10000, received: 10000)],
+      diesel: const [],
+      pvc: const [],
+      bit: const [],
+      hammer: const [],
+      other: [otherE(d1, 700), otherE(d2, 50)],
+      start: DateTime(2026, 10, 1),
+      end: DateTime(2026, 10, 31, 23, 59, 59),
+    );
+    expect(s.other, 700);
+    expect(s.expenses, 700);
+    expect(s.realisedProfit, 9300);
+    // an agent filter hides expenses, so other expenses too
+    final a = PortfolioCalculator.compute(
+      bills: [bill('1', 'a', d1, total: 10000, received: 10000)],
+      diesel: const [],
+      pvc: const [],
+      bit: const [],
+      hammer: const [],
+      other: [otherE(d1, 700)],
+      agentId: 'a',
+    );
+    expect(a.other, 0);
   });
 }

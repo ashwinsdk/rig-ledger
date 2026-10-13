@@ -17,6 +17,7 @@ import '../../core/models/pvc_entry.dart';
 import '../../core/models/vehicle.dart';
 import '../../core/models/bit_entry.dart';
 import '../../core/models/hammer_entry.dart';
+import '../../core/models/other_expense_entry.dart';
 import '../../core/services/file_save_service.dart';
 import '../../core/services/cashbook_export_service.dart';
 
@@ -25,7 +26,8 @@ enum PdfExportType {
   diesel('Diesel'),
   pvc('PVC'),
   bit('Bit'),
-  hammer('Hammer');
+  hammer('Hammer'),
+  other('Other expenses');
 
   final String label;
   const PdfExportType(this.label);
@@ -199,6 +201,10 @@ class _PdfExportScreenState extends ConsumerState<PdfExportScreen> {
             .length;
       case PdfExportType.hammer:
         return DatabaseService.getHammerEntriesByDateRange(
+                vehicleId, _startDate, _endDate)
+            .length;
+      case PdfExportType.other:
+        return DatabaseService.getOtherExpenseEntriesByDateRange(
                 vehicleId, _startDate, _endDate)
             .length;
     }
@@ -588,6 +594,8 @@ class _PdfExportScreenState extends ConsumerState<PdfExportScreen> {
         return _buildBitSummaryCard(vehicleId);
       case PdfExportType.hammer:
         return _buildHammerSummaryCard(vehicleId);
+      case PdfExportType.other:
+        return _buildOtherSummaryCard(vehicleId);
     }
   }
 
@@ -761,6 +769,22 @@ class _PdfExportScreenState extends ConsumerState<PdfExportScreen> {
     }
     return _buildGenericSummaryCard('Hammer', entries.length, [
       ('Total Count', '$totalCount pcs'),
+      ('Total Amount', 'Rs. ${_currencyFormat.format(totalAmount)}'),
+      ('Paid', 'Rs. ${_currencyFormat.format(totalPaid)}'),
+      ('Pending', 'Rs. ${_currencyFormat.format(totalPending)}'),
+    ]);
+  }
+
+  Widget _buildOtherSummaryCard(String vehicleId) {
+    final entries = DatabaseService.getOtherExpenseEntriesByDateRange(
+        vehicleId, _startDate, _endDate);
+    double totalAmount = 0, totalPaid = 0, totalPending = 0;
+    for (final e in entries) {
+      totalAmount += e.total;
+      totalPaid += e.paid;
+      totalPending += e.pending;
+    }
+    return _buildGenericSummaryCard('Other expenses', entries.length, [
       ('Total Amount', 'Rs. ${_currencyFormat.format(totalAmount)}'),
       ('Paid', 'Rs. ${_currencyFormat.format(totalPaid)}'),
       ('Pending', 'Rs. ${_currencyFormat.format(totalPending)}'),
@@ -1129,6 +1153,10 @@ class _PdfExportScreenState extends ConsumerState<PdfExportScreen> {
         final entries = DatabaseService.getHammerEntriesByDateRange(
             vehicleId, _startDate, _endDate);
         return _generateHammerPdf(entries);
+      case PdfExportType.other:
+        final entries = DatabaseService.getOtherExpenseEntriesByDateRange(
+            vehicleId, _startDate, _endDate);
+        return _generateOtherPdf(entries);
     }
   }
 
@@ -1440,6 +1468,31 @@ class _PdfExportScreenState extends ConsumerState<PdfExportScreen> {
         final typeStr =
             hammerTypes.map((t) => '$t: ${typeTotals[t]}').join('  |  ');
         return '$typeStr  |  Total: Rs.${_currencyFormat.format(total)}  |  Paid: Rs.${_currencyFormat.format(paid)}  |  Pending: Rs.${_currencyFormat.format(pending)}';
+      },
+    );
+  }
+
+  Future<Uint8List> _generateOtherPdf(List<OtherExpenseEntry> entries) async {
+    return _generateSideLedgerPdf(
+      title: 'Other Expenses Report',
+      headers: ['Date', 'Bill#', 'Description', 'Total Amt', 'Paid', 'Pending'],
+      entries: entries,
+      getRow: (e) => [
+        _dateFormat.format(e.date),
+        e.billNumber.isEmpty ? '-' : e.billNumber,
+        e.description,
+        _currencyFormat.format(e.total),
+        _currencyFormat.format(e.paid),
+        _currencyFormat.format(e.pending),
+      ],
+      getTotals: () {
+        double total = 0, paid = 0, pending = 0;
+        for (final e in entries) {
+          total += e.total;
+          paid += e.paid;
+          pending += e.pending;
+        }
+        return 'Total: Rs.${_currencyFormat.format(total)}  |  Paid: Rs.${_currencyFormat.format(paid)}  |  Pending: Rs.${_currencyFormat.format(pending)}';
       },
     );
   }

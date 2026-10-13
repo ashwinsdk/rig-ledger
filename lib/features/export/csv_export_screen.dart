@@ -10,6 +10,7 @@ import '../../core/models/diesel_entry.dart';
 import '../../core/models/pvc_entry.dart';
 import '../../core/models/bit_entry.dart';
 import '../../core/models/hammer_entry.dart';
+import '../../core/models/other_expense_entry.dart';
 import '../../core/services/file_save_service.dart';
 
 enum ExportType {
@@ -17,7 +18,8 @@ enum ExportType {
   diesel('Diesel'),
   pvc('PVC'),
   bit('Bit'),
-  hammer('Hammer');
+  hammer('Hammer'),
+  other('Other expenses');
 
   final String label;
   const ExportType(this.label);
@@ -384,6 +386,12 @@ class _CsvExportScreenState extends ConsumerState<CsvExportScreen> {
             : DatabaseService.getHammerEntriesByDateRange(
                     vehicleId, _startDate, _endDate)
                 .length;
+      case ExportType.other:
+        return _exportAll
+            ? DatabaseService.getOtherExpenseEntriesByVehicle(vehicleId).length
+            : DatabaseService.getOtherExpenseEntriesByDateRange(
+                    vehicleId, _startDate, _endDate)
+                .length;
     }
   }
 
@@ -399,6 +407,8 @@ class _CsvExportScreenState extends ConsumerState<CsvExportScreen> {
         return BitEntry.csvHeaders;
       case ExportType.hammer:
         return HammerEntry.csvHeaders;
+      case ExportType.other:
+        return OtherExpenseEntry.csvHeaders;
     }
   }
 
@@ -485,6 +495,17 @@ class _CsvExportScreenState extends ConsumerState<CsvExportScreen> {
             ...entries.map((e) => e.toCsvRow()),
           ];
           typeLabel = 'hammer';
+          break;
+        case ExportType.other:
+          final entries = _exportAll
+              ? DatabaseService.getOtherExpenseEntriesByVehicle(vehicleId)
+              : DatabaseService.getOtherExpenseEntriesByDateRange(
+                  vehicleId, _startDate, _endDate);
+          rows = [
+            OtherExpenseEntry.csvHeaders,
+            ...entries.map((e) => e.toCsvRow()),
+          ];
+          typeLabel = 'other_expenses';
           break;
       }
 
