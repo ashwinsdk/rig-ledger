@@ -6,6 +6,7 @@ import '../../../core/providers/ledger_provider.dart';
 import '../../../core/providers/vehicle_provider.dart';
 import '../../../core/models/vehicle.dart';
 import '../../../core/models/ledger_types.dart';
+import '../../../core/utils/feet_totals.dart';
 
 const _depthColors = [
   Colors.blue,
@@ -15,11 +16,18 @@ const _depthColors = [
 ];
 const _pvcColors = [Colors.teal, Colors.cyan, Colors.green, Colors.lightGreen];
 
-class SummaryRow extends ConsumerWidget {
+class SummaryRow extends ConsumerStatefulWidget {
   const SummaryRow({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<SummaryRow> createState() => _SummaryRowState();
+}
+
+class _SummaryRowState extends ConsumerState<SummaryRow> {
+  bool _expanded = false;
+
+  @override
+  Widget build(BuildContext context) {
     final stats = ref.watch(monthlyStatsProvider);
     final feetTotals = ref.watch(feetTotalsProvider);
     final currentVehicle = ref.watch(currentVehicleProvider);
@@ -36,7 +44,7 @@ class SummaryRow extends ConsumerWidget {
 
     // One slim card, scrolls sideways: money totals first, then the feet of
     // every depth and PVC type (user-defined) and MS pipe.
-    return Container(
+    final strip = Container(
       margin: const EdgeInsets.fromLTRB(16, 8, 16, 4),
       padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
       decoration: BoxDecoration(
@@ -95,7 +103,8 @@ class SummaryRow extends ConsumerWidget {
             ),
             divider(),
             // Side bore: only the total depth (no type split)
-            if (isSideBore)
+            if (isSideBore) ...[
+              divider(),
               SizedBox(
                 width: 84,
                 child: _FeetItem(
@@ -103,37 +112,116 @@ class SummaryRow extends ConsumerWidget {
                   value: '${feetFormat.format(feetTotals.depthTotal)} ft',
                   color: Colors.blue,
                 ),
-              )
-            else ...[
-              for (final (i, e) in feetTotals.depth.entries.indexed)
-                SizedBox(
-                  width: 72,
-                  child: _FeetItem(
-                    label: '${LedgerTypes.shortLabel(e.key)} Depth',
-                    value: '${feetFormat.format(e.value)} ft',
-                    color: _depthColors[i % _depthColors.length],
-                  ),
-                ),
-              for (final (i, e) in feetTotals.pvc.entries.indexed)
-                SizedBox(
-                  width: 72,
-                  child: _FeetItem(
-                    label: '${LedgerTypes.shortLabel(e.key)} PVC',
-                    value: '${feetFormat.format(e.value)} ft',
-                    color: _pvcColors[i % _pvcColors.length],
-                  ),
-                ),
-              SizedBox(
-                width: 72,
-                child: _FeetItem(
-                  label: 'MS Pipe',
-                  value: '${feetFormat.format(feetTotals.msPipeTotal)} ft',
-                  color: Colors.orange,
-                ),
               ),
             ],
           ],
         ),
+      ),
+    );
+
+    if (isSideBore) return strip;
+    return Column(
+      children: [
+        strip,
+        _feetPanel(feetTotals, feetFormat),
+      ],
+    );
+  }
+
+  /// Drop down with the feet of every depth, PVC and MS pipe type.
+  Widget _feetPanel(FeetTotals t, NumberFormat f) {
+    Widget section(String title, Map<String, double> map, List<Color> colors) {
+      return Padding(
+        padding: const EdgeInsets.only(top: 8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(title,
+                style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textSecondary)),
+            const SizedBox(height: 4),
+            Wrap(
+              spacing: 8,
+              runSpacing: 6,
+              children: [
+                for (final (i, e) in map.entries.indexed)
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: colors[i % colors.length].withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text.rich(TextSpan(children: [
+                      TextSpan(
+                          text: '${LedgerTypes.shortLabel(e.key)}  ',
+                          style: const TextStyle(
+                              fontSize: 12, color: AppColors.textSecondary)),
+                      TextSpan(
+                          text: '${f.format(e.value)} ft',
+                          style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: colors[i % colors.length])),
+                    ])),
+                  ),
+              ],
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 4),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.divider),
+      ),
+      child: Column(
+        children: [
+          InkWell(
+            borderRadius: BorderRadius.circular(16),
+            onTap: () => setState(() => _expanded = !_expanded),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              child: Row(
+                children: [
+                  const Icon(Icons.straighten,
+                      size: 16, color: AppColors.textSecondary),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Feet: Depth ${f.format(t.depthTotal)}  |  '
+                      'PVC ${f.format(t.pvc.values.fold(0.0, (a, b) => a + b))}  |  '
+                      'MS ${f.format(t.msPipeTotal)}',
+                      style: const TextStyle(
+                          fontSize: 12, fontWeight: FontWeight.w600),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  Icon(_expanded ? Icons.expand_less : Icons.expand_more,
+                      color: AppColors.textSecondary),
+                ],
+              ),
+            ),
+          ),
+          if (_expanded)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  section('Depth by type', t.depth, _depthColors),
+                  section('PVC by type', t.pvc, _pvcColors),
+                  section('MS pipe by type', t.ms, const [Colors.orange]),
+                ],
+              ),
+            ),
+        ],
       ),
     );
   }

@@ -5,13 +5,16 @@ import '../models/ledger_types.dart';
 ///
 /// One entry per type in the user-defined list (in list order, zero included)
 /// plus any type that bills use but the list does not have, so no feet are
-/// ever dropped. MS pipe is one total.
+/// ever dropped. MS pipe has a per type map and a total.
 class FeetTotals {
   /// Depth feet by depth type.
   final Map<String, double> depth;
 
   /// PVC feet by PVC type.
   final Map<String, double> pvc;
+
+  /// MS pipe feet by MS pipe type.
+  final Map<String, double> ms;
 
   final double msPipeTotal;
 
@@ -21,6 +24,7 @@ class FeetTotals {
   const FeetTotals({
     required this.depth,
     required this.pvc,
+    this.ms = const {},
     required this.msPipeTotal,
     required this.depthTotal,
   });
@@ -28,15 +32,21 @@ class FeetTotals {
   static FeetTotals compute(Iterable<LedgerEntry> entries, LedgerTypes types) {
     final depth = {for (final t in types.depth) t: 0.0};
     final pvc = {for (final t in types.pvc) t: 0.0};
-    var ms = 0.0;
+    final ms = {for (final t in types.ms) t: 0.0};
+    var msTotal = 0.0;
     var depthTotal = 0.0;
     for (final e in entries) {
       depth[e.depth] = (depth[e.depth] ?? 0) + e.depthInFeet;
       pvc[e.pvc] = (pvc[e.pvc] ?? 0) + e.pvcInFeet;
-      ms += e.msPipeInFeet;
+      ms[e.msPipe] = (ms[e.msPipe] ?? 0) + e.msPipeInFeet;
+      msTotal += e.msPipeInFeet;
       depthTotal += e.depthInFeet;
     }
     return FeetTotals(
-        depth: depth, pvc: pvc, msPipeTotal: ms, depthTotal: depthTotal);
+        depth: depth,
+        pvc: pvc,
+        ms: ms,
+        msPipeTotal: msTotal,
+        depthTotal: depthTotal);
   }
 }
