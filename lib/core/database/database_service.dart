@@ -387,6 +387,34 @@ class DatabaseService {
     return bills.length;
   }
 
+  /// Moves an agent price from the old type name to the new one (rename).
+  static Future<void> renameAgentRateType(
+      LedgerTypeCategory c, String from, String to) async {
+    final fromKey = Agent.rateKey(c.name, from);
+    final toKey = Agent.rateKey(c.name, to);
+    for (final agent in _agentBox.values.toList()) {
+      final rates = agent.commissionRates;
+      if (!rates.containsKey(fromKey)) continue;
+      rates[toKey] = rates.remove(fromKey)!;
+      await saveAgent(agent.copyWith(
+          commissionRatesJson: Agent.encodeRates(rates),
+          updatedAt: DateTime.now()));
+    }
+  }
+
+  /// Drops every agent price of a deleted type.
+  static Future<void> removeAgentRateType(
+      LedgerTypeCategory c, String type) async {
+    final key = Agent.rateKey(c.name, type);
+    for (final agent in _agentBox.values.toList()) {
+      final rates = agent.commissionRates;
+      if (rates.remove(key) == null) continue;
+      await saveAgent(agent.copyWith(
+          commissionRatesJson: Agent.encodeRates(rates),
+          updatedAt: DateTime.now()));
+    }
+  }
+
   // Backup and Restore
   static Future<Map<String, dynamic>> createBackup() async {
     // Get ALL data from all vehicles, not just current vehicle

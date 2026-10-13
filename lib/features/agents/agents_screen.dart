@@ -5,8 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/models/agent.dart';
 import '../../core/providers/agent_provider.dart';
-import '../../core/providers/ledger_provider.dart';
 import '../../core/widgets/adaptive_header.dart';
+import 'agent_dialogs.dart';
 
 class AgentsScreen extends ConsumerWidget {
   const AgentsScreen({super.key});
@@ -32,7 +32,7 @@ class AgentsScreen extends ConsumerWidget {
                       ? AppColors.textPrimary
                       : Colors.white,
                 ),
-                onPressed: () => _showAddAgentDialog(context, ref),
+                onPressed: () => showAddAgentDialog(context, ref),
               ),
             ],
           ),
@@ -68,7 +68,7 @@ class AgentsScreen extends ConsumerWidget {
                         ),
                         const SizedBox(height: 24),
                         ElevatedButton.icon(
-                          onPressed: () => _showAddAgentDialog(context, ref),
+                          onPressed: () => showAddAgentDialog(context, ref),
                           icon: const Icon(Icons.add),
                           label: const Text('Add Agent'),
                         ),
@@ -85,9 +85,9 @@ class AgentsScreen extends ConsumerWidget {
                         agent: agent,
                         billCount: billCount,
                         commissionTotal: commissions[agent.id] ?? 0,
-                        onEdit: () => _showEditAgentDialog(context, ref, agent),
+                        onEdit: () => showEditAgentDialog(context, ref, agent),
                         onDelete: () =>
-                            _showDeleteAgentDialog(context, ref, agent, agents),
+                            showDeleteAgentDialog(context, ref, agent, agents),
                       );
                     },
                   ),
@@ -96,389 +96,14 @@ class AgentsScreen extends ConsumerWidget {
       ),
       floatingActionButton: agents.isNotEmpty
           ? FloatingActionButton(
-              onPressed: () => _showAddAgentDialog(context, ref),
+              onPressed: () => showAddAgentDialog(context, ref),
               backgroundColor: AppColors.primary,
               child: const Icon(Icons.add, color: Colors.white),
             )
           : null,
     );
   }
-
-  void _showAddAgentDialog(BuildContext context, WidgetRef ref) {
-    final nameController = TextEditingController();
-    final phoneController = TextEditingController();
-    final notesController = TextEditingController();
-    final depthRate = TextEditingController();
-    final pvcRate = TextEditingController();
-    final msRate = TextEditingController();
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Add Agent'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nameController,
-                decoration: const InputDecoration(
-                  labelText: 'Name *',
-                  hintText: 'Enter agent name',
-                  prefixIcon: Icon(Icons.person_outlined),
-                ),
-                autofocus: true,
-                textCapitalization: TextCapitalization.words,
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: phoneController,
-                decoration: const InputDecoration(
-                  labelText: 'Phone',
-                  hintText: 'Enter phone number',
-                  prefixIcon: Icon(Icons.phone_outlined),
-                ),
-                keyboardType: TextInputType.phone,
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: notesController,
-                decoration: const InputDecoration(
-                  labelText: 'Notes',
-                  hintText: 'Any additional notes',
-                  prefixIcon: Icon(Icons.notes_outlined),
-                ),
-                maxLines: 2,
-              ),
-              const SizedBox(height: 16),
-              _CommissionRateFields(depth: depthRate, pvc: pvcRate, ms: msRate),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              if (nameController.text.trim().isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Name is required')),
-                );
-                return;
-              }
-
-              // Check if agent with same name exists
-              final existing = ref
-                  .read(agentsProvider.notifier)
-                  .getAgentByName(nameController.text.trim());
-              if (existing != null) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                      content: Text('An agent with this name already exists')),
-                );
-                return;
-              }
-
-              ref.read(agentsProvider.notifier).addAgent(
-                    nameController.text.trim(),
-                    phone: phoneController.text.trim().isNotEmpty
-                        ? phoneController.text.trim()
-                        : null,
-                    notes: notesController.text.trim().isNotEmpty
-                        ? notesController.text.trim()
-                        : null,
-                    depthCommissionRate: _rateVal(depthRate),
-                    pvcCommissionRate: _rateVal(pvcRate),
-                    msPipeCommissionRate: _rateVal(msRate),
-                  );
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Agent added'),
-                  backgroundColor: AppColors.success,
-                ),
-              );
-            },
-            child: const Text('Add'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showEditAgentDialog(BuildContext context, WidgetRef ref, Agent agent) {
-    final nameController = TextEditingController(text: agent.name);
-    final phoneController = TextEditingController(text: agent.phone ?? '');
-    final notesController = TextEditingController(text: agent.notes ?? '');
-    final depthRate =
-        TextEditingController(text: _rateText(agent.depthCommissionRate));
-    final pvcRate =
-        TextEditingController(text: _rateText(agent.pvcCommissionRate));
-    final msRate =
-        TextEditingController(text: _rateText(agent.msPipeCommissionRate));
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Edit Agent'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nameController,
-                decoration: const InputDecoration(
-                  labelText: 'Name *',
-                  prefixIcon: Icon(Icons.person_outlined),
-                ),
-                textCapitalization: TextCapitalization.words,
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: phoneController,
-                decoration: const InputDecoration(
-                  labelText: 'Phone',
-                  prefixIcon: Icon(Icons.phone_outlined),
-                ),
-                keyboardType: TextInputType.phone,
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: notesController,
-                decoration: const InputDecoration(
-                  labelText: 'Notes',
-                  prefixIcon: Icon(Icons.notes_outlined),
-                ),
-                maxLines: 2,
-              ),
-              const SizedBox(height: 16),
-              _CommissionRateFields(depth: depthRate, pvc: pvcRate, ms: msRate),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              if (nameController.text.trim().isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Name is required')),
-                );
-                return;
-              }
-
-              final updated = agent.copyWith(
-                name: nameController.text.trim(),
-                phone: phoneController.text.trim().isNotEmpty
-                    ? phoneController.text.trim()
-                    : null,
-                notes: notesController.text.trim().isNotEmpty
-                    ? notesController.text.trim()
-                    : null,
-                depthCommissionRate: _rateVal(depthRate),
-                pvcCommissionRate: _rateVal(pvcRate),
-                msPipeCommissionRate: _rateVal(msRate),
-              );
-              ref.read(agentsProvider.notifier).updateAgent(updated);
-              ref.read(ledgerEntriesProvider.notifier).refresh();
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Agent updated'),
-                  backgroundColor: AppColors.success,
-                ),
-              );
-            },
-            child: const Text('Save'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showDeleteAgentDialog(
-    BuildContext context,
-    WidgetRef ref,
-    Agent agent,
-    List<Agent> allAgents,
-  ) {
-    final billCount = ref.read(agentBillCountsProvider)[agent.id] ?? 0;
-    String? reassignToAgentId;
-    final otherAgents = allAgents.where((a) => a.id != agent.id).toList();
-
-    showDialog(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
-          title: const Text('Delete Agent'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Are you sure you want to delete "${agent.name}"?',
-                  style: const TextStyle(fontSize: 16),
-                ),
-                if (billCount > 0) ...[
-                  const SizedBox(height: 16),
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: AppColors.warning.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.warning_amber_rounded,
-                            color: AppColors.warning),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            'This agent has $billCount ledger ${billCount == 1 ? 'entry' : 'entries'}.',
-                            style: const TextStyle(color: AppColors.warning),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'What would you like to do with these entries?',
-                    style: TextStyle(fontWeight: FontWeight.w500),
-                  ),
-                  const SizedBox(height: 8),
-                  RadioListTile<String?>(
-                    value: null,
-                    groupValue: reassignToAgentId,
-                    onChanged: (value) {
-                      setState(() {
-                        reassignToAgentId = value;
-                      });
-                    },
-                    title: const Text('Delete all entries'),
-                    contentPadding: EdgeInsets.zero,
-                    dense: true,
-                  ),
-                  if (otherAgents.isNotEmpty) ...[
-                    RadioListTile<String?>(
-                      value: 'reassign',
-                      groupValue: reassignToAgentId == null ? null : 'reassign',
-                      onChanged: (value) {
-                        setState(() {
-                          reassignToAgentId = otherAgents.first.id;
-                        });
-                      },
-                      title: const Text('Reassign to another agent'),
-                      contentPadding: EdgeInsets.zero,
-                      dense: true,
-                    ),
-                    if (reassignToAgentId != null)
-                      Padding(
-                        padding: const EdgeInsets.only(left: 16),
-                        child: DropdownButtonFormField<String>(
-                          value: reassignToAgentId,
-                          decoration: const InputDecoration(
-                            labelText: 'Select agent',
-                            isDense: true,
-                          ),
-                          items: otherAgents
-                              .map((a) => DropdownMenuItem(
-                                    value: a.id,
-                                    child: Text(a.name),
-                                  ))
-                              .toList(),
-                          onChanged: (value) {
-                            setState(() {
-                              reassignToAgentId = value;
-                            });
-                          },
-                        ),
-                      ),
-                  ],
-                ],
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                ref.read(agentsProvider.notifier).deleteAgent(agent.id,
-                    reassignToAgentId: reassignToAgentId);
-                ref.read(ledgerEntriesProvider.notifier).refresh();
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(reassignToAgentId != null
-                        ? 'Agent deleted and entries reassigned'
-                        : 'Agent and entries deleted'),
-                    backgroundColor: AppColors.error,
-                  ),
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.error,
-              ),
-              child: const Text('Delete'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }
-
-/// Default commission rate fields (Rs per foot) used by the add / edit agent
-/// dialogs. Copied to new bills of the agent and editable per bill.
-class _CommissionRateFields extends StatelessWidget {
-  final TextEditingController depth;
-  final TextEditingController pvc;
-  final TextEditingController ms;
-  const _CommissionRateFields(
-      {required this.depth, required this.pvc, required this.ms});
-
-  Widget _field(TextEditingController c, String label) => TextField(
-        controller: c,
-        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-        inputFormatters: [
-          FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))
-        ],
-        decoration: InputDecoration(labelText: label),
-      );
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text('Default commission (₹ per foot)',
-            style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-        const SizedBox(height: 4),
-        const Text(
-            'Copied to new bills of this agent. Not added to bill totals.',
-            style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-        const SizedBox(height: 8),
-        _field(depth, 'Depth'),
-        const SizedBox(height: 8),
-        _field(pvc, 'PVC'),
-        const SizedBox(height: 8),
-        _field(ms, 'MS pipe'),
-      ],
-    );
-  }
-}
-
-String _rateText(double v) => v == 0 ? '' : v.toString();
-double _rateVal(TextEditingController c) => double.tryParse(c.text) ?? 0;
 
 class _AgentCard extends StatelessWidget {
   final Agent agent;
@@ -584,7 +209,8 @@ class _AgentCard extends StatelessWidget {
                       if (commissionTotal > 0 ||
                           agent.depthCommissionRate > 0 ||
                           agent.pvcCommissionRate > 0 ||
-                          agent.msPipeCommissionRate > 0) ...[
+                          agent.msPipeCommissionRate > 0 ||
+                          agent.commissionRates.isNotEmpty) ...[
                         const SizedBox(height: 4),
                         Row(
                           children: [

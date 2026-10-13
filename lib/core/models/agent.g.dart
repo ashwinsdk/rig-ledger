@@ -27,13 +27,14 @@ class AgentAdapter extends TypeAdapter<Agent> {
       depthCommissionRate: fields[7] == null ? 0.0 : fields[7] as double,
       pvcCommissionRate: fields[8] == null ? 0.0 : fields[8] as double,
       msPipeCommissionRate: fields[9] == null ? 0.0 : fields[9] as double,
+      commissionRatesJson: fields[10] == null ? '' : fields[10] as String,
     );
   }
 
   @override
   void write(BinaryWriter writer, Agent obj) {
     writer
-      ..writeByte(10)
+      ..writeByte(11)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -53,7 +54,9 @@ class AgentAdapter extends TypeAdapter<Agent> {
       ..writeByte(8)
       ..write(obj.pvcCommissionRate)
       ..writeByte(9)
-      ..write(obj.msPipeCommissionRate);
+      ..write(obj.msPipeCommissionRate)
+      ..writeByte(10)
+      ..write(obj.commissionRatesJson);
   }
 
   @override

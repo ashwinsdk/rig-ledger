@@ -26,6 +26,7 @@ class AgentsNotifier extends StateNotifier<List<Agent>> {
     double depthCommissionRate = 0,
     double pvcCommissionRate = 0,
     double msPipeCommissionRate = 0,
+    String commissionRatesJson = '',
   }) async {
     final agent = Agent(
       id: _uuid.v4(),
@@ -35,6 +36,7 @@ class AgentsNotifier extends StateNotifier<List<Agent>> {
       depthCommissionRate: depthCommissionRate,
       pvcCommissionRate: pvcCommissionRate,
       msPipeCommissionRate: msPipeCommissionRate,
+      commissionRatesJson: commissionRatesJson,
       createdAt: DateTime.now(),
       updatedAt: DateTime.now(),
       vehicleId: DatabaseService.currentVehicleId,

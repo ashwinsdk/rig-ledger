@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../database/database_service.dart';
 import '../models/ledger_types.dart';
+import 'agent_provider.dart';
 import 'ledger_provider.dart';
 
 /// The user-defined depth, PVC and MS pipe types (v2.0.1).
@@ -79,6 +80,7 @@ class LedgerTypesNotifier extends StateNotifier<LedgerTypes> {
     final table =
         c == LedgerTypeCategory.depth ? state.stepTableFor(from) : null;
     await DatabaseService.renameBillType(c, from, to);
+    await DatabaseService.renameAgentRateType(c, from, to);
     final list = [
       for (final t in state.forCategory(c)) t == from ? to : t,
     ];
@@ -86,6 +88,7 @@ class LedgerTypesNotifier extends StateNotifier<LedgerTypes> {
     if (table != null) steps[to] = table; // the renamed type keeps its table
     await _save(state.withCategory(c, _sorted(list)).copyWith(steps: steps));
     _ref.read(ledgerEntriesProvider.notifier).refresh();
+    _ref.read(agentsProvider.notifier).refresh();
     return (true, null);
   }
 
@@ -103,6 +106,8 @@ class LedgerTypesNotifier extends StateNotifier<LedgerTypes> {
       return (false, 'Keep at least one ${c.shortName} type');
     }
     final steps = {...state.steps}..remove(type);
+    await DatabaseService.removeAgentRateType(c, type);
+    _ref.read(agentsProvider.notifier).refresh();
     await _save(state.withCategory(c, [
       for (final t in state.forCategory(c))
         if (t != type) t

@@ -98,9 +98,24 @@ class _LedgerFormScreenState extends ConsumerState<LedgerFormScreen> {
   /// New bills start with the agent's default commission rates.
   void _applyAgentCommissionDefaults(Agent agent) {
     if (isEditing) return;
-    _depthCommissionController.text = _rateText(agent.depthCommissionRate);
-    _pvcCommissionController.text = _rateText(agent.pvcCommissionRate);
-    _msCommissionController.text = _rateText(agent.msPipeCommissionRate);
+    _depthCommissionController.text = _rateText(agent.rateFor('depth', _depth));
+    _pvcCommissionController.text = _rateText(agent.rateFor('pvc', _pvc));
+    _msCommissionController.text = _rateText(agent.rateFor('ms', _msPipe));
+    _updateCommission();
+  }
+
+  /// A type changed: the commission rate follows the agent's price for the
+  /// new type, unless the rate was typed by hand (it no longer equals the
+  /// agent's price for the old type).
+  void _followTypePrice(String category, String oldType, String newType,
+      TextEditingController c) {
+    final agent = _selectedAgent;
+    if (agent == null) return;
+    final typed = double.tryParse(c.text) ?? 0;
+    if (c.text.trim().isNotEmpty && typed != agent.rateFor(category, oldType)) {
+      return;
+    }
+    c.text = _rateText(agent.rateFor(category, newType));
     _updateCommission();
   }
 
@@ -697,9 +712,12 @@ class _LedgerFormScreenState extends ConsumerState<LedgerFormScreen> {
                           .toList(),
                       onChanged: (value) {
                         if (value != null) {
+                          final old = _depth;
                           setState(() {
                             _depth = value;
                           });
+                          _followTypePrice(
+                              'depth', old, value, _depthCommissionController);
                           _updateStepRate();
                         }
                       },
@@ -810,9 +828,12 @@ class _LedgerFormScreenState extends ConsumerState<LedgerFormScreen> {
                           .toList(),
                       onChanged: (value) {
                         if (value != null) {
+                          final old = _pvc;
                           setState(() {
                             _pvc = value;
                           });
+                          _followTypePrice(
+                              'pvc', old, value, _pvcCommissionController);
                         }
                       },
                     ),
@@ -867,9 +888,12 @@ class _LedgerFormScreenState extends ConsumerState<LedgerFormScreen> {
                           .toList(),
                       onChanged: (value) {
                         if (value != null) {
+                          final old = _msPipe;
                           setState(() {
                             _msPipe = value;
                           });
+                          _followTypePrice(
+                              'ms', old, value, _msCommissionController);
                         }
                       },
                     ),

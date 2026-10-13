@@ -147,6 +147,7 @@ decision.
 | depthCommissionRate | double | HiveField 7, v2.0.0 default commission Rs per foot of depth |
 | pvcCommissionRate | double | HiveField 8, v2.0.0 |
 | msPipeCommissionRate | double | HiveField 9, v2.0.0 |
+| commissionRatesJson | String | HiveField 10, v2.0.1 JSON map of per-type prices keyed `depth:9inch`, `pvc:7inch`, `ms:6inch`; default ''. `rateFor(category, type)` returns the type price or falls back to the matching default rate above. Renaming or deleting a ledger type updates the keys (`DatabaseService.renameAgentRateType`/`removeAgentRateType`). |
 | name | String | Broker/agent display name |
 | createdAt | DateTime | |
 | updatedAt | DateTime | |
