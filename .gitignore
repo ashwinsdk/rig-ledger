@@ -82,3 +82,15 @@ coverage/
 # Temp
 temp/
 android/app/google-services.json
+
+# Dependencies of the mockup QA scripts
+node_modules/
+
+# Local debug signing key (see docs/ANDROID_SIGNING.md)
+/android/app/debug.keystore
+
+# Design references: screenshots of real test data, third-party reference
+# images and QA output stay local. The mockup in docs/design/ref/mockup-v1 is kept.
+docs/design/ref/*.png
+docs/design/ref/apple-ref/
+docs/design/ref/qa/
