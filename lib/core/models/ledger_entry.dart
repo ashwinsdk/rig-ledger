@@ -343,6 +343,10 @@ class LedgerEntry extends HiveObject {
     };
   }
 
+  /// Types of a category as text, for cards and exports: '7inch' or
+  /// '7inch + 8inch'.
+  String typeLabel(String category) => typesOf(category).join(' + ');
+
   /// Total feet of one category.
   double feetOf(String category) =>
       linesOf(category).fold(0.0, (a, l) => a + l.feet);
@@ -630,14 +634,14 @@ class LedgerEntry extends HiveObject {
       billNumber,
       agentName,
       address,
-      depth,
+      typeLabel('depth'),
       depthInFeet.toString(),
       depthPerFeetRate.toString(),
       stepRate.toString(),
-      pvc,
+      typeLabel('pvc'),
       pvcInFeet.toString(),
       pvcPerFeetRate.toString(),
-      msPipe,
+      typeLabel('ms'),
       msPipeInFeet.toString(),
       msPipePerFeetRate.toString(),
       extraCharges.toString(),

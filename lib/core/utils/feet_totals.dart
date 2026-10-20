@@ -1,4 +1,5 @@
 import '../models/ledger_entry.dart';
+import '../models/ledger_line.dart';
 import '../models/ledger_types.dart';
 
 /// Feet drilled and laid by type, for the ledger summary and the PDF report.
@@ -35,12 +36,20 @@ class FeetTotals {
     final ms = {for (final t in types.ms) t: 0.0};
     var msTotal = 0.0;
     var depthTotal = 0.0;
+    // Every line counts under its own type (a bill can have several).
     for (final e in entries) {
-      depth[e.depth] = (depth[e.depth] ?? 0) + e.depthInFeet;
-      pvc[e.pvc] = (pvc[e.pvc] ?? 0) + e.pvcInFeet;
-      ms[e.msPipe] = (ms[e.msPipe] ?? 0) + e.msPipeInFeet;
-      msTotal += e.msPipeInFeet;
-      depthTotal += e.depthInFeet;
+      for (final l in e.lines) {
+        switch (l.category) {
+          case LedgerLine.depth:
+            depth[l.type] = (depth[l.type] ?? 0) + l.feet;
+            depthTotal += l.feet;
+          case LedgerLine.pvc:
+            pvc[l.type] = (pvc[l.type] ?? 0) + l.feet;
+          case LedgerLine.ms:
+            ms[l.type] = (ms[l.type] ?? 0) + l.feet;
+            msTotal += l.feet;
+        }
+      }
     }
     return FeetTotals(
         depth: depth,

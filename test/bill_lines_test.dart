@@ -5,6 +5,7 @@ import 'package:rig_ledger/core/database/database_service.dart';
 import 'package:rig_ledger/core/models/ledger_entry.dart';
 import 'package:rig_ledger/core/models/ledger_line.dart';
 import 'package:rig_ledger/core/models/ledger_types.dart';
+import 'package:rig_ledger/core/utils/feet_totals.dart';
 
 LedgerEntry bill({String id = 'b1', String? linesJson}) {
   final now = DateTime(2026, 5, 1);
@@ -104,6 +105,36 @@ void main() {
       final old = bill().toMap()..remove('linesJson');
       expect(LedgerEntry.fromMap(old).linesJson, isNull);
       expect(LedgerEntry.fromMap(old).lines.length, 2);
+    });
+  });
+
+  group('lines elsewhere', () {
+    final two = bill().withLines(const [
+      LedgerLine(category: 'depth', type: '7inch', feet: 200, rate: 10),
+      LedgerLine(category: 'depth', type: '8inch', feet: 150, rate: 12),
+      LedgerLine(category: 'pvc', type: '7inch', feet: 30, rate: 5),
+      LedgerLine(category: 'pvc', type: '8inch', feet: 20, rate: 5),
+      LedgerLine(category: 'ms', type: '6inch', feet: 10, rate: 50),
+    ]);
+
+    test('feet totals count every line under its own type', () {
+      final t =
+          FeetTotals.compute([two, bill(id: 'b2')], LedgerTypes.defaults());
+      expect(t.depth['7inch'], 300); // 200 + the old bill's 100
+      expect(t.depth['8inch'], 150);
+      expect(t.pvc['7inch'], 30);
+      expect(t.pvc['8inch'], 40); // 20 + the old bill's 20
+      expect(t.ms['6inch'], 10);
+      expect(t.depthTotal, 450);
+      expect(t.msPipeTotal, 10);
+    });
+
+    test('type text and csv show every type', () {
+      expect(two.typeLabel('depth'), '7inch + 8inch');
+      final row = two.toCsvRow();
+      expect(row[4], '7inch + 8inch');
+      expect(row[5], '350.0');
+      expect(bill().typeLabel('depth'), '7inch');
     });
   });
 

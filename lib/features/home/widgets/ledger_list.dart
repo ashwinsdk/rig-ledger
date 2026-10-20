@@ -182,23 +182,21 @@ class _LedgerEntryCard extends ConsumerWidget {
                 ),
                 const SizedBox(height: 12),
                 // Second row: Depth, PVC
-                Row(
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 6,
                   children: [
                     _InfoChip(
                       icon: Icons.straighten,
                       label: 'Depth',
-                      value: isSideBore
-                          ? '${entry.depthInFeet}ft'
-                          : '${entry.depthInFeet}ft (${entry.depth})',
+                      value: _depthText(entry, isSideBore),
                     ),
-                    if (!isSideBore) ...[
-                      const SizedBox(width: 12),
+                    if (!isSideBore)
                       _InfoChip(
                         icon: Icons.format_paint_outlined,
                         label: 'PVC',
-                        value: entry.pvc,
+                        value: entry.typeLabel('pvc'),
                       ),
-                    ],
                   ],
                 ),
                 const SizedBox(height: 12),
@@ -248,6 +246,14 @@ class _LedgerEntryCard extends ConsumerWidget {
     );
   }
 
+  /// '350ft (7inch)', or one part per depth line: '200ft (7inch) + 150ft (8inch)'.
+  static String _depthText(LedgerEntry e, bool isSideBore) {
+    if (isSideBore) return '${e.depthInFeet}ft';
+    final lines = e.linesOf('depth').where((l) => l.feet > 0).toList();
+    if (lines.length <= 1) return '${e.depthInFeet}ft (${e.depth})';
+    return lines.map((l) => '${l.feet}ft (${l.type})').join(' + ');
+  }
+
   void _openEditForm(BuildContext context, WidgetRef ref) {
     final currentVehicle = ref.read(currentVehicleProvider);
     final isSideBore = currentVehicle?.vehicleType == VehicleType.sideBore;
@@ -274,9 +280,9 @@ class _CommissionStrip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final parts = <String, double>{
-      'Depth': entry.depthInFeet * entry.depthCommissionRate,
-      if (!isSideBore) 'PVC': entry.pvcInFeet * entry.pvcCommissionRate,
-      if (!isSideBore) 'MS': entry.msPipeInFeet * entry.msPipeCommissionRate,
+      'Depth': entry.commissionOf('depth'),
+      if (!isSideBore) 'PVC': entry.commissionOf('pvc'),
+      if (!isSideBore) 'MS': entry.commissionOf('ms'),
     }..removeWhere((_, v) => v <= 0);
     return Container(
       width: double.infinity,

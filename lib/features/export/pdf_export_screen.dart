@@ -91,7 +91,10 @@ class _PdfExportScreenState extends ConsumerState<PdfExportScreen> {
           getValue: (e) => e.address,
           flex: 1.0),
       PdfColumn(
-          id: 'depthType', label: 'Depth', getValue: (e) => e.depth, flex: 0.5),
+          id: 'depthType',
+          label: 'Depth',
+          getValue: (e) => e.typeLabel('depth'),
+          flex: 0.5),
       PdfColumn(
           id: 'depthFeet',
           label: 'Depth ft',
@@ -107,7 +110,11 @@ class _PdfExportScreenState extends ConsumerState<PdfExportScreen> {
           label: 'Step Rate',
           getValue: (e) => _currencyFormat.format(e.stepRate),
           flex: 0.6),
-      PdfColumn(id: 'pvcType', label: 'PVC', getValue: (e) => e.pvc, flex: 0.5),
+      PdfColumn(
+          id: 'pvcType',
+          label: 'PVC',
+          getValue: (e) => e.typeLabel('pvc'),
+          flex: 0.5),
       PdfColumn(
           id: 'pvcFeet',
           label: 'PVC ft',
@@ -121,7 +128,7 @@ class _PdfExportScreenState extends ConsumerState<PdfExportScreen> {
       PdfColumn(
           id: 'msPipeType',
           label: 'MS Type',
-          getValue: (e) => e.msPipe,
+          getValue: (e) => e.typeLabel('ms'),
           flex: 0.5),
       PdfColumn(
           id: 'msPipeFeet',

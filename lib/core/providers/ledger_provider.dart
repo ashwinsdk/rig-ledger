@@ -240,12 +240,15 @@ final filteredLedgerEntriesProvider = Provider<List<LedgerEntry>>((ref) {
   }
 
   if (filter.depthType != null) {
-    filtered =
-        filtered.where((entry) => entry.depth == filter.depthType).toList();
+    filtered = filtered
+        .where((entry) => entry.typesOf('depth').contains(filter.depthType))
+        .toList();
   }
 
   if (filter.pvcType != null) {
-    filtered = filtered.where((entry) => entry.pvc == filter.pvcType).toList();
+    filtered = filtered
+        .where((entry) => entry.typesOf('pvc').contains(filter.pvcType))
+        .toList();
   }
 
   // Sort by date descending
