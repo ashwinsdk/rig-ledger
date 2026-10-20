@@ -113,9 +113,16 @@ class _PortfolioViewState extends ConsumerState<PortfolioView> {
     for (final b in bills) {
       agentNames[b.agentId] = b.agentName;
     }
-    if (_agentId != null && !agentNames.containsKey(_agentId)) {
+    final known = ref.watch(agentsProvider);
+    if (_agentId != null &&
+        !agentNames.containsKey(_agentId) &&
+        !known.any((a) => a.id == _agentId)) {
       _agentId = null;
     }
+    final selectedName = _agentId == null
+        ? null
+        : (agentNames[_agentId] ??
+            known.where((a) => a.id == _agentId).firstOrNull?.name);
 
     final s = PortfolioCalculator.compute(
       bills: bills,
@@ -143,37 +150,42 @@ class _PortfolioViewState extends ConsumerState<PortfolioView> {
             },
           ),
           const SizedBox(height: 12),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: ChoiceChip(
-                    label: const Text('All agents'),
-                    side: BorderSide(
-                        color: _agentId == null
-                            ? AppColors.primary
-                            : AppColors.border),
-                    selected: _agentId == null,
-                    onSelected: (_) => setState(() => _agentId = null),
-                  ),
+          _AgentFilterPill(
+            label: selectedName ?? 'All agents',
+            selected: _agentId != null,
+            onTap: () async {
+              final all = ref.read(agentsProvider);
+              final rows = PortfolioCalculator.compute(
+                bills: bills,
+                diesel: const [],
+                pvc: const [],
+                bit: const [],
+                hammer: const [],
+                start: widget.start,
+                end: widget.end,
+              ).agents;
+              final picked = await showModalBottomSheet<({String? id})>(
+                context: context,
+                isScrollControlled: true,
+                shape: const RoundedRectangleBorder(
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
                 ),
-                for (final e in agentNames.entries)
-                  Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: ChoiceChip(
-                      label: Text(e.value),
-                      side: BorderSide(
-                          color: _agentId == e.key
-                              ? AppColors.primary
-                              : AppColors.border),
-                      selected: _agentId == e.key,
-                      onSelected: (_) => setState(() => _agentId = e.key),
-                    ),
-                  ),
-              ],
-            ),
+                builder: (_) => _AgentFilterSheet(
+                  agents: [
+                    for (final a in all) (id: a.id, name: a.name),
+                    // an agent that was deleted but still has bills
+                    for (final e in agentNames.entries)
+                      if (!all.any((a) => a.id == e.key))
+                        (id: e.key, name: e.value),
+                  ],
+                  rows: {for (final r in rows) r.agentId: r},
+                  selectedId: _agentId,
+                ),
+              );
+              if (picked != null && mounted) {
+                setState(() => _agentId = picked.id);
+              }
+            },
           ),
           const SizedBox(height: 16),
           if (s.expensesApply) _ProfitCard(s: s) else const _NoExpensesNote(),
@@ -210,6 +222,175 @@ class _PortfolioViewState extends ConsumerState<PortfolioView> {
           const SizedBox(height: 16),
           const _DefinitionsCard(),
         ],
+      ),
+    );
+  }
+}
+
+/// "Agent: All agents" pill that opens the searchable agent list.
+class _AgentFilterPill extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+  const _AgentFilterPill(
+      {required this.label, required this.selected, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(24),
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 44),
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          decoration: BoxDecoration(
+            color: selected
+                ? AppColors.primary.withValues(alpha: 0.1)
+                : AppColors.surface,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(
+                color: selected ? AppColors.primary : AppColors.border),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.person_outline,
+                  size: 18, color: AppColors.textSecondary),
+              const SizedBox(width: 8),
+              const Text('Agent: ',
+                  style:
+                      TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+              Flexible(
+                child: Text(label,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                        fontSize: 13, fontWeight: FontWeight.w600)),
+              ),
+              const Icon(Icons.arrow_drop_down, color: AppColors.textSecondary),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Searchable list of every agent with the bill count and total of the period.
+class _AgentFilterSheet extends StatefulWidget {
+  final List<({String id, String name})> agents;
+  final Map<String, AgentPortfolioRow> rows;
+  final String? selectedId;
+  const _AgentFilterSheet(
+      {required this.agents, required this.rows, required this.selectedId});
+
+  @override
+  State<_AgentFilterSheet> createState() => _AgentFilterSheetState();
+}
+
+class _AgentFilterSheetState extends State<_AgentFilterSheet> {
+  final _search = TextEditingController();
+
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final q = _search.text.trim().toLowerCase();
+    final list = widget.agents
+        .where((a) => q.isEmpty || a.name.toLowerCase().contains(q))
+        .toList()
+      ..sort((a, b) {
+        final x = widget.rows[a.id]?.total ?? 0;
+        final y = widget.rows[b.id]?.total ?? 0;
+        final c = y.compareTo(x);
+        return c != 0 ? c : a.name.compareTo(b.name);
+      });
+
+    Widget row(String? id, String name, String sub) {
+      final on = widget.selectedId == id;
+      return ListTile(
+        title: Text(name,
+            style: TextStyle(
+                fontWeight: on ? FontWeight.w700 : FontWeight.w500,
+                color: on ? AppColors.primary : AppColors.textPrimary)),
+        subtitle: Text(sub, style: const TextStyle(fontSize: 12)),
+        trailing: on ? const Icon(Icons.check, color: AppColors.primary) : null,
+        onTap: () => Navigator.pop(context, (id: id)),
+      );
+    }
+
+    return Padding(
+      padding:
+          EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      child: SafeArea(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.8),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 12),
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.border,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const Padding(
+                padding: EdgeInsets.fromLTRB(20, 16, 20, 8),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text('Filter by agent',
+                      style:
+                          TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: TextField(
+                  controller: _search,
+                  onChanged: (_) => setState(() {}),
+                  decoration: const InputDecoration(
+                    hintText: 'Search agents',
+                    prefixIcon: Icon(Icons.search),
+                  ),
+                ),
+              ),
+              Flexible(
+                child: ListView(
+                  shrinkWrap: true,
+                  children: [
+                    if (q.isEmpty)
+                      row(null, 'All agents',
+                          '${widget.rows.values.fold<int>(0, (n, r) => n + r.bills)} bills'),
+                    for (final a in list)
+                      row(
+                          a.id,
+                          a.name,
+                          widget.rows[a.id] == null
+                              ? 'no bills'
+                              : '${widget.rows[a.id]!.bills} '
+                                  '${widget.rows[a.id]!.bills == 1 ? 'bill' : 'bills'}'
+                                  ' | ₹${_money.format(widget.rows[a.id]!.total)}'),
+                    if (list.isEmpty)
+                      const Padding(
+                        padding: EdgeInsets.all(24),
+                        child: Center(child: Text('No agent matches')),
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        ),
       ),
     );
   }
