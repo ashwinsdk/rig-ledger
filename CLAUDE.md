@@ -17,6 +17,7 @@ No iOS. No web. No flavors. No named routes. No l10n. English only. No emojis. N
 4. If starting work on a provider or service, read `.claude/context/ARCHITECTURE.md` first.
 5. If starting work on any UI, read `.claude/context/CONVENTIONS.md` first.
 6. If starting a feature list, resuming after interruption, adding a model field/provider/screen, or preparing a release, read `.claude/context/PLAYBOOKS.md` first.
+7. UI revamp tasks (ids T-B, T-D, T-F, T-S, T-X, T-P, T-Z in `docs/design/MIGRATION_PLAN.md`): for the active task read ONLY the documents that `docs/design/INDEX.md` lists for that task id (and the ones the task itself names). Do not open the other design documents. macOS code is frozen during the revamp: never edit or delete `macos/`, `desktop_shell.dart` or `desktop_auth_service.dart`.
 
 ## Mandatory session end checklist
 

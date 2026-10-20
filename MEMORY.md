@@ -1,6 +1,6 @@
 # RigLedger - Session Memory
 
-Last updated: 2026-10-12 (v2.0.0 feature work)
+Last updated: 2026-10-20 (v2.0.2 done, Apple-style design mockup)
 
 ## Current versions
 
@@ -21,10 +21,30 @@ Last updated: 2026-10-12 (v2.0.0 feature work)
 
 - Done: Account Ledger (tab 4, Settings is tab 5), payment log with receiver books (`PaymentLinkService`), commission, Portfolio (former Stats tab), side bore fixes (no PVC, location suggestions), About screen and proprietary LICENSE, import from the cashbook app, schemaVersion 5. Every task is committed; see `CURRENT.md` and `docs/features/cashbook/PARITY_STATUS.md`.
 - Review: `docs/v2.0.0-review.md` (tested, not tested, bugs fixed, open bugs, improvements). Open items copied to `BACKLOG.md`.
-- Decisions to confirm with the developer: commission formula (ft x rate per ft), profit definition, LICENSE copyright line, Rs. vs the rupee sign.
+- Decisions to confirm with the developer: commission formula (ft x rate per ft), profit definition, LICENSE copyright line. (Rs. vs the rupee sign: decided 2026-10-13, rupee sign everywhere, LR-24.)
 - Not verifiable here: running the macOS app (needs `macos/Runner/GoogleService-Info.plist`), real Drive sync, camera/gallery bills.
 - Gotchas learned: dialogs must own their TextEditingControllers (dispose in State, never right after `await showDialog`); widget tests that touch Hive must wait on real time (`runAsync`) and must not call `Hive.close()`; `flutter test` runs on the macOS host so `PlatformHelper.isDesktop` is true in tests.
-- Hive typeIds in use: 0-11 (2 CashBook, 3 CashEntry, 11 CashNote; next free 12).
+- Hive typeIds in use: 0-12 (2 CashBook, 3 CashEntry, 11 CashNote, 12 OtherExpenseEntry; next free 13).
+
+## v2.0.1 (version 2.0.1+6, all 11 bugs implemented, T-H01..T-H15 done)
+
+- Review and what changed: `docs/v2.0.1-review.md`. Schema 6. New Hive typeId 12 (OtherExpenseEntry, next free 13). Agent HiveField 10 (`commissionRatesJson`). Ledger types stored as JSON in the settings box (`ledgerTypes`).
+- Gotchas: widget tests that use Hive need one database per test file (two files' worth in one file hung); `LedgerTypes.shortLabel` gives `7"`; the mobile Agents tab is gone but `agents_screen.dart` and `desktop_shell.dart` (frozen) still use it; `desktop_shell.dart` rig switch does not refresh `otherExpenseEntriesProvider`.
+- Not verified: any of the new UI on a device, real file save on Android 11+, Drive sync with new keys.
+
+## v2.0.2 (version 2.0.2+7, T-J01..T-J06 done)
+
+- Review: `docs/v2.0.2-review.md`. Schema 7. `LedgerEntry.linesJson` (HiveField 38) with `LedgerLine` (depth/pvc/ms lines per bill); single-type fields stay as aggregates (`withLines`). Step rate per depth line, commission per line.
+- Gotchas: agent dialogs opened from a sheet must use the caller's context and ref, never the sheet's; widget test files with Hive and several tests can hang, keep one DB and few tests per file and pump twice after opening a sheet; the side bore form has no types (lines have feet, rate, commission rate only).
+- Not verified: any of it on a device. Both mockups were updated to 2.0.2 (Apple one: new QA baseline `qa/logic-baseline-v2.0.2.txt` and `qa/flows.mjs`).
+
+## Apple-style design mockup (design only, no lib/ changes)
+
+- `docs/design/mockup/rigledger_apple_mockup.html` is the visual source of truth for the later Flutter restyle (light, dark, Android phone 412 x 892 and 360 x 800 dp). Baseline: `docs/design/ref/mockup-v1/rigledger_android_mockup.html` (ignored by git, untouched). References and QA output: `docs/design/ref/` (never commit).
+- Docs: `docs/design/mockup/TOKENS.md`, `MOCKUP_NOTES.md`, `MOCKUP_PROGRESS.md` (resume file, open questions), `docs/design/DESIGN_DIRECTION_APPLE.md`. New logic requests LR-21 to LR-24 are in `docs/design/LOGIC_REQUESTS.md`.
+- Checks: `docs/design/mockup/qa/` (`logic-diff.mjs`, `token-audit.mjs`, `smoke.mjs`, `shoot.mjs`); run `npm install` there first (node_modules is ignored). All pass in light, dark, STRESS data, 200 percent text, 360 dp, 3-button nav and blur on. The app is Android only: macOS was dropped from the plan (CSS in `docs/design/mockup/archive/`). Glass blur ships OFF; profile on the reference device first.
+- Decided 2026-10-13: keep AA text colour variants, rupee sign everywhere (LR-24), Appearance setting System by default (LR-23), Portfolio metric cards first and insight cards after LR-21 and LR-22. Open: card gap 11 vs 12, flag for sticky headers and blur.
+- Gotchas: Pillow is not installed for python3.14 (use `/opt/homebrew/bin/python3.12` with a `--target` dir); the path guard blocks paths containing `build/`.
 
 ## Left unfinished
 

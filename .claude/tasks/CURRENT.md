@@ -13,6 +13,52 @@ Resume notes:
 Commit:
 ```
 
+## v2.0.2 PLAN (source: developer list of 2026-10-20, Flutter app only, APPROVED decisions 2026-10-20)
+
+Decisions: step rate is worked out separately for each depth line (each line like its own entry, its own type table, feet counted from 0); each line has its own commission rate filled from the agent price of the line type (editable); Portfolio agent filter becomes a dropdown with search. Rules as in v2.0.1 (no macos, no push, one commit per task, no Co-Authored-By). One Hive change: LedgerEntry.linesJson (HiveField 38), schema 6 -> 7.
+
+## T-J01 Agent edit and delete from the Portfolio sheet fail (bug 1) [DONE]
+Goal: Save in Edit agent (opened from the agent detail sheet) throws StateError because the dialog reuses the closed sheet's ref and context. Open the dialogs with the Agents section's own context and ref. Test drives sheet, Edit, Save and Delete.
+Files: lib/features/portfolio/portfolio_view.dart, test/agent_portfolio_flow_test.dart
+Depends: none
+Resume notes: root cause reproduced (StateError, ref used after the sheet closed). The sheet now takes onEdit and onDelete callbacks bound to the Agents section's context and ref. test/agent_portfolio_flow_test.dart covers add with custom prices, edit from the sheet and delete. Test note: pump twice after opening a sheet or dialog before tapping inside it.
+Commit: Fix agent edit and delete from the Portfolio detail sheet
+
+## T-J02 Portfolio agent filter as a dropdown with search (bug 2) [DONE]
+Goal: replace the scrolling chip row with one "Agent: All agents" pill that opens a searchable sheet listing every agent (also ones without bills) with bill count and total for the period; selecting filters the Overview; resets on scope or rig change.
+Files: lib/features/portfolio/portfolio_view.dart, test
+Depends: T-J01
+Resume notes: the chip row is replaced by an 'Agent: All agents' pill (_AgentFilterPill) that opens _AgentFilterSheet (search box, All agents row, every agent with bill count and total, agents without bills included, deleted agents that still have bills kept). A chosen agent with no bills stays selected. test/agent_filter_test.dart (own file: a fourth test in the flow file hung). 106 tests pass.
+Commit: Add searchable agent filter to Portfolio
+
+## T-J03 Bill lines model (update 1, part 1) [DONE] [HIVE/SYNC FLAG]
+Goal: LedgerLine (category depth|pvc|ms, type, feet, rate, commissionRate) stored as JSON in LedgerEntry.linesJson (HiveField 38). Legacy fields stay as aggregates (feet sums, first type) so old readers and exports keep working. Helpers: lines (synthesised from legacy fields when empty), amounts per category, step rate per depth line (own table, own feet), commission per line, copyWith, toMap/fromMap, ledger type rename/delete/count handle lines, schema 7, MODELS.md, tests (compat: old bills load as single lines).
+Files: lib/core/models/ledger_line.dart, ledger_entry.dart (+ build_runner), database_service.dart, ledger_types_provider.dart, MODELS.md, tests
+Depends: T-J01
+Resume notes: LedgerLine (plain class), LedgerEntry.linesJson (HiveField 38, build_runner done), lines/linesOf/typesOf/feetOf/commissionOf, calculateLinesStepRate (per line), calculateLinesTotal, calculateLinesCommission, withLines (keeps legacy fields as aggregates), toMap/fromMap/copyWith, DatabaseService count/used/rename see lines, schemaVersion 7, MODELS.md. test/bill_lines_test.dart. 111 tests pass.
+Commit: Add multiple depth, PVC and MS lines to bills
+
+## T-J04 Bill form with several lines (update 1, part 2) [DONE]
+Goal: main bore form: depth, PVC and MS pipe sections each hold one or more lines (type, feet, rate; add and remove), auto step rate summed per depth line, commission per line from the agent price, preview and totals from lines. Side bore form: depth lines only. Editing an old bill shows its single line per category.
+Files: lib/features/ledger_form/ledger_form_screen.dart, side_bore_form_screen.dart, widgets/line_editor.dart, commission_section.dart, tests
+Depends: T-J03
+Resume notes: new widgets/line_editor.dart (LineController, LinesSection with showType flag); CommissionSection now takes CommissionRow list (one rate field per line, breakdown by kind). Main form: Depth, PVC and MS pipe each hold a list of lines (add and remove), step rate is the sum per depth line, total and commission from lines, preview shows each line, agent price fills each line by its type, save uses withLines (empty PVC/MS lines are dropped, depth keeps one). Side bore form: depth lines only without types (side bore has no types, so rename and delete rules do not apply to it). Tests: bill_lines_form_test, side_bore_lines_test (own DB each), commission and bill tests updated. 113 tests pass.
+Commit: Edit several depth, PVC and MS lines in the bill form
+
+## T-J05 Lines everywhere else (update 1, part 3) [DONE] [EXPORT FLAG]
+Goal: feet totals and the Ledger feet drop down, filter sheet (matches any line), bill cards (all lines shown), commission strip per kind from lines, PDF and CSV export (summed amounts, line text), CSV import (one line per category), Portfolio unaffected.
+Files: feet_totals.dart, filter_sheet.dart, ledger_list.dart, ledger_provider.dart, pdf_export_screen.dart, csv_export_screen.dart, csv_import_screen.dart, tests
+Depends: T-J04
+Resume notes: FeetTotals counts every line under its own type (also ms per type); ledger filter matches any line type; bill card shows each depth line ('200ft (7inch) + 150ft (8inch)') and all PVC types, commission strip per kind from lines; PDF type columns and CSV type cells show '7inch + 8inch', feet and rate columns keep the sums and average rate; CSV import unchanged (one line per category, built from the single-type fields). test/bill_lines_test.dart extended. 115 tests pass.
+Commit: Show and export bill lines in the ledger
+
+## T-J06 Version 2.0.2 and release notes [DONE]
+Goal: pubspec 2.0.2+7, README changelog, docs/v2.0.2-review.md, MEMORY.md.
+Files: pubspec.yaml, README.md, docs/v2.0.2-review.md, MEMORY.md
+Depends: all
+Resume notes: pubspec 2.0.2+7, README changelog, docs/v2.0.2-review.md, MEMORY.md updated.
+Commit: Bump version to 2.0.2+7
+
 ## v2.0.1 PLAN (source: developer bug list of 2026-10-13, Flutter app only, APPROVED 2026-10-13)
 
 Rules for this plan: no `macos/`, `desktop_shell.dart` or `desktop_auth_service.dart` edits (frozen; `agents_screen.dart` stays because the desktop shell imports it). One Hive schema bump for the whole release: 5 -> 6, done in the first task that needs it (T-H06 or T-H10, whichever runs first). Every task: `flutter analyze`, update MODELS.md/ARCHITECTURE.md when a model or box changes, commit, never push. Order is by dependency.
@@ -69,60 +115,60 @@ Depends: T-H06
 Resume notes: bill form dropdowns use the lists (the bill's own type is always selectable), defaults are the first of each list, step rate gets the chosen table; filter sheet lists the types; new lib/core/utils/feet_totals.dart (FeetTotals: per type in list order, unknown types kept, depthTotal for side bore) used by feetTotalsProvider, the summary row (tiles now scroll sideways) and both PDF summary blocks (pw.Wrap); CSV import normalises sizes ('8 inch' -> '8inch', empty -> list default) and adds new sizes to the lists; CSV and PDF type columns unchanged. Side bore form untouched (placeholders, total depth from all feet). test/ledger_types_use_test.dart. Not verified on a device.
 Commit: Use user-defined ledger types across screens and exports
 
-## T-H08 Agent commission per type (bug 3) [PENDING] [HIVE FLAG]
+## T-H08 Agent commission per type (bug 3) [DONE] [HIVE FLAG]
 Goal: an agent has a static price per foot for each depth type, each PVC type and each MS pipe type, plus the existing three numbers kept as the fallback for types without a price. New `Agent.commissionRatesJson` (HiveField 10, key `depth:7inch`), helpers `rateFor(category, type)`, new agent dialogs with a per-type editor, forms re-apply the agent price whenever the agent or a type changes (unless the rate was typed). Bills keep their three stored rates, so old bills, totals and exports are untouched. Rename and delete of a type update the map (T-H06 rules).
 Files: agent.dart (+ build_runner), agent_provider.dart, agents_screen.dart dialogs (extract to lib/features/agents/agent_dialogs.dart), ledger_form_screen.dart, side_bore_form_screen.dart, MODELS.md, tests (map round trip, fallback, old backup)
 Depends: T-H06
-Resume notes:
+Resume notes: Agent HiveField 10 commissionRatesJson, rateFor with fallback to the three old rates, shared agent_dialogs.dart (add/edit/delete with per-type price fields), ledger form follows the agent price when agent or type changes (hand-typed rates kept), rename/delete of a type updates agent price keys. Side bore form not changed: it reuses the same form defaults path only for depth (verify in T-H09). Tests: agent_commission_types_test (unit), agent_commission_widgets_test (dialog), agent_commission_bill_test (form); one widget DB per file. 94 tests pass.
 Commit: Add per-type commission prices to agents
 
-## T-H09 Commission clearly visible on each ledger entry (bug 6) [PENDING]
+## T-H09 Commission clearly visible on each ledger entry (bug 6) [DONE]
 Goal: in the bill form the commission section shows separate totals (Depth, PVC, MS pipe, Total commission, marked "manual" when overridden) in a read-only breakdown, commission rows appear in the Calculation Preview under a "not in total" divider, and the bill card shows separate commission chips instead of one weak chip.
 Files: commission_section.dart, ledger_form_screen.dart (about 969-989 and 1088-1146), side_bore_form_screen.dart, ledger_list.dart (about 235-247)
 Depends: T-H08
-Resume notes:
+Resume notes: CommissionSection has a read-only breakdown (Depth, PVC, MS, Total commission with a 'manual' tag; used by both forms), main form Calculation Preview has a 'Commission (not in total)' block, bill card shows a commission strip (total, manual marker, per kind amounts). test/commission_breakdown_test.dart. 95 tests pass.
 Commit: Show commission breakdown on bill form and card
 
-## T-H10 Other expenses: model, database, sync, providers (bug 5, part 1) [PENDING] [HIVE/SYNC FLAG]
+## T-H10 Other expenses: model, database, sync, providers (bug 5, part 1) [DONE] [HIVE/SYNC FLAG]
 Goal: new side ledger category "Other expenses" for both rig types. `OtherExpenseEntry` (typeId 12; id, vehicleId, date, billNumber optional, description required, total, paid, pending, balance, paidDate, notes, createdAt, updatedAt), box `other_expense_entries`, CRUD with tombstones, backup and restore (missing key defaults to empty), clear-all, rig delete cascade, Drive merge, provider, 9th refresh call at every refresh site, schema 6 (if not already bumped).
 Files: new lib/core/models/other_expense_entry.dart (+ build_runner), database_service.dart, sync_service.dart, side_ledger_provider.dart, sync_provider.dart, settings_screen.dart, vehicle_management_screen.dart, combined_home_screen.dart, main_navigation.dart, MODELS.md, ARCHITECTURE.md, CONVENTIONS.md (refresh list), tests (model round trip, sync merge)
 Depends: none
-Resume notes:
+Resume notes: OtherExpenseEntry typeId 12 (+ .g.dart), box, CRUD with tombstones, backup/restore (missing key ok), clearAll, rig delete cascade, sync merge, otherExpenseEntriesProvider and filter, refresh added at sync, restore, clear, rig switch, vehicle management and main_navigation sites. desktop_shell.dart is frozen so its rig switch does not refresh the new provider (Android only app). test/other_expense_test.dart.
 Commit: Add Other expenses model, storage and sync
 
-## T-H11 Other expenses: side ledger screens (bug 5, part 2) [PENDING]
+## T-H11 Other expenses: side ledger screens (bug 5, part 2) [DONE]
 Goal: Other expenses card and mini stat on the Side Ledger tab, an Other option in the Add Entry sheet, form and list screens modelled on Diesel. Show for main bore and side bore. Fix `_getEntryDate` so the time filter works for the new type.
 Files: new lib/features/side_ledger/other/other_expense_form_screen.dart and other_expense_list_screen.dart, combined_home_screen.dart (about 493-830 and 990-996), main_navigation.dart (Add Entry sheet)
 Depends: T-H10
-Resume notes:
+Resume notes: OtherExpenseFormScreen (description required, bill number optional, amount, paid, pending, paid date, notes) and OtherExpenseListScreen (summary card, date range filter, cards, delete) under lib/features/side_ledger/other/; Side Ledger tab has an Other mini stat and an 'Other expenses' card for both rig types; Add Entry sheet has Other (now a Wrap); _getEntryDate handles the new type. side_ledger_screen.dart is unused so not changed. 99 tests pass. Not verified on a device.
 Commit: Add Other expenses screens to the Side Ledger
 
-## T-H12 Other expenses in Portfolio, Stats and exports (bug 5, part 3) [PENDING] [EXPORT FLAG]
+## T-H12 Other expenses in Portfolio, Stats and exports (bug 5, part 3) [DONE] [EXPORT FLAG]
 Goal: Portfolio expenses breakdown and profit include Other expenses; Stats gets a pie and a stats card; CSV and PDF exports get the new type.
 Files: portfolio_provider.dart, portfolio_calculator.dart, portfolio_view.dart, stats_screen.dart, csv_export_screen.dart, pdf_export_screen.dart, test/portfolio_calculator_test.dart
 Depends: T-H11
-Resume notes:
+Resume notes: PortfolioCalculator/Summary/Source have an optional `other` (counted in expenses and profit, hidden with an agent filter), Portfolio Overview expenses row, Stats pie and detail card, CSV and PDF export type 'Other expenses' (new getOtherExpenseEntriesByDateRange). 100 tests pass.
 Commit: Include Other expenses in Portfolio, Stats and exports
 
-## T-H13 Ledger home: smaller header, scrollable pinned summary (bug 1) [PENDING]
+## T-H13 Ledger home: smaller header, scrollable pinned summary (bug 1) [DONE]
 Goal: entries are clearly visible. The big header shrinks (one compact app bar row, period chips and month navigator merged into one row, smaller Daily/Calendar toggle). The pinned Total, Received, Balance, Commission and the feet totals per type become one horizontally scrollable strip. The list gets most of the screen.
 Files: combined_home_screen.dart (about 68-491), summary_row.dart (rewrite), ledger_list.dart if spacing changes; dead file home_screen.dart left alone
 Depends: T-H07
-Resume notes:
+Resume notes: header trimmed (app bar row padding, 34 dp tabs, tighter chips); month/year arrows or custom range and the Daily/Calendar toggle share one slim row (_buildPeriodNavigator, _buildViewToggle); SummaryRow is one card about 60 dp high that scrolls sideways (Total, Received, Balance, Commission, then feet per type, MS Pipe) instead of two cards of about 190 dp. test/summary_strip_test.dart. Not verified on a device.
 Commit: Shrink ledger header and make pinned totals scrollable
 
-## T-H14 Agents inside Portfolio, remove the Agents tab (bug 4) [PENDING]
+## T-H14 Agents inside Portfolio, remove the Agents tab (bug 4) [DONE]
 Goal: mobile tabs become Ledger, Portfolio, Accounts, Settings. Portfolio gets an Agents section (all agents including ones with no bills, period totals and commission from the existing calculator, Add agent in the section header, tap opens a detail sheet to edit, delete with the existing reassign flow, and set per-type commission prices). `agents_screen.dart` stays for the frozen desktop shell and shares the extracted dialogs. Update UX docs that mention the Agents tab.
 Files: main_navigation.dart, portfolio_view.dart, agent_dialogs.dart, agents_screen.dart (use shared dialogs only), docs/design/UX_FLOWS.md
 Depends: T-H05, T-H08
-Resume notes:
+Resume notes: mobile tabs are Ledger, Portfolio, Accounts, Settings. Portfolio Overview has an Agents section (all agents, even without bills, period totals, Add agent, tap opens a sheet with contact, period totals, per-type commission prices, Edit and Delete using agent_dialogs.dart). agents_screen.dart stays for the frozen desktop shell. docs/design/UX_FLOWS.md F-9 updated (untracked developer file, not committed). test/portfolio_agents_test.dart. 102 tests pass.
 Commit: Move agents into Portfolio and remove the Agents tab
 
-## T-H15 Version 2.0.1 and release notes [PENDING]
+## T-H15 Version 2.0.1 and release notes [DONE]
 Goal: pubspec 2.0.1+6, MEMORY.md, BACKLOG.md, short release review of tested and untested areas.
 Files: pubspec.yaml, MEMORY.md, docs
 Depends: all
-Resume notes:
+Resume notes: pubspec 2.0.1+6, docs/v2.0.1-review.md, MEMORY.md updated. BACKLOG.md not touched (developer has local edits; MANAGE_EXTERNAL_STORAGE item can be ticked off).
 Commit: Bump version to 2.0.1+6
 
 v2.0.0 plan (source: v2.0.0.md). Order: T-V201..T-V208, then T-CB19, T-CB17, T-CB18, T-V209 (final test, bug and improvement review).
