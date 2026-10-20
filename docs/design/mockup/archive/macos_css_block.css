@@ -1,0 +1,54 @@
+/* Removed on 2026-10-13 when macOS was dropped. To restore: paste into the <style> block, set UI.dw back to 1280 handling in applyUI (toggle class mac on #phone), add the Dev option, show #nav on pushed screens, and re-add the nav kb hints. */
+.mac-only{display:none}#phone.mac .mac-only{display:inline}
+.mac2{display:block}
+/* hover and focus (all widths) */
+@media (hover:hover){.gl:hover{filter:brightness(1.12)}.chip:hover,.seg button:not(.on):hover{filter:brightness(1.15)}.bp:hover{filter:brightness(1.08)}.bs:hover{filter:brightness(1.1)}.ri:hover{background:var(--fill)}.ctile:hover{filter:brightness(1.05)}}
+/* ================= macOS window (width 1280) ================= */
+#phone.mac{width:1280px;height:800px;border-radius:12px;border:1px solid var(--sep);box-shadow:var(--sh-win)}
+#phone.mac #sb{display:none}
+.tl{display:none;position:absolute;top:18px;left:18px;gap:8px;z-index:50}
+#phone.mac .tl{display:flex}
+.tl i{width:12px;height:12px;border-radius:6px;display:block}
+.tl i:nth-child(1){background:var(--tl-r)}.tl i:nth-child(2){background:var(--tl-y)}.tl i:nth-child(3){background:var(--tl-g)}
+#phone.mac #nav{top:0;bottom:0;left:0;right:auto;width:220px;height:auto;border-radius:0;border:0;border-right:.5px solid var(--sep);flex-direction:column;padding:96px 10px 12px;gap:2px;box-shadow:none;justify-content:flex-start;background:var(--glass-bar)}
+#phone.mac #nav::after{content:'RigLedger';position:absolute;top:50px;left:22px;font-size:calc(20px*var(--ts));font-weight:700;color:var(--lb)}
+#phone.mac #nav button{flex:none;flex-direction:row;justify-content:flex-start;gap:10px;height:44px;padding:0 12px;border-radius:10px;font-size:calc(15px*var(--ts))}
+#phone.mac #nav button .mi{font-size:calc(22px*var(--ts))}
+#phone.mac #nav button .kb{margin-left:auto;font-size:calc(12px*var(--ts));color:var(--lb2)}
+#phone.mac #nav button.on{background:var(--acc-tint);color:var(--acc-tx)}
+#phone.mac #screen{left:220px}
+#phone.mac .nb{height:56px;padding-top:0}
+#phone.mac .nbt{top:0;height:56px}
+#phone.mac .lt{padding-top:56px}
+#phone.mac .lt.root{height:auto;padding-bottom:6px}
+#phone.mac .lt.push{padding-top:56px}
+#phone.mac .gh{top:56px}
+#phone.mac .cstrip{top:56px}
+#phone.mac .scr.hasstrip .nb::before{height:100px}
+#phone.mac .scc{padding-bottom:40px}
+#phone.mac .scr.hasbot .scc{padding-bottom:110px}
+#phone.mac .mgrid{grid-template-columns:repeat(4,1fr)}
+#phone.mac .tgrid{grid-template-columns:repeat(4,1fr)}
+#phone.mac .ftiles{grid-template-columns:repeat(5,1fr)}
+#phone.mac .card.tap:hover{background:var(--s2)}
+#phone.mac .dgrid{display:grid;grid-template-columns:1fr 1fr;gap:0 var(--gap);padding:0 var(--mx);align-items:start}
+#phone.mac .dgrid .grp{margin-left:0;margin-right:0}
+#phone.mac .dgrid .gh{padding-left:0;padding-right:0}
+#phone.mac .mac2{display:grid;grid-template-columns:1fr 1fr;gap:0 var(--gap);padding:0 var(--mx);align-items:start}
+#phone.mac .mac2>div{min-width:0}
+#phone.mac .mac2 .card,#phone.mac .mac2 .grp,#phone.mac .mac2 .hlcard{margin-left:0;margin-right:0}
+#phone.mac .mac2 .ftl,#phone.mac .mac2 .fh{padding-left:16px}
+#phone.mac .seg{max-width:460px}
+#phone.mac .hrow{display:grid;grid-template-columns:380px 1fr;gap:0 var(--gap);padding:0 var(--mx);align-items:stretch}
+#phone.mac .hrow>.card{margin:0 0 var(--gap);flex-direction:column;justify-content:center;text-align:center}
+#phone.mac .hrow>.card .sp{flex:none}
+#phone.mac .hrow .mgrid{margin:0;grid-template-columns:1fr 1fr}
+#phone.mac .fsin{left:calc(50% - 280px);right:auto;width:560px;top:36px;bottom:36px;border-radius:14px;box-shadow:var(--sh-win)}
+#phone.mac .scr.fs{background:var(--scrim)}
+#phone.mac .gl{width:36px;height:36px;border-radius:10px}
+#phone.mac .gl .mi{font-size:18px}
+#phone.mac .sh{left:auto;right:0;top:0;bottom:0;width:480px;border-radius:0;max-height:none;animation:none}
+#phone.mac .sh.full{top:0}
+#phone.mac .bot{left:0}
+#phone.mac button:focus-visible,#phone.mac .ri:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+#phone.mac .sn{bottom:24px}

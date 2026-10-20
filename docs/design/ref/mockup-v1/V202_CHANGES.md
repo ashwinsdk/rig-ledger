@@ -1,0 +1,18 @@
+# Mockup changes for RigLedger 2.0.2
+
+File: rigledger_android_mockup.html (dummy data, click-through). Source of truth: the Flutter code in rig-ledger and docs/v2.0.2-review.md.
+
+- Version text is 2.0.2 (build 7) in the page title, sidebar, Settings About tile and About screen.
+- Several lines per bill: each bill now holds lines {category, type, feet, rate, commission rate} in the JS dataset. Older bills become one line per category when the page loads (like the app).
+- Main bore bill form: Depth, PVC and MS Pipe sections show one card per line (header "Depth line 2" with a remove X when there are several), Type dropdown from Settings > Ledger Types, feet and rate fields, and an "Add Depth line / Add PVC line / Add MS Pipe line" button. Step Rate label is "Step Rate (rupee)" with one depth line and "Step Rate, all depth lines" with several. Step rate is the sum of each depth line worked out on its own (own type table, feet from 0). Total = sum of feet x rate + step rate + extra charges.
+- Calculation Preview: one row per line ("Depth 1 7inch (200 ft x rate)"), Step Rate after the depth lines, Extra Charges, Total, then "Commission (not in total)" with one row per line and Total commission.
+- Commission section: one rate field per line ("Depth 7inch rate", "Depth 1 7inch rate" when several) with the helper "200 ft = amount", and the breakdown box with the amber "manual" tag. Choosing an agent fills every line from the agent price of that line's type; changing a line type re-applies it unless the rate was typed; a new line gets the agent price.
+- Side bore form: depth lines only ("Depth (ft)", "Rate/ft"), no type, no step rate, Add Depth line, commission rows "Depth 1", "Depth 2" from the agent default depth rate.
+- Dummy data: bill 1044 (200 ft 7inch + 150 ft 8inch, PVC 7inch + 8inch, no step rate because each line is under 300 ft), bill 1045 (350 ft 7inch + 120 ft 9inch, step rate 500 from the 7inch line only), side bore bill 204 (two depth lines). Agent Murugan got an 8inch depth price. Totals, balances, received and commission are computed from the lines.
+- Ledger page: bill card Depth chip "200ft (7inch) + 150ft (8inch)", PVC chip "7inch + 8inch" (chips wrap), commission strip parts from the lines. Feet totals and the Feet drop down count every line under its own type. The filter sheet depth and PVC filters match a bill if any line has the type. Ledger Types in-use counts, delete refusal and rename use any line.
+- Export to CSV and PDF previews show a sample row (bill 1044): type cells "7inch + 8inch", feet as sums, rate as amount / feet.
+- Portfolio agent filter: one pill "Agent: All agents" (person icon, arrow, highlighted when chosen) opens the "Filter by agent" sheet with search, an "All agents" row (bill count), one row per agent including agents without bills ("no bills" or "N bills | total"), sorted by total then name, a check mark, and "No agent matches". The choice resets on This rig / All rigs and on rig change. Expenses and profit stay hidden with an agent filter.
+- Agent detail sheet: Edit opens the edit dialog and saving changes the agent and returns to the sheet, so edited prices show in "Commission per foot". Delete opens the delete dialog (an agent without bills is really removed).
+- Sidebar index: new entries for the 2 depth + 2 PVC line bill, the 7inch + 9inch bill, Add Depth line, the Commission section with several lines, the side bore two line bill and four agent filter sheet states (open, search "ra", no match, agent chosen).
+
+Not done: Delete agent with bills still only shows a message (unchanged from 2.0.1). Lines of PVC and MS pipe with no feet stay on the form (the app drops them only when saving, which the mockup does not model).
