@@ -49,9 +49,16 @@ RigLedger syncs data between Android and macOS via Google Drive:
 
 ## Version
 
-Current: 2.0.1 (see `pubspec.yaml`)
+Current: 2.0.2 (see `pubspec.yaml`)
 
 ### Changelog
+
+v2.0.2
+- A bill can have several depth, PVC and MS pipe lines, each with its own type, feet, rate and commission rate (for example 200 ft of 7inch and 150 ft of 8inch depth). Step rate is worked out for each depth line on its own. Side bore bills can have several depth lines.
+- Ledger totals, the feet drop down, the type filter, bill cards and PDF and CSV exports count every line. Renaming or deleting a ledger type looks at every line.
+- Fixed: saving an agent after editing it from the Portfolio agent sheet failed (and so did deleting from it).
+- Portfolio agent filter is a pill with a searchable list of all agents.
+- Schema version 7.
 
 v2.0.1
 - Ledger page: smaller header, one slim scrollable totals strip, and a drop down with feet for every depth, PVC and MS pipe type.
