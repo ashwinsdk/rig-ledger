@@ -56,13 +56,14 @@ class LedgerEntryAdapter extends TypeAdapter<LedgerEntry> {
       commission: fields[36] == null ? 0.0 : fields[36] as double,
       isCommissionManuallyEdited:
           fields[37] == null ? false : fields[37] as bool,
+      linesJson: fields[38] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, LedgerEntry obj) {
     writer
-      ..writeByte(38)
+      ..writeByte(39)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -138,7 +139,9 @@ class LedgerEntryAdapter extends TypeAdapter<LedgerEntry> {
       ..writeByte(36)
       ..write(obj.commission)
       ..writeByte(37)
-      ..write(obj.isCommissionManuallyEdited);
+      ..write(obj.isCommissionManuallyEdited)
+      ..writeByte(38)
+      ..write(obj.linesJson);
   }
 
   @override

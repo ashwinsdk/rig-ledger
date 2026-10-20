@@ -1,5 +1,7 @@
 import 'package:hive/hive.dart';
+import 'ledger_line.dart';
 import 'ledger_payment.dart';
+import 'ledger_types.dart';
 
 part 'ledger_entry.g.dart';
 
@@ -121,6 +123,14 @@ class LedgerEntry extends HiveObject {
   @HiveField(37, defaultValue: false)
   bool isCommissionManuallyEdited;
 
+  // v2.0.2: several depth, PVC and MS pipe lines per bill (JSON list of
+  // LedgerLine). Null for bills saved before 2.0.2: [lines] then builds them
+  // from the single-type fields. When present, the single-type fields above
+  // (depth, depthInFeet, depthPerFeetRate, ...) hold the first type and the
+  // summed feet with the average rate, so old readers keep working.
+  @HiveField(38)
+  String? linesJson;
+
   LedgerEntry({
     required this.id,
     required this.date,
@@ -160,6 +170,7 @@ class LedgerEntry extends HiveObject {
     this.msPipeCommissionRate = 0,
     this.commission = 0,
     this.isCommissionManuallyEdited = false,
+    this.linesJson,
   });
 
   /// Calculate step rate based on depth type and feet
@@ -284,6 +295,134 @@ class LedgerEntry extends HiveObject {
     return (c * 100).round() / 100;
   }
 
+  /// The lines of this bill: the saved ones, or for older bills one line per
+  /// category built from the single-type fields (PVC and MS pipe only when
+  /// they have feet or a rate).
+  List<LedgerLine> get lines {
+    final saved = LedgerLine.decodeList(linesJson);
+    if (saved.isNotEmpty) return saved;
+    return [
+      LedgerLine(
+          category: LedgerLine.depth,
+          type: depth,
+          feet: depthInFeet,
+          rate: depthPerFeetRate,
+          commissionRate: depthCommissionRate),
+      if (pvcInFeet > 0 || pvcPerFeetRate > 0)
+        LedgerLine(
+            category: LedgerLine.pvc,
+            type: pvc,
+            feet: pvcInFeet,
+            rate: pvcPerFeetRate,
+            commissionRate: pvcCommissionRate),
+      if (msPipeInFeet > 0 || msPipePerFeetRate > 0)
+        LedgerLine(
+            category: LedgerLine.ms,
+            type: msPipe,
+            feet: msPipeInFeet,
+            rate: msPipePerFeetRate,
+            commissionRate: msPipeCommissionRate),
+    ];
+  }
+
+  /// Lines of one category ('depth', 'pvc' or 'ms').
+  List<LedgerLine> linesOf(String category) =>
+      lines.where((l) => l.category == category).toList();
+
+  /// Types the bill uses in a category: lines that have feet, or the single
+  /// type field when no line has feet.
+  Set<String> typesOf(String category) {
+    final withFeet = linesOf(category).where((l) => l.feet > 0);
+    if (withFeet.isNotEmpty) return {for (final l in withFeet) l.type};
+    return {
+      switch (category) {
+        LedgerLine.depth => depth,
+        LedgerLine.pvc => pvc,
+        _ => msPipe,
+      }
+    };
+  }
+
+  /// Total feet of one category.
+  double feetOf(String category) =>
+      linesOf(category).fold(0.0, (a, l) => a + l.feet);
+
+  /// Commission of one category, from the lines.
+  double commissionOf(String category) =>
+      _round2(linesOf(category).fold(0.0, (a, l) => a + l.commission));
+
+  /// Step rate of all depth lines: every line is worked out on its own, like
+  /// a separate entry (own type table, feet counted from 0).
+  static double calculateLinesStepRate(
+      Iterable<LedgerLine> depthLines, LedgerTypes types) {
+    var sum = 0.0;
+    for (final l in depthLines.where((l) => l.category == LedgerLine.depth)) {
+      sum += calculateStepRate(
+        depthType: l.type,
+        depthInFeet: l.feet,
+        baseRate: l.rate,
+        stepTable: types.stepTableFor(l.type),
+      );
+    }
+    return sum;
+  }
+
+  /// Bill total from lines: sum of feet x rate, plus step rate and extras.
+  static double calculateLinesTotal({
+    required Iterable<LedgerLine> lines,
+    required double stepRate,
+    required double extraCharges,
+  }) {
+    final amounts = lines.fold(0.0, (a, l) => a + l.feet * l.rate);
+    return amounts + stepRate + extraCharges;
+  }
+
+  /// Commission from lines, never part of the total.
+  static double calculateLinesCommission(Iterable<LedgerLine> lines) {
+    final c = lines.fold(0.0, (a, l) => a + l.feet * l.commissionRate);
+    return (c * 100).round() / 100;
+  }
+
+  /// Returns a copy that stores [newLines] and keeps the single-type fields
+  /// in step: first type (with feet) of each category, summed feet, and the
+  /// average rate (amount / feet) so feet x rate still gives the amount.
+  /// Total, step rate and commission are not touched here.
+  LedgerEntry withLines(List<LedgerLine> newLines) {
+    String firstType(String cat, String fallback) {
+      final l = newLines.where((x) => x.category == cat).toList();
+      if (l.isEmpty) return fallback;
+      return l.firstWhere((x) => x.feet > 0, orElse: () => l.first).type;
+    }
+
+    double feet(String cat) => newLines
+        .where((x) => x.category == cat)
+        .fold(0.0, (a, l) => a + l.feet);
+    double avg(String cat, double Function(LedgerLine) per) {
+      final l = newLines.where((x) => x.category == cat).toList();
+      final f = feet(cat);
+      if (l.isEmpty) return 0;
+      if (f <= 0) return per(l.first);
+      return l.fold(0.0, (a, x) => a + x.feet * per(x)) / f;
+    }
+
+    return copyWith(
+      linesJson: LedgerLine.encodeList(newLines),
+      clearLines: newLines.isEmpty,
+      depth: firstType(LedgerLine.depth, depth),
+      depthInFeet: feet(LedgerLine.depth),
+      depthPerFeetRate: avg(LedgerLine.depth, (l) => l.rate),
+      depthCommissionRate: avg(LedgerLine.depth, (l) => l.commissionRate),
+      pvc: firstType(LedgerLine.pvc, pvc),
+      pvcInFeet: feet(LedgerLine.pvc),
+      pvcPerFeetRate: avg(LedgerLine.pvc, (l) => l.rate),
+      pvcCommissionRate: avg(LedgerLine.pvc, (l) => l.commissionRate),
+      msPipe: firstType(LedgerLine.ms, msPipe),
+      msPipeInFeet: feet(LedgerLine.ms),
+      msPipePerFeetRate: avg(LedgerLine.ms, (l) => l.rate),
+      msPipeCommissionRate: avg(LedgerLine.ms, (l) => l.commissionRate),
+    );
+  }
+
   /// Payments logged on this bill (empty for bills without a log).
   List<LedgerPayment> get payments => LedgerPayment.decodeList(paymentsJson);
 
@@ -347,6 +486,8 @@ class LedgerEntry extends HiveObject {
     double? msPipeCommissionRate,
     double? commission,
     bool? isCommissionManuallyEdited,
+    String? linesJson,
+    bool clearLines = false,
   }) {
     return LedgerEntry(
       id: id ?? this.id,
@@ -390,6 +531,7 @@ class LedgerEntry extends HiveObject {
       commission: commission ?? this.commission,
       isCommissionManuallyEdited:
           isCommissionManuallyEdited ?? this.isCommissionManuallyEdited,
+      linesJson: clearLines ? null : (linesJson ?? this.linesJson),
     );
   }
 
@@ -431,6 +573,7 @@ class LedgerEntry extends HiveObject {
       'msPipeCommissionRate': msPipeCommissionRate,
       'commission': commission,
       'isCommissionManuallyEdited': isCommissionManuallyEdited,
+      'linesJson': linesJson,
     };
   }
 
@@ -476,6 +619,7 @@ class LedgerEntry extends HiveObject {
       commission: (map['commission'] as num?)?.toDouble() ?? 0,
       isCommissionManuallyEdited:
           map['isCommissionManuallyEdited'] as bool? ?? false,
+      linesJson: map['linesJson'] as String?,
     );
   }
 

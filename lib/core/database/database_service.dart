@@ -6,6 +6,7 @@ import '../models/diesel_entry.dart';
 import '../models/pvc_entry.dart';
 import '../models/bit_entry.dart';
 import '../models/hammer_entry.dart';
+import '../models/ledger_line.dart';
 import '../models/other_expense_entry.dart';
 import '../models/mini_ledger_entry.dart';
 import '../models/tombstone.dart';
@@ -31,7 +32,7 @@ class DatabaseService {
   static const String cashNoteBoxName = 'cash_notes';
   static const String defaultCashBookId = 'default_cash_book';
   static const Duration cashTrashRetention = Duration(days: 30);
-  static const int schemaVersion = 6;
+  static const int schemaVersion = 7;
 
   static late Box<LedgerEntry> _ledgerBox;
   static late Box<Agent> _agentBox;
@@ -360,20 +361,28 @@ class DatabaseService {
     return _ledgerBox.values.where((e) => mainIds.contains(e.vehicleId));
   }
 
-  static String _billType(LedgerEntry e, LedgerTypeCategory c) => switch (c) {
-        LedgerTypeCategory.depth => e.depth,
-        LedgerTypeCategory.pvc => e.pvc,
-        LedgerTypeCategory.ms => e.msPipe,
+  static String _lineCat(LedgerTypeCategory c) => c.name; // depth | pvc | ms
+
+  /// Types a bill uses in a category: every line type, plus the single-type
+  /// field (older bills and the stored first type).
+  static Set<String> _billTypes(LedgerEntry e, LedgerTypeCategory c) => {
+        switch (c) {
+          LedgerTypeCategory.depth => e.depth,
+          LedgerTypeCategory.pvc => e.pvc,
+          LedgerTypeCategory.ms => e.msPipe,
+        },
+        for (final l in LedgerLine.decodeList(e.linesJson))
+          if (l.category == _lineCat(c)) l.type,
       };
 
-  /// How many bills use [type] in category [c].
+  /// How many bills use [type] in category [c] (in any line).
   static int countBillsWithType(LedgerTypeCategory c, String type) =>
-      _mainBoreBills().where((e) => _billType(e, c) == type).length;
+      _mainBoreBills().where((e) => _billTypes(e, c).contains(type)).length;
 
   /// Types that bills actually use (a type may be missing from the list after a
   /// sync of an older device).
   static Set<String> usedLedgerTypes(LedgerTypeCategory c) => _mainBoreBills()
-      .map((e) => _billType(e, c))
+      .expand((e) => _billTypes(e, c))
       .where((t) => t.isNotEmpty)
       .toSet();
 
@@ -381,14 +390,29 @@ class DatabaseService {
   static Future<int> renameBillType(
       LedgerTypeCategory c, String from, String to) async {
     final bills =
-        _mainBoreBills().where((e) => _billType(e, c) == from).toList();
+        _mainBoreBills().where((e) => _billTypes(e, c).contains(from)).toList();
     final now = DateTime.now();
     for (final b in bills) {
-      final updated = switch (c) {
-        LedgerTypeCategory.depth => b.copyWith(depth: to, updatedAt: now),
-        LedgerTypeCategory.pvc => b.copyWith(pvc: to, updatedAt: now),
-        LedgerTypeCategory.ms => b.copyWith(msPipe: to, updatedAt: now),
+      var updated = switch (c) {
+        LedgerTypeCategory.depth when b.depth == from =>
+          b.copyWith(depth: to, updatedAt: now),
+        LedgerTypeCategory.pvc when b.pvc == from =>
+          b.copyWith(pvc: to, updatedAt: now),
+        LedgerTypeCategory.ms when b.msPipe == from =>
+          b.copyWith(msPipe: to, updatedAt: now),
+        _ => b.copyWith(updatedAt: now),
       };
+      final lines = LedgerLine.decodeList(b.linesJson);
+      if (lines.isNotEmpty) {
+        updated = updated.copyWith(
+          linesJson: LedgerLine.encodeList([
+            for (final l in lines)
+              l.category == _lineCat(c) && l.type == from
+                  ? l.copyWith(type: to)
+                  : l
+          ]),
+        );
+      }
       await saveLedgerEntry(updated);
     }
     return bills.length;

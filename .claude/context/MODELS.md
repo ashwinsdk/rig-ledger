@@ -138,6 +138,12 @@ decision.
 
 ---
 
+## LedgerEntry.linesJson (v2.0.2, HiveField 38) and LedgerLine
+
+`LedgerLine` (lib/core/models/ledger_line.dart, plain class, not Hive): category `depth|pvc|ms`, type (a Ledger Types name), feet, rate, commissionRate. A bill can have several lines per category. They are stored as a JSON list in `LedgerEntry.linesJson` (null for bills saved before 2.0.2). `LedgerEntry.lines` returns the saved lines or builds one line per used category from the single-type fields.
+
+When lines exist the single-type fields stay in step (`LedgerEntry.withLines`): first type that has feet, summed feet, and the average rate (amount / feet) and average commission rate, so old readers, CSV and PDF keep working. Step rate is the sum of per-line step rates (each depth line alone, its own type table, feet counted from 0). Type rename, delete check and counts see every line. Backup/sync carry `linesJson`; schemaVersion is 7.
+
 ## Agent (typeId: 1) -- lib/core/models/agent.dart
 
 | Field | Type | Notes |
