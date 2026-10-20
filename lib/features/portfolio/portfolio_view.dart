@@ -507,14 +507,29 @@ void _showAgentSheet(
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
     ),
-    builder: (sheetContext) => _AgentSheet(agentId: agent.id, row: row),
+    // Edit and Delete run with the caller's context and ref: the sheet is
+    // closed first, and its own ref and context are gone by then.
+    builder: (sheetContext) => _AgentSheet(
+      agentId: agent.id,
+      row: row,
+      onEdit: (a) => showEditAgentDialog(context, ref, a),
+      onDelete: (a) =>
+          showDeleteAgentDialog(context, ref, a, ref.read(agentsProvider)),
+    ),
   );
 }
 
 class _AgentSheet extends ConsumerWidget {
   final String agentId;
   final AgentPortfolioRow? row;
-  const _AgentSheet({required this.agentId, required this.row});
+  final void Function(Agent) onEdit;
+  final void Function(Agent) onDelete;
+  const _AgentSheet({
+    required this.agentId,
+    required this.row,
+    required this.onEdit,
+    required this.onDelete,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -603,7 +618,7 @@ class _AgentSheet extends ConsumerWidget {
                   child: OutlinedButton.icon(
                     onPressed: () {
                       Navigator.pop(context);
-                      showDeleteAgentDialog(context, ref, agent, agents);
+                      onDelete(agent);
                     },
                     style: OutlinedButton.styleFrom(
                         foregroundColor: AppColors.error),
@@ -616,7 +631,7 @@ class _AgentSheet extends ConsumerWidget {
                   child: ElevatedButton.icon(
                     onPressed: () {
                       Navigator.pop(context);
-                      showEditAgentDialog(context, ref, agent);
+                      onEdit(agent);
                     },
                     icon: const Icon(Icons.edit_outlined),
                     label: const Text('Edit'),
