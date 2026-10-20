@@ -8,7 +8,10 @@ import '../../core/models/ledger_entry.dart';
 import '../../core/models/ledger_payment.dart';
 import 'widgets/payment_log_editor.dart';
 import 'widgets/address_autocomplete_field.dart';
+import '../../core/providers/ledger_types_provider.dart';
 import 'widgets/commission_section.dart';
+import 'widgets/line_editor.dart';
+import '../../core/models/ledger_line.dart';
 import '../../core/models/agent.dart';
 import '../../core/database/database_service.dart';
 import '../../core/providers/ledger_provider.dart';
@@ -37,8 +40,8 @@ class _SideBoreFormScreenState extends ConsumerState<SideBoreFormScreen> {
   late TextEditingController _addressController;
 
   // Depth fields only (no PVC, no MS Pipe)
-  late TextEditingController _depthInFeetController;
-  late TextEditingController _depthPerFeetRateController;
+  // Depth lines (v2.0.2): feet and rate per line, no types on side bore
+  late List<LineController> _depthLines;
 
   // Payment fields
   late TextEditingController _totalController;
@@ -52,9 +55,7 @@ class _SideBoreFormScreenState extends ConsumerState<SideBoreFormScreen> {
   late TextEditingController _notesController;
 
   // Commission (v2.0.0): depth only on side bore, never part of the total
-  late TextEditingController _depthCommissionController;
   late TextEditingController _commissionController;
-  final _unusedRate = TextEditingController();
   bool _isCommissionManuallyEdited = false;
 
   bool get isEditing => widget.entry != null;
@@ -62,28 +63,55 @@ class _SideBoreFormScreenState extends ConsumerState<SideBoreFormScreen> {
 
   double _num(TextEditingController c) => double.tryParse(c.text) ?? 0;
 
+  List<LedgerLine> get _lines =>
+      [for (final l in _depthLines) l.toLine(LedgerLine.depth)];
+
+  List<CommissionRow> get _commissionRows => [
+        for (final (i, l) in _depthLines.indexed)
+          CommissionRow(
+            category: LedgerLine.depth,
+            label: _depthLines.length > 1 ? 'Depth ${i + 1}' : 'Depth',
+            feet: l.feetValue,
+            rate: l.comm,
+          ),
+      ];
+
+  static String _rateText(double v) => v == 0 ? '' : v.toString();
+
   /// Recomputes commission unless the user typed an override.
   void _updateCommission() {
     if (_isCommissionManuallyEdited) return;
-    final c = CommissionSection.calculate(
-      depthFeet: _num(_depthInFeetController),
-      pvcFeet: 0,
-      msPipeFeet: 0,
-      depthRate: _depthCommissionController,
-      pvcRate: _unusedRate,
-      msPipeRate: _unusedRate,
-      showPvcAndMs: false,
-    );
+    final c = CommissionSection.calculate(_commissionRows);
     _commissionController.text = c.toStringAsFixed(2);
   }
 
   /// New bills start with the agent's default depth commission rate.
   void _applyAgentCommissionDefaults(Agent agent) {
     if (isEditing) return;
-    _depthCommissionController.text = agent.depthCommissionRate == 0
-        ? ''
-        : agent.depthCommissionRate.toString();
+    for (final l in _depthLines) {
+      l.comm.text = _rateText(agent.depthCommissionRate);
+    }
     _updateCommission();
+  }
+
+  void _wire(LineController l) => l.addListeners(_recalculate, () {
+        _updateCommission();
+        setState(() {});
+      });
+
+  void _addLine() {
+    final line = LineController(type: '7inch');
+    final agent = _selectedAgent;
+    if (agent != null) line.comm.text = _rateText(agent.depthCommissionRate);
+    _wire(line);
+    setState(() => _depthLines.add(line));
+    _recalculate();
+  }
+
+  void _removeLine(int i) {
+    if (_depthLines.length <= 1) return;
+    setState(() => _depthLines.removeAt(i).dispose());
+    _recalculate();
   }
 
   @override
@@ -97,10 +125,10 @@ class _SideBoreFormScreenState extends ConsumerState<SideBoreFormScreen> {
     _addressController = TextEditingController(text: entry?.address ?? '');
 
     // Depth
-    _depthInFeetController =
-        TextEditingController(text: entry?.depthInFeet.toString() ?? '0');
-    _depthPerFeetRateController =
-        TextEditingController(text: entry?.depthPerFeetRate.toString() ?? '0');
+    final saved = entry?.linesOf(LedgerLine.depth) ?? const <LedgerLine>[];
+    _depthLines = saved.isEmpty
+        ? [LineController(type: '7inch')]
+        : [for (final l in saved) LineController.fromLine(l)];
 
     // Payment - now with separate Cash and PhonePe
     _totalController =
@@ -114,10 +142,6 @@ class _SideBoreFormScreenState extends ConsumerState<SideBoreFormScreen> {
     _lessController =
         TextEditingController(text: entry?.less.toString() ?? '0');
     _notesController = TextEditingController(text: entry?.notes ?? '');
-    _depthCommissionController = TextEditingController(
-        text: (entry == null || entry.depthCommissionRate == 0)
-            ? ''
-            : entry.depthCommissionRate.toString());
     _commissionController = TextEditingController(
         text: (entry?.commission ?? 0).toStringAsFixed(2));
     _isCommissionManuallyEdited = entry?.isCommissionManuallyEdited ?? false;
@@ -136,8 +160,9 @@ class _SideBoreFormScreenState extends ConsumerState<SideBoreFormScreen> {
     });
 
     // Add listeners for calculation
-    _depthInFeetController.addListener(_recalculate);
-    _depthPerFeetRateController.addListener(_recalculate);
+    for (final l in _depthLines) {
+      _wire(l);
+    }
     _lessController.addListener(_updateBalance);
     _billNumberController.addListener(_checkBillNumberDuplicate);
   }
@@ -146,24 +171,22 @@ class _SideBoreFormScreenState extends ConsumerState<SideBoreFormScreen> {
   void dispose() {
     _billNumberController.dispose();
     _addressController.dispose();
-    _depthInFeetController.dispose();
-    _depthPerFeetRateController.dispose();
+    for (final l in _depthLines) {
+      l.dispose();
+    }
     _totalController.dispose();
     _balanceController.dispose();
     _lessController.dispose();
     _notesController.dispose();
-    _depthCommissionController.dispose();
     _commissionController.dispose();
-    _unusedRate.dispose();
     super.dispose();
   }
 
   void _recalculate() {
     _updateCommission();
     if (!_isTotalManuallyEdited) {
-      final depth = double.tryParse(_depthInFeetController.text) ?? 0;
-      final rate = double.tryParse(_depthPerFeetRateController.text) ?? 0;
-      final total = depth * rate;
+      final total = LedgerEntry.calculateLinesTotal(
+          lines: _lines, stepRate: 0, extraCharges: 0);
       _totalController.text = total.toStringAsFixed(2);
     }
     _updateBalance();
@@ -271,6 +294,13 @@ class _SideBoreFormScreenState extends ConsumerState<SideBoreFormScreen> {
       return;
     }
 
+    if (!_lines.any((l) => l.feet > 0)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Enter the depth in feet')),
+      );
+      return;
+    }
+
     final cash = _cashReceived;
     final phonePe = _phonePeReceived;
     final totalReceived = cash + phonePe;
@@ -289,8 +319,8 @@ class _SideBoreFormScreenState extends ConsumerState<SideBoreFormScreen> {
       address: _addressController.text.trim(),
       // For side-bore, we only use depth fields - no step rate, no PVC, no MS Pipe
       depth: '7inch', // Default, not really used for side-bore
-      depthInFeet: double.tryParse(_depthInFeetController.text) ?? 0,
-      depthPerFeetRate: double.tryParse(_depthPerFeetRateController.text) ?? 0,
+      depthInFeet: 0,
+      depthPerFeetRate: 0,
       stepRate: 0, // Not used for side-bore
       isStepRateManuallyEdited: false,
       pvc: '7inch', // Default, not used
@@ -307,7 +337,6 @@ class _SideBoreFormScreenState extends ConsumerState<SideBoreFormScreen> {
       receivedPhonePe: phonePe,
       phonePeName: lastPayer ?? widget.entry?.phonePeName,
       paymentsJson: LedgerPayment.encodeList(_payments),
-      depthCommissionRate: _num(_depthCommissionController),
       commission: _num(_commissionController),
       isCommissionManuallyEdited: _isCommissionManuallyEdited,
       balance: double.tryParse(_balanceController.text) ?? 0,
@@ -318,7 +347,7 @@ class _SideBoreFormScreenState extends ConsumerState<SideBoreFormScreen> {
       createdAt: widget.entry?.createdAt ?? DateTime.now(),
       updatedAt: DateTime.now(),
       vehicleId: widget.entry?.vehicleId ?? DatabaseService.currentVehicleId,
-    );
+    ).withLines(_lines);
 
     if (isEditing) {
       await ref.read(ledgerEntriesProvider.notifier).updateEntry(entry);
@@ -526,56 +555,20 @@ class _SideBoreFormScreenState extends ConsumerState<SideBoreFormScreen> {
               ),
               const SizedBox(height: 24),
 
-              // Depth Section
+              // Depth lines
               _buildSectionTitle('Depth Details'),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextFormField(
-                      controller: _depthInFeetController,
-                      keyboardType:
-                          const TextInputType.numberWithOptions(decimal: true),
-                      inputFormatters: [
-                        FilteringTextInputFormatter.allow(
-                            RegExp(r'^\d*\.?\d*')),
-                      ],
-                      decoration: const InputDecoration(
-                        labelText: 'Depth (ft)',
-                        prefixIcon: Icon(Icons.straighten),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Required';
-                        }
-                        return null;
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: TextFormField(
-                      controller: _depthPerFeetRateController,
-                      keyboardType:
-                          const TextInputType.numberWithOptions(decimal: true),
-                      inputFormatters: [
-                        FilteringTextInputFormatter.allow(
-                            RegExp(r'^\d*\.?\d*')),
-                      ],
-                      decoration: const InputDecoration(
-                        labelText: 'Rate/ft (₹)',
-                        prefixIcon: Icon(Icons.currency_rupee),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Required';
-                        }
-                        return null;
-                      },
-                    ),
-                  ),
-                ],
+              LinesSection(
+                category: LedgerLine.depth,
+                title: 'Depth',
+                types: ref.watch(ledgerTypesProvider),
+                lines: _depthLines,
+                showType: false,
+                onAdd: _addLine,
+                onRemove: _removeLine,
+                onTypeChanged: (_, __, ___) {},
+                onChanged: _recalculate,
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 12),
 
               // Total (auto calculated: Depth x Rate)
               _buildSectionTitle('Total'),
@@ -655,13 +648,7 @@ class _SideBoreFormScreenState extends ConsumerState<SideBoreFormScreen> {
 
               // Commission (not added to total)
               CommissionSection(
-                depthFeet: _num(_depthInFeetController),
-                pvcFeet: 0,
-                msPipeFeet: 0,
-                showPvcAndMs: false,
-                depthRate: _depthCommissionController,
-                pvcRate: _unusedRate,
-                msPipeRate: _unusedRate,
+                rows: _commissionRows,
                 commission: _commissionController,
                 isManual: _isCommissionManuallyEdited,
                 onChanged: () {

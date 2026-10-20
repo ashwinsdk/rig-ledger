@@ -7,7 +7,9 @@ import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/models/ledger_entry.dart';
+import '../../core/models/ledger_line.dart';
 import '../../core/models/ledger_payment.dart';
+import 'widgets/line_editor.dart';
 import 'widgets/payment_log_editor.dart';
 import 'widgets/address_autocomplete_field.dart';
 import 'widgets/commission_section.dart';
@@ -35,22 +37,12 @@ class _LedgerFormScreenState extends ConsumerState<LedgerFormScreen> {
   Agent? _selectedAgent;
   late TextEditingController _addressController;
 
-  // Depth fields
-  String _depth = '7inch';
-  late TextEditingController _depthInFeetController;
-  late TextEditingController _depthPerFeetRateController;
+  // Bill lines (v2.0.2): one or more per category
+  late List<LineController> _depthLines;
+  late List<LineController> _pvcLines;
+  late List<LineController> _msLines;
   late TextEditingController _stepRateController;
   bool _isStepRateManuallyEdited = false;
-
-  // PVC fields
-  String _pvc = '7inch';
-  late TextEditingController _pvcInFeetController;
-  late TextEditingController _pvcPerFeetRateController;
-
-  // MS Pipe fields
-  String _msPipe = '6inch';
-  late TextEditingController _msPipeInFeetController;
-  late TextEditingController _msPipePerFeetRateController;
 
   // Other fields
   late TextEditingController _extraChargesController;
@@ -64,9 +56,6 @@ class _LedgerFormScreenState extends ConsumerState<LedgerFormScreen> {
   late TextEditingController _notesController;
 
   // Commission (v2.0.0): informational, never part of the total
-  late TextEditingController _depthCommissionController;
-  late TextEditingController _pvcCommissionController;
-  late TextEditingController _msCommissionController;
   late TextEditingController _commissionController;
   bool _isCommissionManuallyEdited = false;
 
@@ -80,27 +69,58 @@ class _LedgerFormScreenState extends ConsumerState<LedgerFormScreen> {
 
   double _num(TextEditingController c) => double.tryParse(c.text) ?? 0;
 
+  List<LineController> _ctlOf(String category) => switch (category) {
+        LedgerLine.pvc => _pvcLines,
+        LedgerLine.ms => _msLines,
+        _ => _depthLines,
+      };
+
+  LedgerTypeCategory _typeCat(String category) => switch (category) {
+        LedgerLine.pvc => LedgerTypeCategory.pvc,
+        LedgerLine.ms => LedgerTypeCategory.ms,
+        _ => LedgerTypeCategory.depth,
+      };
+
+  /// Every line the user entered, in category order.
+  List<LedgerLine> get _allLines => [
+        for (final c in LedgerLine.categories)
+          for (final l in _ctlOf(c)) l.toLine(c),
+      ];
+
+  List<CommissionRow> get _commissionRows => [
+        for (final c in LedgerLine.categories)
+          for (final (i, l) in _ctlOf(c).indexed)
+            CommissionRow(
+              category: c,
+              label: _ctlOf(c).length > 1
+                  ? '${_catTitle(c)} ${i + 1} ${l.type}'
+                  : '${_catTitle(c)} ${l.type}',
+              feet: l.feetValue,
+              rate: l.comm,
+            ),
+      ];
+
+  static String _catTitle(String c) => switch (c) {
+        LedgerLine.pvc => 'PVC',
+        LedgerLine.ms => 'MS pipe',
+        _ => 'Depth',
+      };
+
   /// Recomputes commission unless the user typed an override.
   void _updateCommission() {
     if (_isCommissionManuallyEdited) return;
-    final c = CommissionSection.calculate(
-      depthFeet: _num(_depthInFeetController),
-      pvcFeet: _num(_pvcInFeetController),
-      msPipeFeet: _num(_msPipeInFeetController),
-      depthRate: _depthCommissionController,
-      pvcRate: _pvcCommissionController,
-      msPipeRate: _msCommissionController,
-      showPvcAndMs: true,
-    );
+    final c = CommissionSection.calculate(_commissionRows);
     _commissionController.text = c.toStringAsFixed(2);
   }
 
-  /// New bills start with the agent's default commission rates.
+  /// New bills start with the agent's price for the type of each line.
   void _applyAgentCommissionDefaults(Agent agent) {
     if (isEditing) return;
-    _depthCommissionController.text = _rateText(agent.rateFor('depth', _depth));
-    _pvcCommissionController.text = _rateText(agent.rateFor('pvc', _pvc));
-    _msCommissionController.text = _rateText(agent.rateFor('ms', _msPipe));
+    for (final c in LedgerLine.categories) {
+      for (final l in _ctlOf(c)) {
+        l.comm.text = _rateText(agent.rateFor(c, l.type));
+      }
+    }
     _updateCommission();
   }
 
@@ -119,6 +139,48 @@ class _LedgerFormScreenState extends ConsumerState<LedgerFormScreen> {
     _updateCommission();
   }
 
+  void _wire(LineController l) =>
+      l.addListeners(_onCalculationFieldChanged, _onCommissionFieldChanged);
+
+  LineController _newLine(String category, {String? type}) {
+    final types = ref.read(ledgerTypesProvider);
+    final t = type ?? types.forCategory(_typeCat(category)).first;
+    final line = LineController(type: t);
+    final agent = _selectedAgent;
+    if (agent != null) line.comm.text = _rateText(agent.rateFor(category, t));
+    _wire(line);
+    return line;
+  }
+
+  void _addLine(String category) {
+    setState(() => _ctlOf(category).add(_newLine(category)));
+    _onCalculationFieldChanged();
+  }
+
+  void _removeLine(String category, int index) {
+    final list = _ctlOf(category);
+    if (list.length <= 1) return;
+    setState(() => list.removeAt(index).dispose());
+    _onCalculationFieldChanged();
+  }
+
+  void _lineTypeChanged(String category, int i, String old, String neu) {
+    setState(() {});
+    _followTypePrice(category, old, neu, _ctlOf(category)[i].comm);
+    _onCalculationFieldChanged();
+  }
+
+  Widget _linesSection(String category, String title) => LinesSection(
+        category: category,
+        title: title,
+        types: ref.watch(ledgerTypesProvider),
+        lines: _ctlOf(category),
+        onAdd: () => _addLine(category),
+        onRemove: (i) => _removeLine(category, i),
+        onTypeChanged: (i, o, n) => _lineTypeChanged(category, i, o, n),
+        onChanged: _onCalculationFieldChanged,
+      );
+
   @override
   void initState() {
     super.initState();
@@ -129,29 +191,22 @@ class _LedgerFormScreenState extends ConsumerState<LedgerFormScreen> {
         TextEditingController(text: entry?.billNumber ?? '');
     _addressController = TextEditingController(text: entry?.address ?? '');
 
-    // Depth
-    _depth = entry?.depth ?? ref.read(ledgerTypesProvider).depth.first;
-    _depthInFeetController =
-        TextEditingController(text: entry?.depthInFeet.toString() ?? '0');
-    _depthPerFeetRateController =
-        TextEditingController(text: entry?.depthPerFeetRate.toString() ?? '0');
+    // Lines: the saved ones, at least one per category
+    final types = ref.read(ledgerTypesProvider);
+    List<LineController> build(String c, String fallbackType) {
+      final saved = entry?.linesOf(c) ?? const <LedgerLine>[];
+      if (saved.isEmpty) {
+        return [LineController(type: fallbackType)];
+      }
+      return [for (final l in saved) LineController.fromLine(l)];
+    }
+
+    _depthLines = build(LedgerLine.depth, entry?.depth ?? types.depth.first);
+    _pvcLines = build(LedgerLine.pvc, entry?.pvc ?? types.pvc.first);
+    _msLines = build(LedgerLine.ms, entry?.msPipe ?? types.ms.first);
     _stepRateController =
         TextEditingController(text: entry?.stepRate.toString() ?? '0');
     _isStepRateManuallyEdited = entry?.isStepRateManuallyEdited ?? false;
-
-    // PVC
-    _pvc = entry?.pvc ?? ref.read(ledgerTypesProvider).pvc.first;
-    _pvcInFeetController =
-        TextEditingController(text: entry?.pvcInFeet.toString() ?? '0');
-    _pvcPerFeetRateController =
-        TextEditingController(text: entry?.pvcPerFeetRate.toString() ?? '0');
-
-    // MS Pipe
-    _msPipe = entry?.msPipe ?? ref.read(ledgerTypesProvider).ms.first;
-    _msPipeInFeetController =
-        TextEditingController(text: entry?.msPipeInFeet.toString() ?? '0');
-    _msPipePerFeetRateController =
-        TextEditingController(text: entry?.msPipePerFeetRate.toString() ?? '0');
 
     // Other
     _extraChargesController =
@@ -168,12 +223,6 @@ class _LedgerFormScreenState extends ConsumerState<LedgerFormScreen> {
     _notesController = TextEditingController(text: entry?.notes ?? '');
 
     // Commission
-    _depthCommissionController =
-        TextEditingController(text: _rateText(entry?.depthCommissionRate));
-    _pvcCommissionController =
-        TextEditingController(text: _rateText(entry?.pvcCommissionRate));
-    _msCommissionController =
-        TextEditingController(text: _rateText(entry?.msPipeCommissionRate));
     _commissionController = TextEditingController(
         text: (entry?.commission ?? 0).toStringAsFixed(2));
     _isCommissionManuallyEdited = entry?.isCommissionManuallyEdited ?? false;
@@ -192,13 +241,12 @@ class _LedgerFormScreenState extends ConsumerState<LedgerFormScreen> {
     });
 
     // Add listeners for calculation - using wrapper that calls setState for live preview
-    _depthInFeetController.addListener(_onCalculationFieldChanged);
-    _depthPerFeetRateController.addListener(_onCalculationFieldChanged);
+    for (final c in LedgerLine.categories) {
+      for (final l in _ctlOf(c)) {
+        _wire(l);
+      }
+    }
     _stepRateController.addListener(_onTotalFieldChanged);
-    _pvcInFeetController.addListener(_onCalculationFieldChanged);
-    _pvcPerFeetRateController.addListener(_onCalculationFieldChanged);
-    _msPipeInFeetController.addListener(_onCalculationFieldChanged);
-    _msPipePerFeetRateController.addListener(_onCalculationFieldChanged);
     _extraChargesController.addListener(_onCalculationFieldChanged);
     _lessController.addListener(_onBalanceFieldChanged);
     _billNumberController.addListener(_checkBillNumberDuplicate);
@@ -208,21 +256,17 @@ class _LedgerFormScreenState extends ConsumerState<LedgerFormScreen> {
   void dispose() {
     _billNumberController.dispose();
     _addressController.dispose();
-    _depthInFeetController.dispose();
-    _depthPerFeetRateController.dispose();
+    for (final c in LedgerLine.categories) {
+      for (final l in _ctlOf(c)) {
+        l.dispose();
+      }
+    }
     _stepRateController.dispose();
-    _pvcInFeetController.dispose();
-    _pvcPerFeetRateController.dispose();
-    _msPipeInFeetController.dispose();
-    _msPipePerFeetRateController.dispose();
     _extraChargesController.dispose();
     _totalController.dispose();
     _balanceController.dispose();
     _lessController.dispose();
     _notesController.dispose();
-    _depthCommissionController.dispose();
-    _pvcCommissionController.dispose();
-    _msCommissionController.dispose();
     _commissionController.dispose();
     super.dispose();
   }
@@ -232,6 +276,11 @@ class _LedgerFormScreenState extends ConsumerState<LedgerFormScreen> {
     _updateStepRate();
     _updateCommission();
     setState(() {}); // Trigger rebuild for calculation preview
+  }
+
+  void _onCommissionFieldChanged() {
+    _updateCommission();
+    setState(() {});
   }
 
   void _onTotalFieldChanged() {
@@ -273,15 +322,8 @@ class _LedgerFormScreenState extends ConsumerState<LedgerFormScreen> {
       return;
     }
 
-    final depthInFeet = double.tryParse(_depthInFeetController.text) ?? 0;
-    final depthRate = double.tryParse(_depthPerFeetRateController.text) ?? 0;
-
-    final stepRate = LedgerEntry.calculateStepRate(
-      depthType: _depth,
-      depthInFeet: depthInFeet,
-      baseRate: depthRate,
-      stepTable: ref.read(ledgerTypesProvider).stepTableFor(_depth),
-    );
+    final stepRate = LedgerEntry.calculateLinesStepRate(
+        _allLines, ref.read(ledgerTypesProvider));
 
     _stepRateController.text = stepRate.toStringAsFixed(2);
     _updateCalculatedTotal();
@@ -290,25 +332,10 @@ class _LedgerFormScreenState extends ConsumerState<LedgerFormScreen> {
   void _updateCalculatedTotal() {
     if (_isTotalManuallyEdited) return;
 
-    final depthInFeet = double.tryParse(_depthInFeetController.text) ?? 0;
-    final depthRate = double.tryParse(_depthPerFeetRateController.text) ?? 0;
-    final stepRate = double.tryParse(_stepRateController.text) ?? 0;
-    final pvcInFeet = double.tryParse(_pvcInFeetController.text) ?? 0;
-    final pvcPerFeetRate = double.tryParse(_pvcPerFeetRateController.text) ?? 0;
-    final msPipeInFeet = double.tryParse(_msPipeInFeetController.text) ?? 0;
-    final msPipePerFeetRate =
-        double.tryParse(_msPipePerFeetRateController.text) ?? 0;
-    final extraCharges = double.tryParse(_extraChargesController.text) ?? 0;
-
-    final total = LedgerEntry.calculateTotal(
-      depthInFeet: depthInFeet,
-      depthPerFeetRate: depthRate,
-      stepRate: stepRate,
-      pvcInFeet: pvcInFeet,
-      pvcPerFeetRate: pvcPerFeetRate,
-      msPipeInFeet: msPipeInFeet,
-      msPipePerFeetRate: msPipePerFeetRate,
-      extraCharges: extraCharges,
+    final total = LedgerEntry.calculateLinesTotal(
+      lines: _allLines,
+      stepRate: double.tryParse(_stepRateController.text) ?? 0,
+      extraCharges: double.tryParse(_extraChargesController.text) ?? 0,
     );
 
     _totalController.text = total.toStringAsFixed(2);
@@ -421,6 +448,24 @@ class _LedgerFormScreenState extends ConsumerState<LedgerFormScreen> {
     }
   }
 
+  /// Lines to store: empty PVC and MS pipe lines are dropped; depth always
+  /// keeps at least its first line.
+  List<LedgerLine> _savedLines() {
+    final out = <LedgerLine>[];
+    for (final c in LedgerLine.categories) {
+      final lines = [for (final l in _ctlOf(c)) l];
+      final kept = [
+        for (final l in lines)
+          if (!l.isEmpty) l.toLine(c)
+      ];
+      if (kept.isEmpty && c == LedgerLine.depth) {
+        kept.add(lines.first.toLine(c));
+      }
+      out.addAll(kept);
+    }
+    return out;
+  }
+
   Future<void> _saveEntry() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -441,18 +486,13 @@ class _LedgerFormScreenState extends ConsumerState<LedgerFormScreen> {
       agentId: _selectedAgent!.id,
       agentName: _selectedAgent!.name,
       address: _addressController.text.trim(),
-      depth: _depth,
-      depthInFeet: double.tryParse(_depthInFeetController.text) ?? 0,
-      depthPerFeetRate: double.tryParse(_depthPerFeetRateController.text) ?? 0,
+      depth: _depthLines.first.type,
+      depthInFeet: 0,
+      depthPerFeetRate: 0,
       stepRate: double.tryParse(_stepRateController.text) ?? 0,
       isStepRateManuallyEdited: _isStepRateManuallyEdited,
-      pvc: _pvc,
-      pvcInFeet: double.tryParse(_pvcInFeetController.text) ?? 0,
-      pvcPerFeetRate: double.tryParse(_pvcPerFeetRateController.text) ?? 0,
-      msPipe: _msPipe,
-      msPipeInFeet: double.tryParse(_msPipeInFeetController.text) ?? 0,
-      msPipePerFeetRate:
-          double.tryParse(_msPipePerFeetRateController.text) ?? 0,
+      pvc: _pvcLines.first.type,
+      msPipe: _msLines.first.type,
       extraCharges: double.tryParse(_extraChargesController.text) ?? 0,
       total: double.tryParse(_totalController.text) ?? 0,
       isTotalManuallyEdited: _isTotalManuallyEdited,
@@ -461,9 +501,6 @@ class _LedgerFormScreenState extends ConsumerState<LedgerFormScreen> {
       receivedPhonePe: 0, // Main-bore: No PhonePe
       phonePeName: null, // Main-bore: No PhonePe name
       paymentsJson: LedgerPayment.encodeList(_payments),
-      depthCommissionRate: _num(_depthCommissionController),
-      pvcCommissionRate: _num(_pvcCommissionController),
-      msPipeCommissionRate: _num(_msCommissionController),
       commission: _num(_commissionController),
       isCommissionManuallyEdited: _isCommissionManuallyEdited,
       balance: double.tryParse(_balanceController.text) ?? 0,
@@ -474,7 +511,7 @@ class _LedgerFormScreenState extends ConsumerState<LedgerFormScreen> {
       createdAt: widget.entry?.createdAt ?? DateTime.now(),
       updatedAt: DateTime.now(),
       vehicleId: widget.entry?.vehicleId ?? DatabaseService.currentVehicleId,
-    );
+    ).withLines(_savedLines());
 
     if (isEditing) {
       await ref.read(ledgerEntriesProvider.notifier).updateEntry(entry);
@@ -694,240 +731,66 @@ class _LedgerFormScreenState extends ConsumerState<LedgerFormScreen> {
               AddressAutocompleteField(controller: _addressController),
               const SizedBox(height: 24),
 
-              // Depth Section
+              // Depth lines
               _buildSectionTitle('Depth Details'),
+              _linesSection(LedgerLine.depth, 'Depth'),
               Row(
                 children: [
                   Expanded(
-                    child: DropdownButtonFormField<String>(
-                      value: _depth,
-                      decoration: const InputDecoration(
-                        labelText: 'Depth Type',
+                    child: TextFormField(
+                      controller: _stepRateController,
+                      keyboardType:
+                          const TextInputType.numberWithOptions(decimal: true),
+                      inputFormatters: [
+                        FilteringTextInputFormatter.allow(
+                            RegExp(r'^\d*\.?\d*')),
+                      ],
+                      decoration: InputDecoration(
+                        labelText: _depthLines.length > 1
+                            ? 'Step Rate, all depth lines (₹)'
+                            : 'Step Rate (₹)',
+                        prefixIcon: const Icon(Icons.trending_up),
+                        suffixIcon: _isStepRateManuallyEdited
+                            ? const Tooltip(
+                                message: 'Manually edited',
+                                child: Icon(Icons.edit,
+                                    color: AppColors.warning, size: 18),
+                              )
+                            : null,
                       ),
-                      items: ref
-                          .watch(ledgerTypesProvider)
-                          .withCurrent(LedgerTypeCategory.depth, _depth)
-                          .map(
-                              (d) => DropdownMenuItem(value: d, child: Text(d)))
-                          .toList(),
                       onChanged: (value) {
-                        if (value != null) {
-                          final old = _depth;
+                        if (!_isStepRateManuallyEdited) {
                           setState(() {
-                            _depth = value;
+                            _isStepRateManuallyEdited = true;
                           });
-                          _followTypePrice(
-                              'depth', old, value, _depthCommissionController);
-                          _updateStepRate();
                         }
                       },
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: TextFormField(
-                      controller: _depthInFeetController,
-                      keyboardType:
-                          const TextInputType.numberWithOptions(decimal: true),
-                      inputFormatters: [
-                        FilteringTextInputFormatter.allow(
-                            RegExp(r'^\d*\.?\d*')),
-                      ],
-                      decoration: const InputDecoration(
-                        labelText: 'Depth (feet)',
-                      ),
+                  if (_isStepRateManuallyEdited)
+                    IconButton(
+                      onPressed: () {
+                        setState(() {
+                          _isStepRateManuallyEdited = false;
+                        });
+                        _updateStepRate();
+                      },
+                      icon: const Icon(Icons.refresh, size: 20),
+                      tooltip: 'Auto calculate',
+                      color: AppColors.primary,
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextFormField(
-                      controller: _depthPerFeetRateController,
-                      keyboardType:
-                          const TextInputType.numberWithOptions(decimal: true),
-                      inputFormatters: [
-                        FilteringTextInputFormatter.allow(
-                            RegExp(r'^\d*\.?\d*')),
-                      ],
-                      decoration: const InputDecoration(
-                        labelText: 'Rate per feet (₹)',
-                        prefixIcon: Icon(Icons.currency_rupee),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: TextFormField(
-                            controller: _stepRateController,
-                            keyboardType: const TextInputType.numberWithOptions(
-                                decimal: true),
-                            inputFormatters: [
-                              FilteringTextInputFormatter.allow(
-                                  RegExp(r'^\d*\.?\d*')),
-                            ],
-                            decoration: InputDecoration(
-                              labelText: 'Step Rate (₹)',
-                              prefixIcon: const Icon(Icons.trending_up),
-                              suffixIcon: _isStepRateManuallyEdited
-                                  ? const Tooltip(
-                                      message: 'Manually edited',
-                                      child: Icon(Icons.edit,
-                                          color: AppColors.warning, size: 18),
-                                    )
-                                  : null,
-                            ),
-                            onChanged: (value) {
-                              if (!_isStepRateManuallyEdited) {
-                                setState(() {
-                                  _isStepRateManuallyEdited = true;
-                                });
-                              }
-                            },
-                          ),
-                        ),
-                        if (_isStepRateManuallyEdited)
-                          IconButton(
-                            onPressed: () {
-                              setState(() {
-                                _isStepRateManuallyEdited = false;
-                              });
-                              _updateStepRate();
-                            },
-                            icon: const Icon(Icons.refresh, size: 20),
-                            tooltip: 'Auto calculate',
-                            color: AppColors.primary,
-                          ),
-                      ],
-                    ),
-                  ),
                 ],
               ),
               const SizedBox(height: 24),
 
-              // PVC Section
+              // PVC lines
               _buildSectionTitle('PVC Details'),
-              Row(
-                children: [
-                  Expanded(
-                    child: DropdownButtonFormField<String>(
-                      value: _pvc,
-                      decoration: const InputDecoration(
-                        labelText: 'PVC Type',
-                      ),
-                      items: ref
-                          .watch(ledgerTypesProvider)
-                          .withCurrent(LedgerTypeCategory.pvc, _pvc)
-                          .map(
-                              (p) => DropdownMenuItem(value: p, child: Text(p)))
-                          .toList(),
-                      onChanged: (value) {
-                        if (value != null) {
-                          final old = _pvc;
-                          setState(() {
-                            _pvc = value;
-                          });
-                          _followTypePrice(
-                              'pvc', old, value, _pvcCommissionController);
-                        }
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: TextFormField(
-                      controller: _pvcInFeetController,
-                      keyboardType:
-                          const TextInputType.numberWithOptions(decimal: true),
-                      inputFormatters: [
-                        FilteringTextInputFormatter.allow(
-                            RegExp(r'^\d*\.?\d*')),
-                      ],
-                      decoration: const InputDecoration(
-                        labelText: 'PVC (feet)',
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+              _linesSection(LedgerLine.pvc, 'PVC'),
               const SizedBox(height: 12),
-              TextFormField(
-                controller: _pvcPerFeetRateController,
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
-                inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
-                ],
-                decoration: const InputDecoration(
-                  labelText: 'PVC Rate per feet (₹)',
-                  prefixIcon: Icon(Icons.currency_rupee),
-                ),
-              ),
-              const SizedBox(height: 24),
 
-              // MS Pipe Section
+              // MS pipe lines
               _buildSectionTitle('MS Pipe Details'),
-              Row(
-                children: [
-                  Expanded(
-                    child: DropdownButtonFormField<String>(
-                      value: _msPipe,
-                      decoration: const InputDecoration(
-                        labelText: 'MS Pipe Type',
-                      ),
-                      items: ref
-                          .watch(ledgerTypesProvider)
-                          .withCurrent(LedgerTypeCategory.ms, _msPipe)
-                          .map(
-                              (m) => DropdownMenuItem(value: m, child: Text(m)))
-                          .toList(),
-                      onChanged: (value) {
-                        if (value != null) {
-                          final old = _msPipe;
-                          setState(() {
-                            _msPipe = value;
-                          });
-                          _followTypePrice(
-                              'ms', old, value, _msCommissionController);
-                        }
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: TextFormField(
-                      controller: _msPipeInFeetController,
-                      keyboardType:
-                          const TextInputType.numberWithOptions(decimal: true),
-                      inputFormatters: [
-                        FilteringTextInputFormatter.allow(
-                            RegExp(r'^\d*\.?\d*')),
-                      ],
-                      decoration: const InputDecoration(
-                        labelText: 'MS Pipe (feet)',
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _msPipePerFeetRateController,
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
-                inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
-                ],
-                decoration: const InputDecoration(
-                  labelText: 'MS Pipe Rate per feet (₹)',
-                  prefixIcon: Icon(Icons.currency_rupee),
-                ),
-              ),
+              _linesSection(LedgerLine.ms, 'MS Pipe'),
               const SizedBox(height: 16),
 
               // Extra Charges
@@ -999,13 +862,7 @@ class _LedgerFormScreenState extends ConsumerState<LedgerFormScreen> {
 
               // Commission (not added to total)
               CommissionSection(
-                depthFeet: _num(_depthInFeetController),
-                pvcFeet: _num(_pvcInFeetController),
-                msPipeFeet: _num(_msPipeInFeetController),
-                showPvcAndMs: true,
-                depthRate: _depthCommissionController,
-                pvcRate: _pvcCommissionController,
-                msPipeRate: _msCommissionController,
+                rows: _commissionRows,
                 commission: _commissionController,
                 isManual: _isCommissionManuallyEdited,
                 onChanged: () {
@@ -1118,20 +975,35 @@ class _LedgerFormScreenState extends ConsumerState<LedgerFormScreen> {
   }
 
   Widget _buildCalculationPreview() {
-    final depthInFeet = double.tryParse(_depthInFeetController.text) ?? 0;
-    final depthRate = double.tryParse(_depthPerFeetRateController.text) ?? 0;
     final stepRate = double.tryParse(_stepRateController.text) ?? 0;
-    final pvcInFeet = double.tryParse(_pvcInFeetController.text) ?? 0;
-    final pvcPerFeetRate = double.tryParse(_pvcPerFeetRateController.text) ?? 0;
-    final msPipeInFeet = double.tryParse(_msPipeInFeetController.text) ?? 0;
-    final msPipePerFeetRate =
-        double.tryParse(_msPipePerFeetRateController.text) ?? 0;
     final extraCharges = double.tryParse(_extraChargesController.text) ?? 0;
     final format = NumberFormat('#,##0.00');
+    final lines = _allLines;
 
-    final depthTotal = depthInFeet * depthRate;
-    final pvcTotal = pvcInFeet * pvcPerFeetRate;
-    final msPipeTotal = msPipeInFeet * msPipePerFeetRate;
+    String label(String cat, LedgerLine l, int i, int n) {
+      final name = switch (cat) {
+        LedgerLine.pvc => 'PVC',
+        LedgerLine.ms => 'MS Pipe',
+        _ => 'Depth',
+      };
+      final head = n > 1 ? '$name ${i + 1} ${l.type}' : '$name ${l.type}';
+      return '$head (${l.feet} ft × ₹${l.rate})';
+    }
+
+    final rows = <Widget>[];
+    for (final c in LedgerLine.categories) {
+      final cl = [
+        for (final l in lines)
+          if (l.category == c) l
+      ];
+      for (final (i, l) in cl.indexed) {
+        rows.add(_buildCalcRow(
+            label(c, l, i, cl.length), '₹${format.format(l.feet * l.rate)}'));
+      }
+      if (c == LedgerLine.depth) {
+        rows.add(_buildCalcRow('Step Rate', '₹${format.format(stepRate)}'));
+      }
+    }
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -1152,25 +1024,14 @@ class _LedgerFormScreenState extends ConsumerState<LedgerFormScreen> {
             ),
           ),
           const SizedBox(height: 12),
-          _buildCalcRow('Depth ($depthInFeet ft × ₹$depthRate)',
-              '₹${format.format(depthTotal)}'),
-          _buildCalcRow('Step Rate', '₹${format.format(stepRate)}'),
-          _buildCalcRow('PVC ($pvcInFeet ft × ₹$pvcPerFeetRate)',
-              '₹${format.format(pvcTotal)}'),
-          _buildCalcRow('MS Pipe ($msPipeInFeet ft × ₹$msPipePerFeetRate)',
-              '₹${format.format(msPipeTotal)}'),
+          ...rows,
           _buildCalcRow('Extra Charges', '₹${format.format(extraCharges)}'),
           const Divider(),
           _buildCalcRow(
             'Total',
-            '₹${format.format(LedgerEntry.calculateTotal(
-              depthInFeet: depthInFeet,
-              depthPerFeetRate: depthRate,
+            '₹${format.format(LedgerEntry.calculateLinesTotal(
+              lines: lines,
               stepRate: stepRate,
-              pvcInFeet: pvcInFeet,
-              pvcPerFeetRate: pvcPerFeetRate,
-              msPipeInFeet: msPipeInFeet,
-              msPipePerFeetRate: msPipePerFeetRate,
               extraCharges: extraCharges,
             ))}',
             isBold: true,
@@ -1184,15 +1045,10 @@ class _LedgerFormScreenState extends ConsumerState<LedgerFormScreen> {
                     fontWeight: FontWeight.w600,
                     color: AppColors.textSecondary)),
           ),
-          _buildCalcRow(
-              'Depth ($depthInFeet ft × ₹${_depthCommissionController.text.isEmpty ? 0 : _depthCommissionController.text})',
-              '₹${format.format(depthInFeet * (double.tryParse(_depthCommissionController.text) ?? 0))}'),
-          _buildCalcRow(
-              'PVC ($pvcInFeet ft × ₹${_pvcCommissionController.text.isEmpty ? 0 : _pvcCommissionController.text})',
-              '₹${format.format(pvcInFeet * (double.tryParse(_pvcCommissionController.text) ?? 0))}'),
-          _buildCalcRow(
-              'MS Pipe ($msPipeInFeet ft × ₹${_msCommissionController.text.isEmpty ? 0 : _msCommissionController.text})',
-              '₹${format.format(msPipeInFeet * (double.tryParse(_msCommissionController.text) ?? 0))}'),
+          for (final r in _commissionRows)
+            _buildCalcRow(
+                '${r.label} (${r.feet} ft × ₹${r.rate.text.isEmpty ? 0 : r.rate.text})',
+                '₹${format.format(r.amount)}'),
           _buildCalcRow(
             _isCommissionManuallyEdited
                 ? 'Total commission (manual)'

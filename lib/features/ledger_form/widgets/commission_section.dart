@@ -1,23 +1,35 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
-import '../../../core/models/ledger_entry.dart';
 import '../../../core/theme/app_colors.dart';
 
-/// Commission block of a bill (v2.0.0): rate per foot for depth (and PVC / MS
-/// pipe on main bore) and the resulting commission, which can be overridden.
-/// Commission is informational and is never part of the bill total.
+/// One commission rate field of the section: a bill line.
+class CommissionRow {
+  /// 'depth', 'pvc' or 'ms'.
+  final String category;
+  final String label; // for example 'Depth 7inch'
+  final double feet;
+  final TextEditingController rate;
+
+  const CommissionRow({
+    required this.category,
+    required this.label,
+    required this.feet,
+    required this.rate,
+  });
+
+  double get amount => feet * (double.tryParse(rate.text) ?? 0);
+}
+
+/// Commission block of a bill (v2.0.1, lines in v2.0.2): a rate per foot for
+/// every depth, PVC and MS pipe line, the amount per kind and the total, which
+/// can be overridden. Commission is informational and is never part of the
+/// bill total.
 ///
 /// The form owns the controllers; this widget only lays them out and calls
 /// [onChanged] after any edit so the form can recalculate.
 class CommissionSection extends StatelessWidget {
-  final double depthFeet;
-  final double pvcFeet;
-  final double msPipeFeet;
-  final bool showPvcAndMs;
-  final TextEditingController depthRate;
-  final TextEditingController pvcRate;
-  final TextEditingController msPipeRate;
+  final List<CommissionRow> rows;
   final TextEditingController commission;
   final bool isManual;
   final VoidCallback onChanged;
@@ -25,13 +37,7 @@ class CommissionSection extends StatelessWidget {
 
   const CommissionSection({
     super.key,
-    required this.depthFeet,
-    required this.pvcFeet,
-    required this.msPipeFeet,
-    required this.showPvcAndMs,
-    required this.depthRate,
-    required this.pvcRate,
-    required this.msPipeRate,
+    required this.rows,
     required this.commission,
     required this.isManual,
     required this.onChanged,
@@ -39,40 +45,24 @@ class CommissionSection extends StatelessWidget {
   });
 
   /// Commission calculated from the current rates (used by the form).
-  static double calculate({
-    required double depthFeet,
-    required double pvcFeet,
-    required double msPipeFeet,
-    required TextEditingController depthRate,
-    required TextEditingController pvcRate,
-    required TextEditingController msPipeRate,
-    required bool showPvcAndMs,
-  }) {
-    return LedgerEntry.calculateCommission(
-      depthInFeet: depthFeet,
-      depthCommissionRate: double.tryParse(depthRate.text) ?? 0,
-      pvcInFeet: showPvcAndMs ? pvcFeet : 0,
-      pvcCommissionRate:
-          showPvcAndMs ? (double.tryParse(pvcRate.text) ?? 0) : 0,
-      msPipeInFeet: showPvcAndMs ? msPipeFeet : 0,
-      msPipeCommissionRate:
-          showPvcAndMs ? (double.tryParse(msPipeRate.text) ?? 0) : 0,
-    );
+  static double calculate(Iterable<CommissionRow> rows) {
+    final c = rows.fold(0.0, (a, r) => a + r.amount);
+    return (c * 100).round() / 100;
   }
 
-  Widget _rate(TextEditingController c, String label, double feet) {
+  Widget _rate(CommissionRow r) {
     final money = NumberFormat('#,##0.##');
-    final part = feet * (double.tryParse(c.text) ?? 0);
-    return Expanded(
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
       child: TextFormField(
-        controller: c,
+        controller: r.rate,
         keyboardType: const TextInputType.numberWithOptions(decimal: true),
         inputFormatters: [
           FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))
         ],
         decoration: InputDecoration(
-          labelText: label,
-          helperText: '${money.format(feet)} ft = ₹${money.format(part)}',
+          labelText: '${r.label} rate (₹/ft)',
+          helperText: '${money.format(r.feet)} ft = ₹${money.format(r.amount)}',
         ),
         onChanged: (_) => onChanged(),
       ),
@@ -105,15 +95,12 @@ class CommissionSection extends StatelessWidget {
     );
   }
 
-  /// Read-only totals: each part (feet x rate) and the commission of the bill.
+  /// Read-only totals: the commission of each kind and of the bill.
   Widget _breakdown() {
-    final depth = depthFeet * (double.tryParse(depthRate.text) ?? 0);
-    final pvc =
-        showPvcAndMs ? pvcFeet * (double.tryParse(pvcRate.text) ?? 0) : 0.0;
-    final ms = showPvcAndMs
-        ? msPipeFeet * (double.tryParse(msPipeRate.text) ?? 0)
-        : 0.0;
+    double of(String cat) =>
+        rows.where((r) => r.category == cat).fold(0.0, (a, r) => a + r.amount);
     final total = double.tryParse(commission.text) ?? 0;
+    final has = {for (final r in rows) r.category};
     return Container(
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
@@ -123,11 +110,9 @@ class CommissionSection extends StatelessWidget {
       ),
       child: Column(
         children: [
-          _line('Depth commission', depth),
-          if (showPvcAndMs) ...[
-            _line('PVC commission', pvc),
-            _line('MS pipe commission', ms),
-          ],
+          if (has.contains('depth')) _line('Depth commission', of('depth')),
+          if (has.contains('pvc')) _line('PVC commission', of('pvc')),
+          if (has.contains('ms')) _line('MS pipe commission', of('ms')),
           const Divider(height: 12),
           _line('Total commission', total,
               bold: true, tag: isManual ? 'manual' : null),
@@ -163,18 +148,7 @@ class CommissionSection extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 8),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _rate(depthRate, 'Depth rate (₹/ft)', depthFeet),
-              if (showPvcAndMs) ...[
-                const SizedBox(width: 8),
-                _rate(pvcRate, 'PVC rate (₹/ft)', pvcFeet),
-                const SizedBox(width: 8),
-                _rate(msPipeRate, 'MS rate (₹/ft)', msPipeFeet),
-              ],
-            ],
-          ),
+          for (final r in rows) _rate(r),
           const SizedBox(height: 12),
           _breakdown(),
           const SizedBox(height: 16),

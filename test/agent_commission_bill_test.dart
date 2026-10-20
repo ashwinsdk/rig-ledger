@@ -54,12 +54,12 @@ void main() {
     await t.tap(find.text('Karthik').last);
     await t.pump(const Duration(milliseconds: 300));
 
+    final depthRateField = find.byWidgetPredicate((w) =>
+        w is TextField &&
+        (w.decoration?.labelText ?? '').startsWith('Depth ') &&
+        (w.decoration?.labelText ?? '').endsWith('rate (₹/ft)'));
     double depthRate() => double.parse(
-        (t.widget(find.widgetWithText(TextFormField, 'Depth rate (₹/ft)'))
-                    as TextFormField)
-                .controller
-                ?.text ??
-            '0');
+        (t.widget(depthRateField) as TextField).controller?.text ?? '0');
     expect(depthRate(), 10); // 7inch has no price: the default
 
     // choose 9inch
@@ -70,8 +70,7 @@ void main() {
     expect(depthRate(), 15);
 
     // a typed rate is kept when the type changes
-    await t.enterText(
-        find.widgetWithText(TextFormField, 'Depth rate (₹/ft)'), '20');
+    await t.enterText(depthRateField, '20');
     await t.tap(find.byType(DropdownButtonFormField<String>).first);
     await t.pump(const Duration(milliseconds: 300));
     await t.tap(find.text('7inch').last);

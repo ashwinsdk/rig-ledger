@@ -12,13 +12,17 @@ void main() {
       home: Scaffold(
         body: SingleChildScrollView(
           child: CommissionSection(
-            depthFeet: 100,
-            pvcFeet: 50,
-            msPipeFeet: 0,
-            showPvcAndMs: true,
-            depthRate: depth,
-            pvcRate: pvc,
-            msPipeRate: ms,
+            rows: [
+              CommissionRow(
+                  category: 'depth',
+                  label: 'Depth 7inch',
+                  feet: 100,
+                  rate: depth),
+              CommissionRow(
+                  category: 'pvc', label: 'PVC 7inch', feet: 50, rate: pvc),
+              CommissionRow(
+                  category: 'ms', label: 'MS pipe 6inch', feet: 0, rate: ms),
+            ],
             commission: total,
             isManual: true,
             onChanged: () {},
