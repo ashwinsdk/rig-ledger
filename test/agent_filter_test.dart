@@ -50,6 +50,8 @@ void main() {
     await t.pump(const Duration(milliseconds: 400));
     // the pill shows the chosen agent even though Zed has no bills
     expect(find.text('Zed'), findsWidgets);
-    expect(find.text('All agents'), findsNothing);
+    // the agent view opens, with a way back to all agents
+    expect(find.text('Commission earned'), findsOneWidget);
+    expect(find.text('No bills for Zed in this period'), findsOneWidget);
   });
 }

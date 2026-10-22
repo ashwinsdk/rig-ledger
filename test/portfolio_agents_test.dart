@@ -48,8 +48,8 @@ void main() {
     expect(find.text('Karthik'), findsOneWidget);
     expect(find.text('no bills'), findsOneWidget);
 
-    await t.ensureVisible(find.text('Karthik'));
-    await t.tap(find.text('Karthik'));
+    await t.ensureVisible(find.byTooltip('Prices and details').first);
+    await t.tap(find.byTooltip('Prices and details').first);
     await t.pump(const Duration(milliseconds: 400));
     expect(find.text('Commission per foot'), findsOneWidget);
     expect(find.text('Depth 7"'), findsOneWidget);

@@ -9,6 +9,7 @@ import '../../core/providers/vehicle_provider.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/portfolio_calculator.dart';
 import '../agents/agent_dialogs.dart';
+import 'agent_view.dart';
 
 final _money = NumberFormat('#,##0.00');
 
@@ -188,39 +189,66 @@ class _PortfolioViewState extends ConsumerState<PortfolioView> {
             },
           ),
           const SizedBox(height: 16),
-          if (s.expensesApply) _ProfitCard(s: s) else const _NoExpensesNote(),
-          const SizedBox(height: 16),
-          GridView.count(
-            crossAxisCount: 2,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            mainAxisSpacing: 12,
-            crossAxisSpacing: 12,
-            childAspectRatio: 1.7,
-            children: [
-              _MetricCard('Total billed', s.total, AppColors.primary,
-                  Icons.account_balance_wallet_outlined,
-                  subtitle: '${s.bills} ${s.bills == 1 ? 'bill' : 'bills'}'),
-              _MetricCard('Received', s.received, AppColors.success,
-                  Icons.check_circle_outline),
-              _MetricCard('Pending', s.pending, AppColors.warning,
-                  Icons.pending_outlined,
-                  subtitle: s.less > 0
-                      ? 'after ₹${_money.format(s.less)} less'
-                      : null),
-              _MetricCard('Commission', s.commission, AppColors.accent,
-                  Icons.handshake_outlined,
-                  subtitle: 'not part of total'),
-            ],
-          ),
-          if (s.expensesApply) ...[
+          if (_agentId != null)
+            AgentView(
+              agent: known.where((a) => a.id == _agentId).firstOrNull,
+              agentName: selectedName ?? 'Agent',
+              bills: [
+                for (final b in bills)
+                  if (b.agentId == _agentId &&
+                      (widget.start == null ||
+                          !b.date.isBefore(widget.start!)) &&
+                      (widget.end == null || !b.date.isAfter(widget.end!)))
+                    b
+              ],
+              start: widget.start,
+              end: widget.end,
+              onShowAll: () => setState(() => _agentId = null),
+              onDetails: () {
+                final a = known.where((a) => a.id == _agentId).firstOrNull;
+                if (a == null) return;
+                _showAgentSheet(
+                    context, ref, a, s.agents.isEmpty ? null : s.agents.first);
+              },
+            )
+          else ...[
+            if (s.expensesApply) _ProfitCard(s: s) else const _NoExpensesNote(),
             const SizedBox(height: 16),
-            _ExpensesCard(s: s),
+            GridView.count(
+              crossAxisCount: 2,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              mainAxisSpacing: 12,
+              crossAxisSpacing: 12,
+              childAspectRatio: 1.7,
+              children: [
+                _MetricCard('Total billed', s.total, AppColors.primary,
+                    Icons.account_balance_wallet_outlined,
+                    subtitle: '${s.bills} ${s.bills == 1 ? 'bill' : 'bills'}'),
+                _MetricCard('Received', s.received, AppColors.success,
+                    Icons.check_circle_outline),
+                _MetricCard('Pending', s.pending, AppColors.warning,
+                    Icons.pending_outlined,
+                    subtitle: s.less > 0
+                        ? 'after ₹${_money.format(s.less)} less'
+                        : null),
+                _MetricCard('Commission', s.commission, AppColors.accent,
+                    Icons.handshake_outlined,
+                    subtitle: 'not part of total'),
+              ],
+            ),
+            if (s.expensesApply) ...[
+              const SizedBox(height: 16),
+              _ExpensesCard(s: s),
+            ],
+            const SizedBox(height: 16),
+            _AgentsSection(
+              rows: s.agents,
+              onSelect: (id) => setState(() => _agentId = id),
+            ),
+            const SizedBox(height: 16),
+            const _DefinitionsCard(),
           ],
-          const SizedBox(height: 16),
-          _AgentsSection(rows: s.agents),
-          const SizedBox(height: 16),
-          const _DefinitionsCard(),
         ],
       ),
     );
@@ -562,7 +590,10 @@ class _ExpensesCard extends StatelessWidget {
 /// period, with the period totals. Tap an agent for details, prices and edit.
 class _AgentsSection extends ConsumerWidget {
   final List<AgentPortfolioRow> rows;
-  const _AgentsSection({required this.rows});
+
+  /// Tap on an agent: show that agent's bills in the period.
+  final void Function(String agentId) onSelect;
+  const _AgentsSection({required this.rows, required this.onSelect});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -609,7 +640,9 @@ class _AgentsSection extends ConsumerWidget {
             _AgentRow(
               agent: agent,
               row: byId[agent.id],
-              onTap: () => _showAgentSheet(context, ref, agent, byId[agent.id]),
+              onTap: () => onSelect(agent.id),
+              onInfo: () =>
+                  _showAgentSheet(context, ref, agent, byId[agent.id]),
             ),
         ],
       ),
@@ -621,8 +654,12 @@ class _AgentRow extends StatelessWidget {
   final Agent agent;
   final AgentPortfolioRow? row;
   final VoidCallback onTap;
+  final VoidCallback onInfo;
   const _AgentRow(
-      {required this.agent, required this.row, required this.onTap});
+      {required this.agent,
+      required this.row,
+      required this.onTap,
+      required this.onInfo});
 
   @override
   Widget build(BuildContext context) {
@@ -647,8 +684,13 @@ class _AgentRow extends StatelessWidget {
                       : '${r.bills} ${r.bills == 1 ? 'bill' : 'bills'}',
                   style: const TextStyle(
                       fontSize: 12, color: AppColors.textSecondary)),
-              const Icon(Icons.chevron_right,
-                  size: 18, color: AppColors.textHint),
+              IconButton(
+                onPressed: onInfo,
+                icon: const Icon(Icons.info_outline, size: 20),
+                color: AppColors.textSecondary,
+                tooltip: 'Prices and details',
+                visualDensity: VisualDensity.compact,
+              ),
             ]),
             if (r != null) ...[
               const SizedBox(height: 2),

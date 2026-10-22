@@ -70,8 +70,8 @@ void main() {
       child: const MaterialApp(home: Scaffold(body: PortfolioView())),
     ));
     await t.pump(const Duration(milliseconds: 300));
-    await t.ensureVisible(find.text('Mani'));
-    await t.tap(find.text('Mani'));
+    await t.ensureVisible(find.byTooltip('Prices and details').first);
+    await t.tap(find.byTooltip('Prices and details').first);
     await t.pump(const Duration(milliseconds: 400));
     await t.pump(const Duration(milliseconds: 400));
     await t.ensureVisible(find.text('Edit'));
@@ -99,8 +99,8 @@ void main() {
       child: const MaterialApp(home: Scaffold(body: PortfolioView())),
     ));
     await t.pump(const Duration(milliseconds: 300));
-    await t.ensureVisible(find.text('Mani'));
-    await t.tap(find.text('Mani'));
+    await t.ensureVisible(find.byTooltip('Prices and details').first);
+    await t.tap(find.byTooltip('Prices and details').first);
     await t.pump(const Duration(milliseconds: 400));
     await t.pump(const Duration(milliseconds: 400));
     await t.tap(find.text('Delete'));
