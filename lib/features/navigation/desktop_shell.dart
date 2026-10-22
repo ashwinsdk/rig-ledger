@@ -12,7 +12,6 @@ import '../../core/providers/sync_provider.dart';
 import '../../core/models/vehicle.dart';
 import '../home/combined_home_screen.dart';
 import '../stats/stats_screen.dart';
-import '../agents/agents_screen.dart';
 import '../settings/settings_screen.dart';
 import '../cashbook/cashbook_hub_screen.dart';
 import '../ledger_form/ledger_form_screen.dart';
@@ -65,8 +64,6 @@ class _DesktopShellState extends ConsumerState<DesktopShell>
         icon: Icons.pie_chart_outline,
         activeIcon: Icons.pie_chart,
         label: 'Portfolio'),
-    _NavItem(
-        icon: Icons.people_outlined, activeIcon: Icons.people, label: 'Agents'),
     _NavItem(
         icon: Icons.account_balance_wallet_outlined,
         activeIcon: Icons.account_balance_wallet,
@@ -214,25 +211,18 @@ class _DesktopShellState extends ConsumerState<DesktopShell>
                 ref.read(desktopNavIndexProvider.notifier).state = 1,
           ),
           PlatformMenuItem(
-            label: 'Agents',
+            label: 'Account Ledger',
             shortcut:
                 const SingleActivator(LogicalKeyboardKey.digit3, meta: true),
             onSelected: () =>
                 ref.read(desktopNavIndexProvider.notifier).state = 2,
           ),
           PlatformMenuItem(
-            label: 'Account Ledger',
+            label: 'Settings',
             shortcut:
                 const SingleActivator(LogicalKeyboardKey.digit4, meta: true),
             onSelected: () =>
                 ref.read(desktopNavIndexProvider.notifier).state = 3,
-          ),
-          PlatformMenuItem(
-            label: 'Settings',
-            shortcut:
-                const SingleActivator(LogicalKeyboardKey.digit5, meta: true),
-            onSelected: () =>
-                ref.read(desktopNavIndexProvider.notifier).state = 4,
           ),
         ],
       ),
@@ -266,9 +256,6 @@ class _DesktopShellState extends ConsumerState<DesktopShell>
         _showAddSideLedgerDialog(context);
       }
     } else if (currentIndex == 2) {
-      // Agents tab - trigger add agent
-      // The agents screen has its own add button
-    } else if (currentIndex == 3) {
       // Account Ledger tab - new entry in the current book
       openCashbookNewEntry(context, ref);
     }
@@ -349,7 +336,7 @@ class _DesktopShellState extends ConsumerState<DesktopShell>
   Map<ShortcutActivator, VoidCallback> _buildKeyboardShortcuts(
       BuildContext context, WidgetRef ref) {
     return {
-      // Cmd+1..5 to switch tabs
+      // Cmd+1..4 to switch tabs
       const SingleActivator(LogicalKeyboardKey.digit1, meta: true): () =>
           ref.read(desktopNavIndexProvider.notifier).state = 0,
       const SingleActivator(LogicalKeyboardKey.digit2, meta: true): () =>
@@ -358,8 +345,6 @@ class _DesktopShellState extends ConsumerState<DesktopShell>
           ref.read(desktopNavIndexProvider.notifier).state = 2,
       const SingleActivator(LogicalKeyboardKey.digit4, meta: true): () =>
           ref.read(desktopNavIndexProvider.notifier).state = 3,
-      const SingleActivator(LogicalKeyboardKey.digit5, meta: true): () =>
-          ref.read(desktopNavIndexProvider.notifier).state = 4,
       // Cmd+N to add new entry
       const SingleActivator(LogicalKeyboardKey.keyN, meta: true): () {
         final currentIndex = ref.read(desktopNavIndexProvider);
@@ -780,7 +765,6 @@ class _DesktopPageContent extends StatelessWidget {
         // Wrap each screen in a desktop-adapted container
         _DesktopContentWrapper(child: CombinedHomeScreen()),
         _DesktopContentWrapper(child: StatsScreen()),
-        _DesktopContentWrapper(child: AgentsScreen()),
         _DesktopContentWrapper(child: CashbookRootScreen()),
         _DesktopContentWrapper(child: SettingsScreen()),
       ],
