@@ -10,7 +10,7 @@ import 'package:rig_ledger/core/models/ledger_line.dart';
 import 'package:rig_ledger/features/portfolio/portfolio_view.dart';
 
 LedgerEntry bill(String no, DateTime date, double feet, double comm,
-    {String agentId = 'a1', bool manual = false}) {
+    {String agentId = 'a1', bool manual = false, String type = '7inch'}) {
   final b = LedgerEntry(
     id: 'id-$no',
     date: date,
@@ -38,7 +38,7 @@ LedgerEntry bill(String no, DateTime date, double feet, double comm,
   return b.withLines([
     LedgerLine(
         category: 'depth',
-        type: '7inch',
+        type: type,
         feet: feet,
         rate: 100,
         commissionRate: comm),
@@ -70,7 +70,7 @@ void main() {
     await DatabaseService.saveLedgerEntry(
         bill('B2', DateTime(2026, 9, 5), 200, 10));
     await DatabaseService.saveLedgerEntry(
-        bill('B3', DateTime(2026, 10, 2), 50, 12, manual: true));
+        bill('B3', DateTime(2026, 10, 2), 50, 12, manual: true, type: '8inch'));
     await DatabaseService.saveLedgerEntry(
         bill('Z1', DateTime(2026, 9, 9), 70, 10, agentId: 'a2'));
     await DatabaseService.saveLedgerEntry(
@@ -115,10 +115,14 @@ void main() {
         findsOneWidget);
     expect(find.text('₹17,400.00'), findsOneWidget);
     expect(find.textContaining('All agents, after expenses'), findsOneWidget);
-    // feet by type: 100 + 200 + 50 ft of 7inch depth
-    expect(find.text('Feet by type'), findsOneWidget);
-    expect(find.text('Total 350 ft'), findsOneWidget);
-    expect(find.text('7"  350 ft', findRichText: true), findsOneWidget);
+    // feet and commission by type: 7inch 100 + 200 ft (1000 + 2000), 8inch
+    // 50 ft (600)
+    expect(find.text('Feet and commission by type'), findsOneWidget);
+    expect(find.text('Total 350 ft  |  ₹3,600.00'), findsOneWidget);
+    expect(find.text('7"  300 ft', findRichText: true), findsOneWidget);
+    expect(find.text('Commission ₹3,000.00'), findsOneWidget);
+    expect(find.text('8"  50 ft', findRichText: true), findsOneWidget);
+    expect(find.text('Commission ₹600.00'), findsOneWidget);
     expect(find.text('By month'), findsOneWidget);
     for (final m in ['Aug 2026', 'Sep 2026', 'Oct 2026']) {
       expect(find.text(m), findsOneWidget);

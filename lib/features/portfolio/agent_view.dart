@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import '../../core/database/database_service.dart';
 import '../../core/models/agent.dart';
 import '../../core/models/ledger_entry.dart';
+import '../../core/models/ledger_line.dart';
 import '../../core/models/ledger_types.dart';
 import '../../core/utils/feet_totals.dart';
 import '../../core/models/vehicle.dart';
@@ -97,7 +98,7 @@ class AgentView extends StatelessWidget {
         ),
         if (sorted.isNotEmpty) ...[
           const SizedBox(height: 16),
-          _feetByType(FeetTotals.compute(sorted, types)),
+          _feetByType(FeetTotals.compute(sorted, types), sorted),
         ],
         if (sorted.isEmpty)
           Padding(
@@ -265,17 +266,31 @@ class AgentView extends StatelessWidget {
         ),
       );
 
-  /// Feet of every depth, PVC and MS pipe type over the agent's bills: every
-  /// line counts under its own type. Types without feet are left out.
-  Widget _feetByType(FeetTotals f) {
+  /// Feet and commission of every depth, PVC and MS pipe type over the
+  /// agent's bills: every line counts under its own type (commission is feet x
+  /// the line's commission rate). Types without feet are left out.
+  Widget _feetByType(FeetTotals f, List<LedgerEntry> bills) {
     final feet = NumberFormat('#,##0.##');
-    Widget group(String title, Map<String, double> map, Color color) {
+    // commission per category and type, from the lines
+    final comm = <String, Map<String, double>>{};
+    for (final b in bills) {
+      for (final l in b.lines) {
+        final m = comm.putIfAbsent(l.category, () => {});
+        m[l.type] = (m[l.type] ?? 0) + l.feet * l.commissionRate;
+      }
+    }
+    final anyManual = bills.any((b) => b.isCommissionManuallyEdited);
+
+    Widget group(
+        String title, String category, Map<String, double> map, Color color) {
       final used = {
         for (final e in map.entries)
           if (e.value > 0) e.key: e.value
       };
       if (used.isEmpty) return const SizedBox.shrink();
-      final total = used.values.fold(0.0, (a, b) => a + b);
+      double c(String type) => _r2(comm[category]?[type] ?? 0);
+      final totalFeet = used.values.fold(0.0, (a, b) => a + b);
+      final totalComm = _r2(used.keys.fold(0.0, (a, t) => a + c(t)));
       return Padding(
         padding: const EdgeInsets.only(top: 10),
         child: Column(
@@ -290,11 +305,15 @@ class AgentView extends StatelessWidget {
                           fontWeight: FontWeight.w600,
                           color: AppColors.textSecondary)),
                 ),
-                Text('Total ${feet.format(total)} ft',
-                    style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: color)),
+                Flexible(
+                  child: Text(
+                      'Total ${feet.format(totalFeet)} ft  |  ₹${_money.format(totalComm)}',
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: color)),
+                ),
               ],
             ),
             const SizedBox(height: 4),
@@ -310,18 +329,28 @@ class AgentView extends StatelessWidget {
                       color: color.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: Text.rich(TextSpan(children: [
-                      TextSpan(
-                          text: '${LedgerTypes.shortLabel(e.key)}  ',
-                          style: const TextStyle(
-                              fontSize: 12, color: AppColors.textSecondary)),
-                      TextSpan(
-                          text: '${feet.format(e.value)} ft',
-                          style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: color)),
-                    ])),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text.rich(TextSpan(children: [
+                          TextSpan(
+                              text: '${LedgerTypes.shortLabel(e.key)}  ',
+                              style: const TextStyle(
+                                  fontSize: 12,
+                                  color: AppColors.textSecondary)),
+                          TextSpan(
+                              text: '${feet.format(e.value)} ft',
+                              style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: color)),
+                        ])),
+                        Text('Commission ₹${_money.format(c(e.key))}',
+                            style: const TextStyle(
+                                fontSize: 11, color: AppColors.textSecondary)),
+                      ],
+                    ),
                   ),
               ],
             ),
@@ -341,11 +370,18 @@ class AgentView extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Feet by type',
+          const Text('Feet and commission by type',
               style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
-          group('Depth', f.depth, Colors.blue),
-          group('PVC', f.pvc, Colors.teal),
-          group('MS pipe', f.ms, Colors.orange),
+          group('Depth', LedgerLine.depth, f.depth, Colors.blue),
+          group('PVC', LedgerLine.pvc, f.pvc, Colors.teal),
+          group('MS pipe', LedgerLine.ms, f.ms, Colors.orange),
+          if (anyManual)
+            const Padding(
+              padding: EdgeInsets.only(top: 10),
+              child: Text(
+                  'Commission by type uses the line rates. A bill whose commission was set by hand counts with its line rates here.',
+                  style: TextStyle(fontSize: 11, color: AppColors.textHint)),
+            ),
         ],
       ),
     );
