@@ -24,11 +24,11 @@ Depends: none
 Resume notes: StepTable/RigStepRates/StepRates (lib/core/models/step_rates.dart), calculateStepRate(custom:) delegates to the table (built-in tables give the old numbers, checked by hand), calculateLinesStepRate(rig:), DatabaseService get/saveStepRates + backup key + restore + removal on rig delete, schemaVersion 8, SyncService merge per rig, StepRatesNotifier (saveRig, resetRig, refresh at sync/restore sites), bill form uses forRig(bill's vehicle). MODELS.md. test/step_rates_test.dart. 132 tests pass.
 Commit: Add step rate tables per rig
 
-## T-L02 Settings screen: edit step rates per rig (item 1, part 2) [PENDING]
+## T-L02 Settings screen: edit step rates per rig (item 1, part 2) [DONE]
 Goal: Settings > Step Rates: choose a main bore rig, edit its 7 inch and 8 inch tables (start, extra per ft for each 100 ft bracket with add and remove, extra for each further 100 ft), Save, Reset to standard; note that saved bills keep their step rate.
 Files: lib/features/settings/step_rates_screen.dart, settings_screen.dart, tests
 Depends: T-L01
-Resume notes:
+Resume notes: Settings > Step Rates (lib/features/settings/step_rates_screen.dart): rig dropdown (main bore rigs), two editors (7 inch, 8 inch): where the step starts, extra per ft for each 100 ft bracket (add and remove), growth per further 100 ft, live example; Save and Reset to standard (confirm). Note on screen says saved bills keep their step rate. test/step_rates_flow_test.dart: edit and save, a new bill uses the table (350 ft = 1250 with +25), a saved bill opened and saved keeps 500. 134 tests pass.
 Commit: Add Step Rates settings per rig
 
 ## T-L03 Agent view: feet by type (item 2) [PENDING]

@@ -20,6 +20,7 @@ import '../export/csv_import_screen.dart';
 import '../export/pdf_export_screen.dart';
 import 'vehicle_management_screen.dart';
 import 'ledger_types_screen.dart';
+import 'step_rates_screen.dart';
 import '../../core/providers/ledger_types_provider.dart';
 import '../../core/providers/step_rates_provider.dart';
 import 'about_screen.dart';
@@ -64,6 +65,18 @@ class SettingsScreen extends ConsumerWidget {
                           ),
                         );
                       },
+                    ),
+                    _SettingsTile(
+                      icon: Icons.trending_up,
+                      title: 'Step Rates',
+                      subtitle:
+                          'Extra rate beyond 300 ft, for each rig (new bills only)',
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const StepRatesScreen(),
+                        ),
+                      ),
                     ),
                     _SettingsTile(
                       icon: Icons.straighten_outlined,
