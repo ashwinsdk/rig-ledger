@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import '../database/database_service.dart';
 import '../models/agent.dart';
+import '../services/commission_recalc.dart';
 import '../services/payment_link_service.dart';
 import 'cashbook_provider.dart';
 import 'ledger_provider.dart';
@@ -46,14 +47,25 @@ class AgentsNotifier extends StateNotifier<List<Agent>> {
     return agent;
   }
 
-  Future<void> updateAgent(Agent agent) async {
+  /// Saves the agent. When its commission prices changed, the commission of
+  /// the agent's existing bills follows (bills overridden by hand are kept).
+  /// Returns how many bills changed.
+  Future<int> updateAgent(Agent agent) async {
+    final before = DatabaseService.getAgent(agent.id)?.copyWith();
     final updated = agent.copyWith(updatedAt: DateTime.now());
     await DatabaseService.saveAgent(updated);
 
     // Update agent name in ledger entries
     await DatabaseService.updateAgentInLedgerEntries(agent.id, agent.name);
 
+    var changed = 0;
+    if (before != null) {
+      changed =
+          await CommissionRecalc.apply(oldAgent: before, newAgent: updated);
+    }
     loadAgents();
+    _ref.read(ledgerEntriesProvider.notifier).refresh(); // name and commission
+    return changed;
   }
 
   Future<void> deleteAgent(String id, {String? reassignToAgentId}) async {

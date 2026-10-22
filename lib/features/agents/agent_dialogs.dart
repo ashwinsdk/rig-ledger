@@ -188,15 +188,19 @@ void showEditAgentDialog(BuildContext context, WidgetRef ref, Agent agent) {
               msPipeCommissionRate: rates.ms,
               commissionRatesJson: rates.json,
             );
-            ref.read(agentsProvider.notifier).updateAgent(updated);
-            ref.read(ledgerEntriesProvider.notifier).refresh();
+            final messenger = ScaffoldMessenger.of(context);
             Navigator.pop(context);
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Agent updated'),
-                backgroundColor: AppColors.success,
-              ),
-            );
+            ref.read(agentsProvider.notifier).updateAgent(updated).then((n) {
+              messenger.showSnackBar(
+                SnackBar(
+                  content: Text(n == 0
+                      ? 'Agent updated'
+                      : 'Agent updated. Commission changed on $n '
+                          '${n == 1 ? 'bill' : 'bills'}'),
+                  backgroundColor: AppColors.success,
+                ),
+              );
+            });
           },
           child: const Text('Save'),
         ),
