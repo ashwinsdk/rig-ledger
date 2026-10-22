@@ -203,6 +203,17 @@ class _PortfolioViewState extends ConsumerState<PortfolioView> {
               ],
               start: widget.start,
               end: widget.end,
+              overallProfit: PortfolioCalculator.compute(
+                bills: bills,
+                diesel: src.diesel,
+                pvc: src.pvc,
+                bit: src.bit,
+                hammer: src.hammer,
+                other: src.other,
+                start: widget.start,
+                end: widget.end,
+                sideBoreVehicleIds: sideBoreIds,
+              ).realisedProfit,
               onShowAll: () => setState(() => _agentId = null),
               onDetails: () {
                 final a = known.where((a) => a.id == _agentId).firstOrNull;

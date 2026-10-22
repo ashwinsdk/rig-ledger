@@ -31,6 +31,10 @@ class AgentView extends StatelessWidget {
   final VoidCallback onShowAll;
   final VoidCallback onDetails;
 
+  /// Profit of all agents in the same period, after expenses (shown as a
+  /// reference line under this agent's profit).
+  final double? overallProfit;
+
   const AgentView({
     super.key,
     required this.agent,
@@ -40,6 +44,7 @@ class AgentView extends StatelessWidget {
     required this.end,
     required this.onShowAll,
     required this.onDetails,
+    this.overallProfit,
   });
 
   String get _period {
@@ -57,6 +62,7 @@ class AgentView extends StatelessWidget {
     final received = _r2(sorted.fold(0.0, (a, b) => a + b.received));
     final pending = _r2(sorted.fold(0.0, (a, b) => a + b.balance));
     final commission = _r2(sorted.fold(0.0, (a, b) => a + b.commission));
+    final less = _r2(sorted.fold(0.0, (a, b) => a + b.less));
 
     final months = <String, List<LedgerEntry>>{};
     for (final b in sorted) {
@@ -67,6 +73,8 @@ class AgentView extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _header(commission),
+        const SizedBox(height: 12),
+        _profitCard(received - commission, total - less - commission),
         const SizedBox(height: 12),
         Row(
           children: [
@@ -103,6 +111,57 @@ class AgentView extends StatelessWidget {
           _totalRow(sorted.length, total, received, pending, commission),
         ],
       ],
+    );
+  }
+
+  /// Profit of this agent: money received (or billed, for the expected line)
+  /// minus the commission. Expenses are not tracked per agent, so they are not
+  /// deducted here; the overall figure below does include them.
+  Widget _profitCard(double profit, double expected) {
+    String signed(double v) => '${v < 0 ? '-' : ''}₹${_money.format(v.abs())}';
+    final good = profit >= 0;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: (good ? AppColors.success : AppColors.error)
+            .withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+            color: (good ? AppColors.success : AppColors.error)
+                .withValues(alpha: 0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Profit from this agent (received - commission)',
+              style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+          const SizedBox(height: 4),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(signed(_r2(profit)),
+                style: TextStyle(
+                    fontSize: 26,
+                    fontWeight: FontWeight.w700,
+                    color: good ? AppColors.success : AppColors.error)),
+          ),
+          const SizedBox(height: 6),
+          Text(
+              'Expected when all pending is collected: ${signed(_r2(expected))}',
+              style: const TextStyle(fontSize: 12)),
+          if (overallProfit != null) ...[
+            const SizedBox(height: 2),
+            Text('All agents, after expenses: ${signed(_r2(overallProfit!))}',
+                style: const TextStyle(
+                    fontSize: 12, color: AppColors.textSecondary)),
+          ],
+          const SizedBox(height: 6),
+          const Text(
+              'Expenses are not tracked per agent, so they are not taken off this figure.',
+              style: TextStyle(fontSize: 11, color: AppColors.textHint)),
+        ],
+      ),
     );
   }
 

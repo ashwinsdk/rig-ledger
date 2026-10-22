@@ -110,6 +110,11 @@ void main() {
     expect(find.text('Commission earned'), findsOneWidget);
     // 100 x 10 + 200 x 10 + 50 x 12 = 3600, three bills, the Feb bill is out
     expect(find.text('₹3,600.00'), findsWidgets);
+    // profit stays visible: received 6000 + 12000 + 3000 = 21000 minus 3600
+    expect(find.text('Profit from this agent (received - commission)'),
+        findsOneWidget);
+    expect(find.text('₹17,400.00'), findsOneWidget);
+    expect(find.textContaining('All agents, after expenses'), findsOneWidget);
     expect(find.text('By month'), findsOneWidget);
     for (final m in ['Aug 2026', 'Sep 2026', 'Oct 2026']) {
       expect(find.text(m), findsOneWidget);
