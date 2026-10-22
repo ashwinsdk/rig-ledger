@@ -7,6 +7,7 @@ import '../models/pvc_entry.dart';
 import '../models/bit_entry.dart';
 import '../models/hammer_entry.dart';
 import '../models/ledger_line.dart';
+import '../models/step_rates.dart';
 import '../models/other_expense_entry.dart';
 import '../models/mini_ledger_entry.dart';
 import '../models/tombstone.dart';
@@ -32,7 +33,7 @@ class DatabaseService {
   static const String cashNoteBoxName = 'cash_notes';
   static const String defaultCashBookId = 'default_cash_book';
   static const Duration cashTrashRetention = Duration(days: 30);
-  static const int schemaVersion = 7;
+  static const int schemaVersion = 8;
 
   static late Box<LedgerEntry> _ledgerBox;
   static late Box<Agent> _agentBox;
@@ -123,6 +124,9 @@ class DatabaseService {
       // Version 6 (v2.0.1): user-defined ledger types (settings key
       // `ledgerTypes`, absent means the built-in lists) and, later in the same
       // version, new Agent and Other expenses data. All default safely.
+      // Version 7 (v2.0.2): LedgerEntry.linesJson (null on old bills).
+      // Version 8 (v2.0.4): settings key `stepRates` (absent means the built-in
+      // tables) and CashEntry.vehicleId (null on old entries).
 
       await _settingsBox.put('schemaVersion', schemaVersion);
     }
@@ -179,6 +183,7 @@ class DatabaseService {
     await _deleteMiniLedgerByVehicle(id);
     await recordTombstone(id, vehicleBoxName);
     await _vehicleBox.delete(id);
+    await saveStepRates(getStepRates().withoutRig(id));
 
     // If deleting current vehicle, switch to first available
     if (currentVehicleId == id) {
@@ -351,6 +356,14 @@ class DatabaseService {
   static Future<void> saveLedgerTypes(LedgerTypes types) =>
       _settingsBox.put('ledgerTypes', types.encode());
 
+  // ============ STEP RATES (per rig tables, v2.0.4) ============
+
+  static StepRates getStepRates() =>
+      StepRates.fromJson(_settingsBox.get('stepRates'));
+
+  static Future<void> saveStepRates(StepRates rates) =>
+      _settingsBox.put('stepRates', rates.encode());
+
   /// Bills of main bore rigs, across all rigs. Side bore bills carry placeholder
   /// types (7inch, 6inch) that mean nothing, so they never count as using a type.
   static Iterable<LedgerEntry> _mainBoreBills() {
@@ -485,6 +498,7 @@ class DatabaseService {
       'cashEntries': cashEntries,
       'cashNotes': cashNotes,
       'ledgerTypes': getLedgerTypes().toJson(),
+      'stepRates': getStepRates().toJson(),
       'tombstones': _tombstoneBox.values.map((t) => t.toJson()).toList(),
     };
   }
@@ -562,6 +576,12 @@ class DatabaseService {
     final ledgerTypesData = backup['ledgerTypes'];
     if (ledgerTypesData != null) {
       await saveLedgerTypes(LedgerTypes.fromJson(ledgerTypesData));
+    }
+
+    // Step rate tables (absent in backups before 2.0.4: keep the local ones)
+    final stepRatesData = backup['stepRates'];
+    if (stepRatesData != null) {
+      await saveStepRates(StepRates.fromJson(stepRatesData));
     }
 
     // Restore Account Ledger (keys are absent in backups from older versions)

@@ -1,5 +1,6 @@
 import '../../core/models/ledger_types.dart';
 import '../../core/providers/ledger_types_provider.dart';
+import '../../core/providers/step_rates_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -322,8 +323,14 @@ class _LedgerFormScreenState extends ConsumerState<LedgerFormScreen> {
       return;
     }
 
+    // The tables of this bill's rig (Settings, Step Rates). A saved bill keeps
+    // its stored step rate until its depth lines are edited.
+    final rig = ref
+        .read(stepRatesProvider)
+        .forRig(widget.entry?.vehicleId ?? DatabaseService.currentVehicleId);
     final stepRate = LedgerEntry.calculateLinesStepRate(
-        _allLines, ref.read(ledgerTypesProvider));
+        _allLines, ref.read(ledgerTypesProvider),
+        rig: rig);
 
     _stepRateController.text = stepRate.toStringAsFixed(2);
     _updateCalculatedTotal();

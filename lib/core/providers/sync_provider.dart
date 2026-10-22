@@ -6,6 +6,7 @@ import 'ledger_provider.dart';
 import 'agent_provider.dart';
 import 'vehicle_provider.dart';
 import 'ledger_types_provider.dart';
+import 'step_rates_provider.dart';
 import 'side_ledger_provider.dart';
 import 'cashbook_provider.dart';
 
@@ -111,6 +112,7 @@ class SyncNotifier extends StateNotifier<SyncState> {
     _ref.read(ledgerEntriesProvider.notifier).refresh();
     _ref.read(agentsProvider.notifier).refresh();
     _ref.read(ledgerTypesProvider.notifier).refresh();
+    _ref.read(stepRatesProvider.notifier).refresh();
     _ref.read(vehiclesProvider.notifier).refresh();
     _ref.read(currentVehicleProvider.notifier).refresh();
     _ref.read(dieselEntriesProvider.notifier).refresh();

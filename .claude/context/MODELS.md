@@ -144,6 +144,10 @@ decision.
 
 When lines exist the single-type fields stay in step (`LedgerEntry.withLines`): first type that has feet, summed feet, and the average rate (amount / feet) and average commission rate, so old readers, CSV and PDF keep working. Step rate is the sum of per-line step rates (each depth line alone, its own type table, feet counted from 0). Type rename, delete check and counts see every line. Backup/sync carry `linesJson`; schemaVersion is 7.
 
+## StepRates (v2.0.4, settings key `stepRates`)
+
+`lib/core/models/step_rates.dart` (plain classes, JSON in the settings box). `StepTable`: `threshold` (where the step rate starts, 300 ft), `extras` (extra rate per foot for each 100 ft bracket after it) and `beyondIncrement` (added for every further 100 ft after the last bracket). `RigStepRates`: the 7 inch and 8 inch tables of one rig plus `updatedAt`. `StepRates`: map rig id to `RigStepRates`; a rig without an entry uses the built-in tables (the old hard-coded values). Backup key `stepRates` (absent in older backups: local tables kept), Drive merge per rig by newest `updatedAt`, entry removed when a rig is deleted, schemaVersion 8. Bills store their step rate (`LedgerEntry.stepRate`), so a table change never touches saved bills.
+
 ## Agent (typeId: 1) -- lib/core/models/agent.dart
 
 | Field | Type | Notes |

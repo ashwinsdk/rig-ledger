@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../database/database_service.dart';
 import '../models/ledger_types.dart';
+import '../models/step_rates.dart';
 import '../models/tombstone.dart';
 import 'payment_link_service.dart';
 import 'google_drive_service.dart';
@@ -265,6 +266,11 @@ class SyncService {
       if (_mergeLedgerTypes(local['ledgerTypes'], remote['ledgerTypes'])
           case final merged?)
         'ledgerTypes': merged,
+      // Step rate tables: per rig, the newer side wins.
+      if (local['stepRates'] != null || remote['stepRates'] != null)
+        'stepRates': StepRates.merge(StepRates.fromJson(local['stepRates']),
+                StepRates.fromJson(remote['stepRates']))
+            .toJson(),
       'cashBooks': _mergeCollection(
         localItems: local['cashBooks'] ?? [],
         remoteItems: remote['cashBooks'] ?? [],

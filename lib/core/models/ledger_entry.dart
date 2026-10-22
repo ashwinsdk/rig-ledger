@@ -2,6 +2,7 @@ import 'package:hive/hive.dart';
 import 'ledger_line.dart';
 import 'ledger_payment.dart';
 import 'ledger_types.dart';
+import 'step_rates.dart';
 
 part 'ledger_entry.g.dart';
 
@@ -192,72 +193,17 @@ class LedgerEntry extends HiveObject {
     required double depthInFeet,
     required double baseRate,
     String? stepTable,
+    StepTable? custom,
   }) {
-    if (depthInFeet <= 300) return 0;
+    if (depthInFeet <= 0) return 0;
 
     final table = stepTable ??
         ((depthType == '7inch' || depthType == '8inch') ? depthType : null);
     if (table == null) return 0;
 
-    double totalStepRate = 0;
-    final is7inch = table == '7inch';
-
-    // Define cumulative rate additions per 100ft bracket
-    // For 7inch: +10, +10, +10, +20, +20, +20 (cumulative: 10, 20, 30, 50, 70, 90)
-    // For 8inch: +10, +10, +20, +20, +20, +20 (cumulative: 10, 20, 40, 60, 80, 100)
-    final List<Map<String, dynamic>> brackets = is7inch
-        ? [
-            {'start': 300, 'end': 400, 'extraPerFeet': 10}, // d+10
-            {'start': 400, 'end': 500, 'extraPerFeet': 20}, // d+20
-            {'start': 500, 'end': 600, 'extraPerFeet': 30}, // d+30
-            {'start': 600, 'end': 700, 'extraPerFeet': 50}, // d+50
-            {'start': 700, 'end': 800, 'extraPerFeet': 70}, // d+70
-            {'start': 800, 'end': 900, 'extraPerFeet': 90}, // d+90
-          ]
-        : [
-            {'start': 300, 'end': 400, 'extraPerFeet': 10}, // d+10
-            {'start': 400, 'end': 500, 'extraPerFeet': 20}, // d+20
-            {'start': 500, 'end': 600, 'extraPerFeet': 40}, // d+40
-            {'start': 600, 'end': 700, 'extraPerFeet': 60}, // d+60
-            {'start': 700, 'end': 800, 'extraPerFeet': 80}, // d+80
-            {'start': 800, 'end': 900, 'extraPerFeet': 100}, // d+100
-          ];
-
-    for (final bracket in brackets) {
-      final start = bracket['start'] as int;
-      final end = bracket['end'] as int;
-      final extraPerFeet = bracket['extraPerFeet'] as int;
-
-      if (depthInFeet > start) {
-        final feetInBracket = (depthInFeet >= end ? end : depthInFeet) - start;
-        if (feetInBracket > 0) {
-          totalStepRate += feetInBracket * extraPerFeet;
-        }
-      }
-    }
-
-    // For depth beyond 900ft, continue incrementing by +20 per 100ft bracket
-    if (depthInFeet > 900) {
-      final feetBeyond900 = depthInFeet - 900;
-      final lastExtraRate = is7inch ? 90 : 100; // Rate at 800-900 bracket
-
-      // Calculate how many complete 100ft brackets beyond 900
-      final completeBrackets = (feetBeyond900 / 100).floor();
-      final remainingFeet = feetBeyond900 % 100;
-
-      // Each bracket beyond 900 adds another +20
-      for (int i = 0; i < completeBrackets; i++) {
-        totalStepRate += 100 * (lastExtraRate + 20 * (i + 1));
-      }
-
-      // Remaining feet in the current bracket
-      if (remainingFeet > 0) {
-        totalStepRate +=
-            remainingFeet * (lastExtraRate + 20 * (completeBrackets + 1));
-      }
-    }
-
-    return totalStepRate;
+    // [custom] is the rig's own table (Settings, Step Rates, v2.0.4); without
+    // it the built-in 7 inch or 8 inch table is used.
+    return (custom ?? StepTable.builtinFor(table)).calculate(depthInFeet);
   }
 
   /// Calculate total based on new formula
@@ -358,14 +304,17 @@ class LedgerEntry extends HiveObject {
   /// Step rate of all depth lines: every line is worked out on its own, like
   /// a separate entry (own type table, feet counted from 0).
   static double calculateLinesStepRate(
-      Iterable<LedgerLine> depthLines, LedgerTypes types) {
+      Iterable<LedgerLine> depthLines, LedgerTypes types,
+      {RigStepRates? rig}) {
     var sum = 0.0;
     for (final l in depthLines.where((l) => l.category == LedgerLine.depth)) {
+      final table = types.stepTableFor(l.type);
       sum += calculateStepRate(
         depthType: l.type,
         depthInFeet: l.feet,
         baseRate: l.rate,
-        stepTable: types.stepTableFor(l.type),
+        stepTable: table,
+        custom: (rig == null || table == null) ? null : rig.table(table),
       );
     }
     return sum;

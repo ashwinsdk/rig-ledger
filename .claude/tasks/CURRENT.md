@@ -13,6 +13,45 @@ Resume notes:
 Commit:
 ```
 
+## v2.0.4 PLAN (source: developer list of 2026-10-22, Flutter app only)
+
+Decisions taken without asking (change if wrong): step rates are edited per rig as two tables (7 inch and 8 inch): where the step starts (default 300 ft), the extra rate per foot for each 100 ft bracket after it, and the extra added for every further 100 ft after the last bracket (default +20). Defaults equal today's hard-coded values. Saved bills keep their stored step rate; only new bills, and saved bills whose depth lines are edited, use the current tables. Cashbook entries get an optional rig (vehicleId); payments linked from a bill take the bill's rig. One schema bump: 7 -> 8 (T-L01).
+
+## T-L01 Step rate tables per rig: model, storage, sync, calculation (item 1, part 1) [DONE] [SYNC FLAG]
+Goal: StepTable and StepRates models, settings key `stepRates` (per rig, newest updatedAt wins in the Drive merge), backup and restore, schemaVersion 8, StepRatesNotifier, calculateStepRate and calculateLinesStepRate take the rig tables (builtin when none saved), the bill form uses the tables of the bill's rig.
+Files: lib/core/models/step_rates.dart, ledger_entry.dart, database_service.dart, sync_service.dart, lib/core/providers/step_rates_provider.dart, sync_provider.dart, settings_screen.dart (refresh sites), ledger_form_screen.dart, MODELS.md, tests
+Depends: none
+Resume notes: StepTable/RigStepRates/StepRates (lib/core/models/step_rates.dart), calculateStepRate(custom:) delegates to the table (built-in tables give the old numbers, checked by hand), calculateLinesStepRate(rig:), DatabaseService get/saveStepRates + backup key + restore + removal on rig delete, schemaVersion 8, SyncService merge per rig, StepRatesNotifier (saveRig, resetRig, refresh at sync/restore sites), bill form uses forRig(bill's vehicle). MODELS.md. test/step_rates_test.dart. 132 tests pass.
+Commit: Add step rate tables per rig
+
+## T-L02 Settings screen: edit step rates per rig (item 1, part 2) [PENDING]
+Goal: Settings > Step Rates: choose a main bore rig, edit its 7 inch and 8 inch tables (start, extra per ft for each 100 ft bracket with add and remove, extra for each further 100 ft), Save, Reset to standard; note that saved bills keep their step rate.
+Files: lib/features/settings/step_rates_screen.dart, settings_screen.dart, tests
+Depends: T-L01
+Resume notes:
+Commit: Add Step Rates settings per rig
+
+## T-L03 Agent view: feet by type (item 2) [PENDING]
+Goal: in the Portfolio agent view show total depth per type, total PVC per type and total MS pipe per type for the agent's bills in the period (every line counted), next to the totals.
+Files: lib/features/portfolio/agent_view.dart, tests
+Depends: none
+Resume notes:
+Commit: Show feet by type in the Portfolio agent view
+
+## T-L04 Account Ledger entries remember the rig (item 3) [PENDING] [HIVE/SYNC FLAG]
+Goal: CashEntry.vehicleId (optional): entry form dropdown "Rig (optional)", rig shown on rows and in reports, set automatically for income linked from a bill payment (the bill's rig); copies and transfers keep or clear it sensibly; backup and sync carry it.
+Files: lib/core/models/cash_entry.dart (+ build_runner), payment_link_service.dart, cashbook_entry_form_screen.dart, widgets/cashbook_row.dart, cashbook_export_service.dart, MODELS.md, tests
+Depends: T-L01 (schema 8)
+Resume notes:
+Commit: Add an optional rig to Account Ledger entries
+
+## T-L05 Version 2.0.4 and release notes [PENDING]
+Goal: pubspec 2.0.4+9, README changelog, docs/v2.0.4-review.md, MEMORY.md.
+Files: pubspec.yaml, README.md, docs/v2.0.4-review.md, MEMORY.md
+Depends: all
+Resume notes:
+Commit: Bump version to 2.0.4+9
+
 ## v2.0.3 PLAN (source: developer list of 2026-10-22, Flutter app only)
 
 Rules as before (no push, one commit per task, no Co-Authored-By). The developer explicitly asked to change the macOS shell in T-K01, so the "macOS code is frozen" rule is lifted for that one edit (desktop_shell.dart only).

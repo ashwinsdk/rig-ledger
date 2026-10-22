@@ -21,6 +21,7 @@ import '../export/pdf_export_screen.dart';
 import 'vehicle_management_screen.dart';
 import 'ledger_types_screen.dart';
 import '../../core/providers/ledger_types_provider.dart';
+import '../../core/providers/step_rates_provider.dart';
 import 'about_screen.dart';
 
 class SettingsScreen extends ConsumerWidget {
@@ -293,6 +294,7 @@ class SettingsScreen extends ConsumerWidget {
       ref.read(ledgerEntriesProvider.notifier).refresh();
       ref.read(agentsProvider.notifier).refresh();
       ref.read(ledgerTypesProvider.notifier).refresh();
+      ref.read(stepRatesProvider.notifier).refresh();
       ref.read(vehiclesProvider.notifier).refresh();
       ref.read(dieselEntriesProvider.notifier).refresh();
       ref.read(pvcEntriesProvider.notifier).refresh();
@@ -378,6 +380,7 @@ class SettingsScreen extends ConsumerWidget {
       ref.read(ledgerEntriesProvider.notifier).refresh();
       ref.read(agentsProvider.notifier).refresh();
       ref.read(ledgerTypesProvider.notifier).refresh();
+      ref.read(stepRatesProvider.notifier).refresh();
       ref.read(vehiclesProvider.notifier).refresh();
       ref.read(dieselEntriesProvider.notifier).refresh();
       ref.read(pvcEntriesProvider.notifier).refresh();
@@ -602,6 +605,7 @@ class _GoogleDriveBackupCardState extends State<_GoogleDriveBackupCard> {
         ref.read(ledgerEntriesProvider.notifier).refresh();
         ref.read(agentsProvider.notifier).refresh();
         ref.read(ledgerTypesProvider.notifier).refresh();
+        ref.read(stepRatesProvider.notifier).refresh();
         ref.read(dieselEntriesProvider.notifier).refresh();
         ref.read(pvcEntriesProvider.notifier).refresh();
         ref.read(bitEntriesProvider.notifier).refresh();
