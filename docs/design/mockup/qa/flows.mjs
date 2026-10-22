@@ -1,4 +1,4 @@
-// Click-through checks of the v2.0.2 and v2.0.3 behaviours (several bill lines, agent filter, agent edit, agent view, commission recalculation). usage: node flows.mjs
+// Click-through checks of the v2.0.2, v2.0.3 and v2.0.4 behaviours (several bill lines, agent filter, agent edit, agent view, commission recalculation, Step Rates, feet and commission by type, rig on Account Ledger entries). usage: node flows.mjs
 import { chromium } from 'playwright-core';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -163,6 +163,86 @@ check('detail sheet shows the new 8inch price', await page.evaluate(() => /Depth
 await page.evaluate(() => { F = {}; agentDel('a4'); });
 await page.evaluate(() => agentGone('a4'));
 check('agent without bills deleted', await page.evaluate(() => AG.length), 3);
+
+// 7. v2.0.4 Step Rates screen (fresh page: the sections above edited the agent prices)
+await page.reload();
+await page.waitForTimeout(400);
+const norm = sel => page.evaluate(s => { const e = document.querySelector(s); return e ? e.innerText.replace(/\s+/g, ' ').trim() : ''; }, sel);
+const plain = e => { const c = e.cloneNode(true); c.querySelectorAll('.mi').forEach(x => x.remove()); return c.textContent.replace(/\s+/g, ' ').trim(); };
+await jumpTo('Step Rates (default tables)');
+check('Settings row exists with the new subtitle', await page.evaluate(() => { S.stack = []; S.tab = 3; render(); const l = [...document.querySelectorAll('.ri .tt')].map(e => e.innerText.replace(/\s+/g, ' ').trim()); const i = l.findIndex(t => t.startsWith('Step Rates')); return i >= 0 && l[i + 1].startsWith('Ledger Types') && l[i] === 'Step Rates Extra rate beyond 300 ft, for each rig (new bills only)'; }), true);
+await jumpTo('Step Rates (default tables)');
+check('7 inch default example', await norm('#srx_t7'), 'Example: 1,000 ft gives a step rate of ₹38,000');
+check('8 inch default example', await norm('#srx_t8'), 'Example: 1,000 ft gives a step rate of ₹43,000');
+check('bracket labels', await page.evaluate(() => [...document.querySelectorAll('[id^=srl_t7_]')].map(e => e.textContent).join('|')), '300 to 400 ft, extra per ft|400 to 500 ft, extra per ft|500 to 600 ft, extra per ft|600 to 700 ft, extra per ft|700 to 800 ft, extra per ft|800 to 900 ft, extra per ft');
+await page.fill('#i_st7_e0', '15');
+check('typing a rate updates the example (38,000 + 100 x 5)', await norm('#srx_t7'), 'Example: 1,000 ft gives a step rate of ₹38,500');
+await page.fill('#i_st7_th', '400');
+check('typing the start updates labels and example feet', await page.evaluate(() => document.querySelector('#srl_t7_0').textContent + ' / ' + document.querySelector('#srx_t7').textContent.slice(0, 23)), '400 to 500 ft, extra per ft / Example: 1,100 ft gives');
+await page.fill('#i_st7_th', '300');
+await page.evaluate(() => srAdd('t7'));
+check('Add bracket = last + growth (90 + 20)', await page.inputValue('#i_st7_e6'), '110');
+check('example feet after an added row', await norm('#srx_t7'), 'Example: 1,100 ft gives a step rate of ₹51,500');
+for (let i = 0; i < 6; i++) await page.evaluate(() => srRm('t7', 0));
+check('one row left, remove X disabled', await page.evaluate(() => document.querySelector('#i_st7_e0').closest('.fr').querySelector('button.nbtn').disabled), true);
+await page.fill('#i_st7_e0', '');
+await page.evaluate(() => srSave());
+check('empty field snack', await txt('.sn'), 'Fill every rate with a number');
+await page.fill('#i_st7_e0', 'abc');
+await page.evaluate(() => srSave());
+check('non-number snack', await txt('.sn'), 'Fill every rate with a number');
+await jumpTo('Step Rates (default tables)');
+await page.fill('#i_st7_e0', '15');
+await page.evaluate(() => srSave());
+check('save snack', await txt('.sn'), 'Step rates saved. New bills use them');
+check('table stored for the rig', await page.evaluate(() => STEPR.main.t7.ex.join(',')), '15,20,30,50,70,90');
+// saved bills keep their step rate, a new bill uses the new table
+await page.evaluate(() => { S.stack = []; S.rig = 'main'; S.tab = 0; render(); openBill('b1'); });
+check('saved bill 1042 still shows step 500', await page.inputValue('#i_step'), '500');
+check('saved bill 1042 total unchanged by the new table', await page.evaluate(() => BILLS.filter(b => b.bill === '1042')[0].total), 350 * 90 + 500 + 120 * 150 + 20 * 400 + 1000);
+await page.fill('#i_L_depth_0_f', '360');
+check('editing the depth of a saved bill recalculates with the new table (60 ft x 15)', await page.inputValue('#i_step'), '900');
+await page.evaluate(() => { S.stack = []; newForm('billForm'); });
+await page.fill('#i_L_depth_0_f', '350');
+check('new bill 350 ft 7inch uses the new table (50 x 15)', await page.inputValue('#i_step'), '750');
+await page.selectOption('#i_L_depth_0_t', '8inch');
+check('8inch is untouched (50 x 10)', await page.inputValue('#i_step'), '500');
+await page.evaluate(() => { S.stack = []; S.tab = 3; F = {}; push('stepRates'); });
+await page.evaluate(() => srResetDlg());
+check('reset dialog wording', await page.evaluate(() => /Reset step rates/.test(document.querySelector('#ov').innerText) && /Go back to the standard 7 inch and 8 inch tables for this rig\? Saved bills keep their step rate\./.test(document.querySelector('#ov').innerText)), true);
+await page.evaluate(() => { closeOv(); srReset(); });
+check('reset goes back to the standard table', await page.evaluate(() => STEPR.main === undefined && stepFor('7inch', 350, 'main') === 500 && document.querySelector('#i_st7_e0').value === '10'), true);
+
+// 8. v2.0.4 agent view: Feet and commission by type
+await jumpTo('Agent view, Feet and commission by type');
+const fcTxt = (await norm('.fcard')).replace(/\s*\|\s*/g, ' | ');
+check('card title', /^Feet and commission by type Depth Total 1,910 ft \| ₹20,070/.test(fcTxt), true);
+check('depth chips (7", 8", 9") with commission', ['7" 1,350 ft Commission ₹13,500', '8" 150 ft Commission ₹1,650', '9" 410 ft Commission ₹4,920'].every(x => fcTxt.includes(x)), true);
+check('PVC group and chips', ['PVC Total 490 ft | ₹2,780', '7" 430 ft Commission ₹2,420', '8" 60 ft Commission ₹360'].every(x => fcTxt.includes(x)), true);
+check('MS group and manual note', fcTxt.includes('MS pipe Total 20 ft | ₹40') && fcTxt.includes('Commission by type uses the line rates. A bill whose commission was set by hand counts with its line rates here.'), true);
+await page.evaluate(() => { S.pr = { tab: 0, range: 'month', scope: 'this', agent: 'a3' }; render(); });
+check('October view has no manual bill, so no note', await page.evaluate(() => !/set by hand/.test(document.querySelector('.fcard').innerText)), true);
+check('card sits between the metric cards and By month', await page.evaluate(() => { const c = document.querySelector('.fcard'), m = document.querySelector('.mgrid'); return !!(m.compareDocumentPosition(c) & 4); }), true);
+
+// 9. v2.0.4 rig on Account Ledger entries
+await jumpTo('Account Ledger list with rig names');
+const rows = await page.evaluate(() => [...document.querySelectorAll('.entry')].map(e => e.innerText.replace(/\s+/g, ' ')).filter(t => /Labour wages|Compressor/.test(t)).join(' || '));
+check('rows with a rig show its name, rows without show none', /Labour wages.*Side Rig 1/.test(rows) && /Compressor service.*Main Rig/.test(rows) && !(await page.evaluate(() => /Rig/.test([...document.querySelectorAll('.entry')].filter(e => /Spare parts/.test(e.innerText))[0].innerText))), true);
+await jumpTo('Account Ledger linked entry form (rig locked)');
+check('linked entry: rig disabled with helper', await page.evaluate(() => document.querySelector('#i_cv').disabled && /Set from the bill/.test(document.querySelector('#scc').innerText) && /Main Rig/.test(document.querySelector('#i_cv').innerText)), true);
+await page.evaluate(() => { S.stack = []; S.tab = 2; CB.book = 'mur'; CB.period = 'all'; render(); });
+check('linked income rows show the bill rig', await page.evaluate(() => [...document.querySelectorAll('.entry')].filter(e => /Bill 1042 cash/.test(e.innerText)).every(e => /Main Rig/.test(e.innerText))), true);
+await jumpTo('Account Ledger entry form, Rig dropdown (open)');
+check('sheet lists No rig and both rigs', await page.evaluate(() => [...document.querySelectorAll('#ov .ri .tt b')].map(e => e.textContent.trim()).join('|')), 'No rig|Main Rig|Side Rig 1');
+await page.evaluate(() => [...document.querySelectorAll('#ov .ri')].filter(e => /Side Rig 1/.test(e.innerText))[0].click());
+await page.waitForTimeout(100);
+check('chosen rig shown on the form', await page.evaluate(() => document.querySelector('#i_cv').innerText.replace(/\s+/g, ' ').replace(/precision_manufacturing|expand_more/g, '').replace(/\s+/g, ' ').trim()), 'Rig (optional) Side Rig 1');
+await page.evaluate(() => cbSave(false));
+check('Save and add another keeps the rig', await page.evaluate(() => F.cv + ' ' + document.querySelector('#i_cv').innerText.includes('Side Rig 1')), 'side true');
+await page.evaluate(() => { F.edit = 6; F.ca = '3500'; F.cn = 'Compressor copy'; cbCopy('cash'); });
+check('Copy keeps the rig', await page.evaluate(() => CBE[CBE.length - 1].v + ' ' + CBE[CBE.length - 1].ln), 'side 0');
+await page.evaluate(() => cbReportDlg(1));
+check('Report sheet says what the CSV and PDF get', await page.evaluate(() => /trailing|ends with a Rig column/.test(document.querySelector('#ov').innerText) && /Rig: Side Rig 1|Rig: Main Rig/.test(document.querySelector('#ov').innerText)), true);
 console.log(errs.length ? 'ERRORS ' + errs.join(' | ') : 'no script errors');
 console.log(ok && !errs.length ? 'RESULT: flows OK' : 'RESULT: FLOWS FAILED');
 await browser.close();

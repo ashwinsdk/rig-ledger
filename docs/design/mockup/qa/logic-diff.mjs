@@ -1,5 +1,5 @@
 // Proves the data and derived-logic block is frozen, and that its numbers match hand-computed values.
-// usage: node logic-diff.mjs            check against qa/logic-baseline-v2.0.3.txt
+// usage: node logic-diff.mjs            check against qa/logic-baseline-v2.0.4.txt
 //        node logic-diff.mjs --update   rewrite the baseline after an INTENTIONAL logic change (say so in MOCKUP_PROGRESS.md)
 //
 // History: until v2.0.0 the block was compared byte for byte with the v1 mockup in docs/design/ref. The v2.0.1 update changed it on
@@ -10,8 +10,8 @@ import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const html = fs.readFileSync(path.resolve(here, '..', 'rigledger_apple_mockup.html'), 'utf8');
-const basePath = path.join(here, 'logic-baseline-v2.0.3.txt');
-const startMark = "(checked by qa/logic-diff.mjs against qa/logic-baseline-v2.0.3.txt) ================= */\n";
+const basePath = path.join(here, 'logic-baseline-v2.0.4.txt');
+const startMark = "(checked by qa/logic-diff.mjs against qa/logic-baseline-v2.0.4.txt) ================= */\n";
 const a = html.indexOf(startMark), b = html.indexOf('/* ================= END LOGIC BLOCK');
 if (a < 0 || b < 0) { console.log('RESULT: logic block markers not found'); process.exit(1); }
 const logic = html.slice(a + startMark.length, b);
@@ -25,7 +25,7 @@ if (!same) { const x = base.split('\n'), y = logic.split('\n'); for (let i = 0; 
 // Evaluate the block and compare with numbers worked out by hand (see MOCKUP_PROGRESS.md, "Hand check").
 const ctx = { document: { querySelector() { return null; } }, console };
 vm.createContext(ctx);
-vm.runInContext(logic + '\nthis.__x={recalcAgentBills:recalcAgentBills,agent:agent,BILLS:BILLS,S:S,pfScopeBills:pfScopeBills,pfCalc:pfCalc,expenses:expenses,mrange:mrange,stats:stats,periodBills:periodBills,rateFor:rateFor,AG:AG,feetTotals:feetTotals};', ctx);
+vm.runInContext(logic + '\nthis.__x={recalcAgentBills:recalcAgentBills,agent:agent,BILLS:BILLS,S:S,pfScopeBills:pfScopeBills,pfCalc:pfCalc,expenses:expenses,mrange:mrange,stats:stats,periodBills:periodBills,rateFor:rateFor,AG:AG,feetTotals:feetTotals,stepCalc:stepCalc,stepFor:stepFor,stepSum:stepSum,STEPR:STEPR,STDT:STDT,feetComm:feetComm,CBE:CBE,calcBill:calcBill};', ctx);
 const X = ctx.__x;
 const check = (name, got, want) => { const g = Math.round(got * 100) / 100; const p = g === want; ok = ok && p; console.log(`${p ? 'OK  ' : 'FAIL'}  ${name}: ${g} (hand ${want})`); };
 const bill = id => X.BILLS.find(b => b.id === id);
@@ -89,6 +89,45 @@ check('Karthik 3 mo commission = 3220 + 3000 (manual) + 3300 + 3420 + 4410 + 500
 check('Karthik 3 mo agent profit = received - commission', v.st.recv - v.st.comm, 152650);
 check('Karthik 3 mo expected = billed - less - commission', v.st.total - v.less - v.st.comm, 238100);
 check('commission of b10 (depth 250 x 10 + hand-typed PVC 90 x 8)', bill('b10').comm, 3220);
+// v2.0.4 step rate tables (StepTable.calculate), checked by hand with the standard tables and with edited ones
+check('step rate 350 ft, 7inch standard table = 50 x 10', X.stepFor('7inch', 350, 'main'), 500);
+check('step rate 420 ft, 8inch standard table = 100 x 10 + 20 x 20', X.stepFor('8inch', 420, 'main'), 1400);
+check('step rate 9inch (no table) = 0', X.stepFor('9inch', 420, 'main'), 0);
+check('step rate 1050 ft, 7inch = 27000 (300 to 900) + 100 x 110 + 50 x 130', X.stepFor('7inch', 1050, 'main'), 44500);
+const totals0 = JSON.stringify(X.BILLS.map(b => [b.id, b.step, b.total, b.bal, b.comm]));
+const pf0 = JSON.stringify([X.pfCalc('all').st, X.pfCalc('all').profit]);
+X.STEPR.main.t7.ex[0] = 15; X.STEPR.main.t8.ex[1] = 25;
+check('edited 7inch bracket 1 (10 -> 15): 350 ft = 50 x 15', X.stepFor('7inch', 350, 'main'), 750);
+check('edited 8inch bracket 2 (20 -> 25): 420 ft = 1000 + 20 x 25', X.stepFor('8inch', 420, 'main'), 1500);
+X.STEPR.main.t7.bey = 30;
+check('growth 30 per 100 ft: 7inch 1050 ft = 27000 + 5 x 100 (bracket 1 +5) + 100 x 120 + 50 x 150', X.stepFor('7inch', 1050, 'main'), 47000);
+X.STEPR.main.t7.ex.push(110); X.STEPR.main.t7.bey = 20;
+check('added bracket 110 (7 rows): 1050 ft = 27500 + 100 x 110 + 50 x 130', X.stepFor('7inch', 1050, 'main'), 45000);
+X.BILLS.forEach(b => X.calcBill(b));
+check('saved bills keep their step rate after the tables are edited', JSON.stringify(X.BILLS.map(b => [b.id, b.step, b.total, b.bal, b.comm])) === totals0, 1);
+check('Portfolio numbers do not change after the tables are edited', JSON.stringify([X.pfCalc('all').st, X.pfCalc('all').profit]) === pf0, 1);
+check('a new bill of 350 ft 7inch uses the edited table', X.stepSum([{ c: 'depth', t: '7inch', f: 350 }], false, 'main'), 750);
+check('a side bore bill has no step rate', X.stepSum([{ c: 'depth', t: '7inch', f: 350 }], true, 'side'), 0);
+check('bill 1042 (350 ft 7inch) stays at 500', bill('b1').step, 500);
+check('bill 1041 (420 ft 8inch) stays at 1400', bill('b2').step, 1400);
+X.STEPR.main = { t7: JSON.parse(JSON.stringify(X.STDT.t7)), t8: JSON.parse(JSON.stringify(X.STDT.t8)) };
+// v2.0.4 agent view: feet and commission by type, Karthik 3 months (b10, b6, b3, b7, b8, b9)
+const fc = X.feetComm(v.bs);
+const row = (c, t) => fc[c].rows.filter(r => r.t === t)[0];
+check('Karthik depth 7inch feet = 250 + 300 + 280 + 200 + 320', row('depth', '7inch').f, 1350);
+check('Karthik depth 7inch commission = 2500 + 3000 + 2800 + 2000 + 3200', row('depth', '7inch').c, 13500);
+check('Karthik depth 8inch commission = 150 x 11', row('depth', '8inch').c, 1650);
+check('Karthik depth 9inch feet = 260 + 150, commission = 3120 + 1800', row('depth', '9inch').f + row('depth', '9inch').c, 410 + 4920);
+check('Karthik depth total commission', fc.depth.c, 20070);
+check('Karthik PVC 7inch commission = 90 x 8 (hand typed) + 100 x 5 + 100 x 5 + 60 x 5 + 80 x 5', row('pvc', '7inch').c, 2420);
+check('Karthik PVC 8inch commission = 60 x 6', row('pvc', '8inch').c, 360);
+check('Karthik PVC total feet 430 + 60', fc.pvc.f, 490);
+check('Karthik MS 6inch commission = 20 x 2 (line rate, the bill itself is manual)', row('ms', '6inch').c, 40);
+check('by type commission differs from the agent commission only by the manual bill (22890 vs 22350, bill 1037 lines 3540 vs 3000)', fc.depth.c + fc.pvc.c + fc.ms.c - v.st.comm, 540);
+check('manual note shown', fc.man, 1);
+// v2.0.4 Account Ledger rigs: linked income carries the bill rig, transfers have none
+check('linked entries carry the rig of their bill (13, 14, 15 = main)', X.CBE.filter(e => e.ln).every(e => e.v === 'main'), 1);
+check('transfers have no rig', X.CBE.filter(e => /^Transfer/.test(e.n)).every(e => !e.v), 1);
 X.S.pr.agent = 'all';
 const o = X.pfCalc();
 check('All agents 3 mo received (424,800)', o.st.recv, 424800);

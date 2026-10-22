@@ -1,10 +1,10 @@
 # Mockup progress (checkpoints, newest last)
 
-Resume rule: this file plus `rigledger_apple_mockup.html` are the whole state. The v1 file at `docs/design/ref/mockup-v1/rigledger_android_mockup.html` is no longer the logic baseline (since the 2.0.3 update the baseline is `qa/logic-baseline-v2.0.3.txt`; the 2.0.1 and 2.0.2 copies stay for history) and must not be edited from here. Nothing under `lib/` was touched.
+Resume rule: this file plus `rigledger_apple_mockup.html` are the whole state. The v1 file at `docs/design/ref/mockup-v1/rigledger_android_mockup.html` is no longer the logic baseline (since the 2.0.4 update the baseline is `qa/logic-baseline-v2.0.4.txt`; the 2.0.1, 2.0.2 and 2.0.3 copies stay for history) and must not be edited from here. Nothing under `lib/` was touched.
 
 Authoring note: the file was assembled once from parts kept ignored by git (CSS, core, ledger, portfolio/agents/settings, accounts, dev), with the logic block copied from the baseline by line range. After the first assembly it is edited directly. `qa/logic-diff.mjs` re-proves the freeze at any time.
 
-## Status by J group (all DONE; 121 screens after the 2.0.3 update, 117 after 2.0.2, 111 after 2.0.1, 91 before: 68 from v1, 23 added for the Apple direction, 20 added for 2.0.1)
+## Status by J group (all DONE; 128 screens after the 2.0.4 update, 121 after 2.0.3, 117 after 2.0.2, 111 after 2.0.1, 91 before: 68 from v1, 23 added for the Apple direction, 20 added for 2.0.1)
 
 | J group | Screens | Status | Notes |
 |---|---|---|---|
@@ -18,6 +18,7 @@ Authoring note: the file was assembled once from parts kept ignored by git (CSS,
 | Apple direction: states (new) | 14 | DONE | empty, loading, error for every list |
 | Apple direction: overlays (new) | 9 | DONE | row actions, full value popover, alerts, appearance, date picker |
 | Agent view (v2.0.3, new) | 4 | DONE | 3 month agent view, manual commission bill, empty state, Edit Agent dialog |
+| Step Rates and entry rig (v2.0.4, new) | 7 | DONE | Step Rates (default, edited), reset dialog, feet and commission by type, entry form with Rig dropdown, linked entry (rig locked), ledger list with rig names |
 
 ## Checkpoint 2: Android platform pass (2026-10-13)
 
@@ -171,3 +172,44 @@ Fix found on the way: in STRESS data the By month Total figure was scaled to 10.
 ### Open
 
 Nothing blocks. Not verified: the real Flutter agent view on a device (the review lists the same gap). `docs/v2.0.3-review.md` item "The mockups under docs/design do not show the agent view yet" can now be removed by the developer.
+
+## Checkpoint 6: update to app version 2.0.4 (2026-10-22)
+
+Source of truth: `docs/v2.0.4-review.md` and the Flutter code (`step_rates.dart`, `step_rates_screen.dart`, `agent_view.dart` `_feetByType`, `cashbook_entry_form_screen.dart` `_rigField`, `cashbook_row.dart`, `payment_link_service.dart`, `cashbook_export_service.dart`, read only). The mockup now matches 2.0.4+9. Per item:
+
+1. Version text is 2.0.4 (build 9): page title, dev panel title, About, Settings row, logic block header.
+2. Settings has a "Step Rates" row above "Ledger Types" (subtitle "Extra rate beyond 300 ft, for each rig (new bills only)"). The Step Rates screen: Rig dropdown (main bore rigs), info box, two table cards (7 inch and 8 inch: "Step rate starts after", one row per 100 ft bracket with a remove X (disabled with one row), "Add bracket" = last row + growth, "After the last bracket, extra per ft grows by", live example), "Reset to standard" with the confirm alert, "Save" with the snacks "Step rates saved. New bills use them" and "Fill every rate with a number". `stepCalc` mirrors `StepTable.calculate`. A new bill (and a saved bill whose depth lines are edited) uses the current tables of its rig, a saved bill keeps its stored step rate (`b.stp`); see MOCKUP_NOTES.md.
+3. Agent view: new card "Feet and commission by type" between the Bills / Total / Received / Pending cards and By month (the mockup had no feet card before): Depth, PVC and MS pipe groups, a header "Total N ft  |  ₹C", one chip per type with feet (`7"  1,350 ft` and "Commission ₹13,500"), the manual note when a bill in the view has a hand-typed commission. Karthik 3 Mo shows three depth types, two PVC types and MS pipe, so no dummy data was added for it.
+4. Account Ledger entries have an optional rig (`v`): "Rig (optional)" row between notes and Account (sheet of No rig and the rigs), disabled with "Set from the bill" for linked income; rows show the rig (icon and name) under the time line; linked income of bills 1039 and 1042 has Main Rig; three hand-typed entries have a rig; Copy keeps the rig (now adds the copy to the data); Save and Save and add another keep it. The Report sheets describe the CSV Rig column and the PDF "Rig: NAME" line. Totals and balances are unchanged.
+5. Screen jump list: 128 entries, new group "Step Rates and entry rig (v2.0.4)" with the 7 screens above; `SCREEN_MAP.md`, `MOCKUP_NOTES.md` and `TOKENS.md` (section 11) updated.
+
+### Intentional logic changes (the baseline was updated deliberately)
+
+`qa/logic-baseline-v2.0.4.txt` is the new frozen copy. Changes against the v2.0.3 block: the fixed `STEP` table is replaced by `STDT` (standard tables), `STEPR` (tables per main bore rig, `{th, ex, bey}`), `cloneTb`, `stepCalc` (adds the growth after the last bracket, which the old function did not have; no dummy bill is that deep), `stepTab`; `stepFor(t,ft,rig)` and `stepSum(L,side,rig)` take the rig; each bill stores its step rate once at load (`b.stp`) and `calcBill` uses it (`b.step=b.stp`), so editing the tables never changes a saved bill; `calcMain` uses the stored step rate of a saved bill until a depth line is edited (`F.keepStep`, `F.depthEd`) and the rig of the form (`F.rig`); new `feetComm(bs)` (feet and commission per category and type, rounded to paise); account ledger entries 3, 6, 9, 13, 14 and 15 got a rig (`v`). Every older number is unchanged (the 59 hand checks of 2.0.3 still pass).
+
+### Hand check (recomputed outside the page, `qa/logic-diff.mjs` asserts the same numbers)
+
+- Step rate, default tables: 350 ft 7inch = 50 x 10 = 500; 420 ft 8inch = 100 x 10 + 20 x 20 = 1,400 (bills 1042 and 1041 keep exactly these).
+- One edited bracket: 7inch first bracket 10 to 15 gives 350 ft = 50 x 15 = 750; 8inch second bracket 20 to 25 gives 420 ft = 1,000 + 20 x 25 = 1,500. After both edits the 13 main bills, the ledger cards and the Portfolio numbers are identical to before (checked in the script), a new 350 ft 7inch line costs 750.
+- Beyond the last bracket (7inch, 1,050 ft): 27,000 (300 to 900 ft) + 100 x (90 + 20) + 50 x (90 + 40) = 27,000 + 11,000 + 6,500 = 44,500; with first bracket 15 and growth 30: 27,500 + 100 x 120 + 50 x 150 = 47,000; with a seventh bracket 110: 27,500 + 100 x 110 + 50 x 130 = 45,000.
+- Defaults shown by the live example: 1,000 ft 7inch = 27,000 + 100 x 110 = 38,000; 8inch = 31,000 + 100 x 120 = 43,000. Example feet = start + 100 x (rows + 1).
+- Karthik, 3 Mo (bills 1036, 1037, 1040, 1043, 1044, 1045), feet and commission by type: Depth 7inch 1,350 ft (250 + 300 + 280 + 200 + 320), 2,500 + 3,000 + 2,800 + 2,000 + 3,200 = 13,500; 8inch 150 ft x 11 = 1,650; 9inch 410 ft (260 + 150), 3,120 + 1,800 = 4,920; Depth total 1,910 ft, 20,070. PVC 7inch 430 ft (90 + 100 + 100 + 60 + 80), 90 x 8 (hand-typed) + 500 + 500 + 300 + 400 = 2,420; 8inch 60 ft x 6 = 360; PVC total 490 ft, 2,780. MS pipe 6inch 20 ft x 2 = 40. Sum 22,890 against the agent commission 22,350: the difference 540 is bill 1037, whose commission was typed as 3,000 while its lines give 3,540 (this is why the card carries the note).
+
+### Verification (2026-10-22)
+
+| Check | Result |
+|---|---|
+| `node qa/token-audit.mjs` | OK |
+| `node qa/logic-diff.mjs` | identical to the 2.0.4 baseline, 86 hand checks OK |
+| `node qa/smoke.mjs` | 128 screens, no errors |
+| `node qa/flows.mjs` | all click-through checks OK (101), no script errors |
+| `node qa/shoot.mjs` (412 dp, light and dark) | 0 issues |
+| `--stress`, `--stress --ts 2`, `--stress --ts 1.3` | 0 issues |
+| `--width 360` and `--width 360 --stress --ts 2` | 0 issues |
+| `--nav3`, `--blur` | 0 issues |
+
+Fix found on the way: the locked Income/Expense segment of a linked entry (new screen "linked entry form") had 4.42:1 contrast at 55 percent opacity; it is now 65 percent. The flows script reloads the page before its 2.0.4 part because the 2.0.3 part edits agent prices.
+
+### Open
+
+Nothing blocks. Not verified: the Flutter screens on a device (the review lists the same gap). `docs/v2.0.4-review.md` "Open: the mockups under docs/design do not show Step Rates, feet by type in the agent view or the entry rig yet" can now be removed by the developer (the other mockup under `docs/design/ref/mockup-v1/` is updated by another agent). Rig dropdown on Step Rates lists one rig because the dummy data has one main bore rig.

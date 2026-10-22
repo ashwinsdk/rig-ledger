@@ -48,7 +48,7 @@ Last updated: 2026-10-22 (v2.0.4 done, Apple-style design mockup)
 
 - Review: `docs/v2.0.4-review.md`. Schema 8. `StepRates` per rig (settings key `stepRates`, lib/core/models/step_rates.dart, Settings > Step Rates); saved bills keep `stepRate`. `AgentView` shows feet by type. `CashEntry.vehicleId` (HiveField 19): optional rig, automatic for linked bill payments.
 - Gotchas: `calculateStepRate(custom:)` delegates to `StepTable.calculate`; `CashbookRow` is now a ConsumerWidget (reads the rig name); CSV of the Account Ledger has a trailing Rig column.
-- Not verified: any of it on a device. The mockups do not show these three changes yet.
+- Not verified: any of it on a device. Both mockups were updated to 2.0.4 (Apple one: `qa/logic-baseline-v2.0.4.txt`).
 
 ## Apple-style design mockup (design only, no lib/ changes)
 

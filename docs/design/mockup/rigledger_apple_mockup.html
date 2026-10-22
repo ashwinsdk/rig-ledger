@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>RigLedger 2.0.3 - Android mockup, Apple look (dummy data)</title>
+<title>RigLedger 2.0.4 - Android mockup, Apple look (dummy data)</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light dark">
 <script>(function(){var r=document.documentElement;try{var t=localStorage.getItem('rl.theme')||'system',a=localStorage.getItem('rl.accent')||'blue';var d=t=='dark'||(t=='system'&&window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches);r.dataset.th=d?'dark':'light';r.dataset.accent=a}catch(e){r.dataset.th='light';r.dataset.accent='blue'}})()</script>
@@ -379,6 +379,22 @@ body.tsbig .strip3{flex-direction:column}
 .hint{padding:0 calc(var(--mx) + 8px) 10px}
 .plink{display:flex;align-items:center;width:100%;min-height:var(--tap);border-top:.5px solid var(--sep)}
 .plink .pm{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;min-height:var(--tap);text-align:left;padding:10px 0}
+/* v2.0.4: Step Rates info box, bracket rows, feet and commission by type card, rig line on Account Ledger rows */
+.infob{display:flex;gap:10px;align-items:flex-start;margin:0 var(--mx) var(--gap);padding:14px;border-radius:16px;background:var(--acc-tint);color:var(--lb)}
+.infob .mi{flex:none;color:var(--acc-tx)}
+.fr.sel{text-align:left}
+.fr.sel .tr{text-align:right;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fr.sel[disabled]{opacity:.55}
+.fcard .fcg{margin-top:12px}
+.fch{display:flex;flex-wrap:wrap;justify-content:space-between;gap:2px 12px;font-size:calc(12px*var(--ts));font-weight:600;color:var(--lb2)}
+.fch b{font-weight:700}
+.fcc{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.fcx{display:flex;flex-direction:column;gap:1px;padding:6px 10px;border-radius:10px;background:var(--fill);font-size:calc(12px*var(--ts));color:var(--lb2)}
+.fcx span{display:inline-flex;gap:6px;align-items:baseline}
+.fcx b{font-size:calc(13px*var(--ts));font-weight:600}
+.fcx small{font-size:calc(11px*var(--ts));color:var(--lb2)}
+.entry .r2.rg{align-items:center;gap:4px}
+.entry .r2.rg .mi{color:var(--lb2)}
 /* v2.0.3: info icon button (opens the agent details sheet), agent view header, agent profit card, month table, agent bill card */
 .agi{display:inline-flex;align-items:center;justify-content:center;width:var(--tap);height:var(--tap);flex:none;border-radius:24px;color:var(--lb2)}
 .agi:active{box-shadow:inset 0 0 0 100vmax var(--press)}
@@ -460,7 +476,7 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--acc);outli
 <div id="sysnav"></div>
 </div></div>
 <script>
-/* ================= LOGIC BLOCK: v2.0.3 data and derived logic, frozen (checked by qa/logic-diff.mjs against qa/logic-baseline-v2.0.3.txt) ================= */
+/* ================= LOGIC BLOCK: v2.0.4 data and derived logic, frozen (checked by qa/logic-diff.mjs against qa/logic-baseline-v2.0.4.txt) ================= */
 var $=function(s){return document.querySelector(s)};
 var MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 var MONF=['January','February','March','April','May','June','July','August','September','October','November','December'];
@@ -483,9 +499,17 @@ var AG=[
  {id:'a4',name:'Prakash',phone:'97890 55123',notes:'New agent, no bills yet',cd:9,cp:0,cm:0,pr:{}}];
 /* v2.0.1 user-defined types (Settings, Ledger Types). Step table per depth type: '7inch', '8inch' or 'none'. */
 var TYPES={depth:['7inch','8inch','9inch'],pvc:['7inch','8inch'],ms:['6inch']};
-var STEP={'7inch':[10,20,30,50,70,90],'8inch':[10,20,40,60,80,100]};
 var STEPT={'7inch':'7inch','8inch':'8inch','9inch':'none'};
-function stepFor(t,ft){var inc=STEP[STEPT[t]];if(!inc)return 0;var s=0,i;for(i=0;i<6;i++){var lo=300+i*100;var f=Math.max(0,Math.min(ft,lo+100)-lo);s+=f*inc[i]}return s}
+/* v2.0.4 (StepTable): step rate tables per main bore rig. th = step rate starts after (ft), ex = extra per ft of each 100 ft bracket, bey = extra per ft added for each further 100 ft after the last bracket. A rig without an entry uses the standard tables (STDT). */
+var STDT={t7:{th:300,ex:[10,20,30,50,70,90],bey:20},t8:{th:300,ex:[10,20,40,60,80,100],bey:20}};
+function cloneTb(t){return {th:t.th,ex:t.ex.slice(),bey:t.bey}}
+var STEPR={main:{t7:cloneTb(STDT.t7),t8:cloneTb(STDT.t8)}};
+/* StepTable.calculate: 0 up to th; bracket i charges the feet inside [th+100i, th+100(i+1)] times ex[i]; the k-th further 100 ft (and the remaining part) costs last + bey x k per ft */
+function stepCalc(tb,ft){var th=tb.th,ex=tb.ex,n=ex.length;if(ft<=th||!n)return 0;var s=0,i;for(i=0;i<n;i++){var lo=th+100*i,f=Math.max(0,Math.min(ft,lo+100)-lo);s+=f*ex[i]}
+ var bs=th+100*n;if(ft>bs){var by=ft-bs,c=Math.floor(by/100),rem=by%100,last=ex[n-1];for(i=0;i<c;i++)s+=100*(last+tb.bey*(i+1));if(rem>0)s+=rem*(last+tb.bey*(c+1))}return s}
+/* the table a depth type uses on a rig (Ledger Types picks the 7 inch or 8 inch table; 'none' has no step rate) */
+function stepTab(rig,t){var n=STEPT[t];if(n!='7inch'&&n!='8inch')return null;var k=n=='7inch'?'t7':'t8',r=STEPR[rig];return r?r[k]:STDT[k]}
+function stepFor(t,ft,rig){var tb=stepTab(rig,t);return tb?stepCalc(tb,ft):0}
 /* agent price per foot for a type, else the default of that kind (Agent.rateFor) */
 function rateFor(a,cat,t){var v=a.pr&&a.pr[cat+':'+t];if(v!=null)return v;return cat=='depth'?a.cd:cat=='pvc'?a.cp:a.cm}
 /* v2.0.2: a bill has lines. Each line is one category (depth, pvc, ms), a type, feet f, rate per foot r and a commission rate k per foot. */
@@ -514,11 +538,11 @@ function lcomm(b,c){return sum(linesOf(b,c),function(l){return l.f*l.k})}
 function typesOf(b,c){var l=linesOf(b,c),w=l.filter(function(x){return x.f>0}),o=[];(w.length?w:l.slice(0,1)).forEach(function(x){if(o.indexOf(x.t)<0)o.push(x.t)});return o}
 function hasType(b,c,t){return linesOf(b,c).some(function(l){return l.t==t})}
 /* step rate of all depth lines: every line is worked out on its own (own type table, feet from 0); the bill step rate is the sum; side bore has none */
-function stepSum(L,side){return side?0:sum(L.filter(function(l){return l.c=='depth'}),function(l){return stepFor(l.t,l.f)})}
+function stepSum(L,side,rig){return side?0:sum(L.filter(function(l){return l.c=='depth'}),function(l){return stepFor(l.t,l.f,rig)})}
 function calcBill(b){
  var side=b.rig=='side';
  b.d=lfeet(b,'depth');b.p=lfeet(b,'pvc');b.m=lfeet(b,'ms');
- b.step=stepSum(b.L,side);
+ b.step=b.stp;/* v2.0.4: a saved bill keeps the step rate it was saved with (stp); editing the step tables never changes it */
  b.total=sum(b.L,function(l){return l.f*l.r})+b.step+b.ex;
  b.man=b.cmo!=null;
  b.comm=b.man?b.cmo:Math.round(sum(b.L,function(l){return l.f*l.k})*100)/100;
@@ -526,6 +550,7 @@ function calcBill(b){
 }
 BILLS.forEach(function(b){
  var a=AG.filter(function(x){return x.id==b.ag})[0];
+ b.stp=stepSum(b.L,b.rig=='side',b.rig);
  b.L.forEach(function(l){l.k=l.hk!=null?l.hk:(b.rig=='side'?a.cd:rateFor(a,l.c,l.t))});
  calcBill(b);
 });
@@ -556,22 +581,23 @@ SL.diesel.forEach(function(e){e.total=e.l*e.r;e.pend=e.total-e.paid});
 SL.other.forEach(function(e){e.pend=e.total-e.paid});
 ['pvc','bit','hammer'].forEach(function(k){SL[k].forEach(function(e){e.total=sum(e.t,function(x){return x.c*x.r});e.cnt=sum(e.t,function(x){return x.c});e.pend=e.total-e.paid})});
 var CB_BOOKS=[{id:'cash',name:'Cash',rec:false},{id:'bank',name:'Bank',rec:false},{id:'mur',name:'Murugan',rec:true}];
+/* v2.0.4: an entry has an optional rig v (a Vehicle id). Income linked from a bill payment (ln:1) carries the bill's rig; transfers have none. */
 var CBE=[
  {id:1,b:'cash',t:'in',a:50000,n:'Cash from owner',d:'2026-09-25',tm:'10:00',ln:0},
  {id:2,b:'cash',t:'in',a:15000,n:'Selvam advance',d:'2026-09-28',tm:'11:20',ln:0},
- {id:3,b:'cash',t:'out',a:4200,n:'Diesel for rig',d:'2026-09-30',tm:'08:45',ln:0},
+ {id:3,b:'cash',t:'out',a:4200,n:'Diesel for rig',d:'2026-09-30',tm:'08:45',ln:0,v:'main'},
  {id:4,b:'cash',t:'out',a:1800,n:'Tea and food for crew',d:'2026-10-02',tm:'13:10',ln:0},
  {id:5,b:'cash',t:'out',a:12000,n:'Labour wages',d:'2026-10-03',tm:'18:30',ln:0},
- {id:6,b:'cash',t:'out',a:3500,n:'Compressor service',d:'2026-10-08',tm:'12:00',ln:0},
+ {id:6,b:'cash',t:'out',a:3500,n:'Compressor service',d:'2026-10-08',tm:'12:00',ln:0,v:'main'},
  {id:7,b:'cash',t:'out',a:10000,n:'Transfer to Bank',d:'2026-10-09',tm:'16:40',ln:0},
  {id:8,b:'cash',t:'out',a:2500,n:'Spare parts',d:'2026-10-10',tm:'09:15',ln:0},
- {id:9,b:'cash',t:'out',a:6000,n:'Labour wages',d:'2026-10-11',tm:'18:05',ln:0},
+ {id:9,b:'cash',t:'out',a:6000,n:'Labour wages',d:'2026-10-11',tm:'18:05',ln:0,v:'side'},
  {id:10,b:'bank',t:'in',a:25000,n:'Opening balance',d:'2026-09-29',tm:'09:00',ln:0},
  {id:11,b:'bank',t:'in',a:10000,n:'Transfer from Cash',d:'2026-10-09',tm:'16:40',ln:0},
  {id:12,b:'bank',t:'out',a:7500,n:'Insurance premium',d:'2026-10-10',tm:'11:30',ln:0},
- {id:13,b:'mur',t:'in',a:90000,n:'Bill 1039 payment',d:'2026-10-03',tm:'17:00',ln:1},
- {id:14,b:'mur',t:'in',a:30000,n:'Bill 1042 cash',d:'2026-10-12',tm:'15:20',ln:1},
- {id:15,b:'mur',t:'in',a:10000,n:'Bill 1042 PhonePe',d:'2026-10-12',tm:'15:25',ln:1},
+ {id:13,b:'mur',t:'in',a:90000,n:'Bill 1039 payment',d:'2026-10-03',tm:'17:00',ln:1,v:'main'},
+ {id:14,b:'mur',t:'in',a:30000,n:'Bill 1042 cash',d:'2026-10-12',tm:'15:20',ln:1,v:'main'},
+ {id:15,b:'mur',t:'in',a:10000,n:'Bill 1042 PhonePe',d:'2026-10-12',tm:'15:25',ln:1,v:'main'},
  {id:16,b:'mur',t:'out',a:20000,n:'Paid to Murugan',d:'2026-10-13',tm:'10:10',ln:0}
 ];
 var CB_TRASH=[{n:'Hotel stay',a:3200,t:'out',book:'Cash',d:'2026-10-05',tm:'20:10',left:24}];
@@ -614,6 +640,8 @@ function periodBills(){
 /* feet per user-defined type, in list order (FeetTotals); every line counts under its own type; a type that no list knows is kept under its own name */
 function feetBy(bs,cat){var o={};TYPES[cat].forEach(function(t){o[t]=0});bs.forEach(function(b){linesOf(b,cat).forEach(function(l){o[l.t]=(o[l.t]||0)+l.f})});return o}
 function feetTotals(bs){var d=feetBy(bs,'depth'),p=feetBy(bs,'pvc'),m=feetBy(bs,'ms'),t=function(o){return sum(Object.keys(o),function(k){return o[k]})};return {depth:d,pvc:p,ms:m,depthTotal:t(d),pvcTotal:t(p),msTotal:t(m)}}
+/* v2.0.4 (AgentView._feetByType): feet and commission per category and type over every line of the bills. Commission of a type = sum of feet x line commission rate, rounded to paise; a category total is the sum of its (rounded) types; types without feet are left out; man = some bill has a hand-typed commission total */
+function feetComm(bs){var o={man:bs.some(function(b){return b.man})};['depth','pvc','ms'].forEach(function(c){var m={};bs.forEach(function(b){linesOf(b,c).forEach(function(l){var x=m[l.t]||(m[l.t]={f:0,c:0});x.f+=l.f;x.c+=l.f*l.k})});var ty=TYPES[c].concat(Object.keys(m).filter(function(t){return TYPES[c].indexOf(t)<0})),r=[];ty.forEach(function(t){var x=m[t];if(x&&x.f>0)r.push({t:t,f:x.f,c:Math.round(x.c*100)/100})});o[c]={rows:r,f:sum(r,function(x){return x.f}),c:Math.round(sum(r,function(x){return x.c})*100)/100}});return o}
 function stats(bs){return {total:sum(bs,function(b){return b.total}),recv:sum(bs,function(b){return b.recv}),bal:sum(bs,function(b){return b.bal}),comm:sum(bs,function(b){return b.comm}),ft:feetTotals(bs),ms:sum(bs,function(b){return b.m}),dep:sum(bs,function(b){return b.d})}}
 function slIn(k,r){return SL[k].filter(function(e){return inR(e.date,r)})}
 function expenses(r){var o={diesel:0,pvc:0,bit:0,hammer:0,other:0};for(var k in o)o[k]=sum(slIn(k,r),function(e){return e.total});o.total=o.diesel+o.pvc+o.bit+o.hammer+o.other;return o}
@@ -622,7 +650,7 @@ function formLines(){var o=[];['depth','pvc','ms'].forEach(function(c){((F.LN&&F
 function calcMain(side){
  var n=function(k){return parseFloat(F[k])||0},L=formLines(),of=function(c){return L.filter(function(l){return l.c==c})};
  var dep=sum(of('depth'),function(l){return l.f*l.r}),pv=sum(of('pvc'),function(l){return l.f*l.r}),ms=sum(of('ms'),function(l){return l.f*l.r}),ex=n('ex');
- if(!FM.step)F.step=stepSum(L,side);
+ if(!FM.step)F.step=(F.keepStep!=null&&!F.depthEd)?F.keepStep:stepSum(L,side,F.rig||S.rig);
  var st=n('step'),tot=dep+st+pv+ms+ex;
  if(!FM.total)F.total=tot;
  var comm=sum(L,function(l){return l.f*l.k});if(!FM.comm)F.comm=comm;
@@ -946,14 +974,14 @@ function blankLine(c,side){var t=side?TYPES.depth[0]:TYPES[c][0],a=F.ag?agent(F.
 function blankLN(side){F.LN={depth:[blankLine('depth',side)],pvc:side?[]:[blankLine('pvc',false)],ms:side?[]:[blankLine('ms',false)]}}
 function newForm(id,b){
  F={};FM={};var side=id=='sideBoreForm';
- if(b){F={date:b.date,bill:b.bill,ag:b.ag,addr:b.addr,step:b.step,ex:b.ex||'',total:b.total,comm:b.comm,less:b.less||'',notes:b.notes,edit:b.id,pays:[],early:0};
+ if(b){F={rig:b.rig,keepStep:b.step,depthEd:0,date:b.date,bill:b.bill,ag:b.ag,addr:b.addr,step:b.step,ex:b.ex||'',total:b.total,comm:b.comm,less:b.less||'',notes:b.notes,edit:b.id,pays:[],early:0};
   F.LN={depth:[],pvc:[],ms:[]};
   b.L.forEach(function(l){F.LN[l.c].push({t:l.t,f:String(l.f),r:String(l.r),k:l.k?String(l.k):'',kt:0})});
   ['depth','pvc','ms'].forEach(function(c){if(!F.LN[c].length&&(c=='depth'||!side))F.LN[c].push(blankLine(c,side))});
   if(b.id=='b1'){F.pays=[{amt:30000,mode:'Cash',date:'2026-10-12',rec:'Murugan',payer:'',note:''},{amt:10000,mode:'PhonePe',date:'2026-10-12',rec:'Murugan',payer:'Ravi Kumar',note:''}]}
   else F.early=b.recv;
   if(b.man)FM.comm=1;
- }else{F={date:TODAY,pays:[],early:0,ag:'',addr:''};blankLN(side)}
+ }else{F={rig:S.rig,date:TODAY,pays:[],early:0,ag:'',addr:''};blankLN(side)}
  push(id);
 }
 /* ---------- ledger sheets ---------- */
@@ -986,9 +1014,11 @@ function previewHtml(c){
 }
 function onFi(k){
  if(window.curForm=='oth')otTot();
+ if(window.curForm=='steps'&&F.srrig&&/^(srrig|st[78]_)/.test(k)){srUpd(k);return}
  if((window.curForm=='main'||window.curForm=='side')&&F.LN){
   var side=window.curForm=='side',m=/^L_([a-z]+)_(\d+)_([a-z])$/.exec(k);
   if(m&&m[3]=='k')F.LN[m[1]][+m[2]].kt=1;
+  if(m&&m[1]=='depth'&&(m[3]=='t'||m[3]=='f'))F.depthEd=1;
   if(k=='step')FM.step=1;if(k=='total'||k=='mtotal')FM.total=1;if(k=='comm')FM.comm=1;
   var c=calcMain(side),set=function(i,v){var e=$('#i_'+i);if(e&&document.activeElement!==e)e.value=v};
   if($('#pv'))$('#pv').innerHTML=previewHtml(c);
@@ -1008,8 +1038,8 @@ function pickAgent(){var a=agent(F.ag),side=window.curForm=='side';
  render()}
 /* a line type changed: its rate follows the agent price unless the rate was typed by hand */
 function lineType(c,i){var l=F.LN[c][i];if(F.ag&&!l.kt){var k=rateFor(agent(F.ag),c,l.t);l.k=k?String(k):''}FM.comm=0;render()}
-function addLine(c){F.LN[c].push(blankLine(c,window.curForm=='side'));FM.comm=0;render()}
-function rmLine(c,i){if(F.LN[c].length>1){F.LN[c].splice(i,1);FM.comm=0;render()}}
+function addLine(c){if(c=='depth')F.depthEd=1;F.LN[c].push(blankLine(c,window.curForm=='side'));FM.comm=0;render()}
+function rmLine(c,i){if(F.LN[c].length>1){if(c=='depth')F.depthEd=1;F.LN[c].splice(i,1);FM.comm=0;render()}}
 /* the type list plus the bill's own type, so editing an old bill never loses it */
 function typeOpts(cat,cur){var l=TYPES[cat].slice();if(cur&&l.indexOf(cur)<0)l.push(cur);return l}
 function lk(c,i,p){return 'L_'+c+'_'+i+'_'+p}
@@ -1256,6 +1286,12 @@ function agentSheet(id){
 }
 /* v2.0.3 agent view (AgentView): shown instead of the profit card, metric cards, expenses, Agents section and definitions when an agent is chosen (pill sheet or tap on an agent row). Every number comes from pfCalc() (scope, period and this agent) and the dataset. */
 function agPeriod(r){if(!r)return 'All time';var t=pd(TODAY),e=r[1]>t?t:r[1],f=function(d){return p2(d.getDate())+' '+MON[d.getMonth()]+' '+d.getFullYear()};return f(r[0])+' to '+f(e)}
+/* v2.0.4 AgentView._feetByType: a chip per type that has feet (feet, then a small Commission line), a header per group with the group total, and a note when a bill has a hand-typed commission */
+function feetCommCard(bs){
+ var fc=feetComm(bs),g=function(title,k,cc){var d=fc[k];if(!d.rows.length)return '';
+  return '<div class="fcg"><div class="fch"><span>'+title+'</span><b class="'+cc+'">Total '+ftq(d.f)+'  |  '+money(d.c)+'</b></div><div class="fcc">'+d.rows.map(function(x){return '<div class="fcx"><span>'+x.t.replace('inch','')+'"<b class="'+cc+'">'+ftq(x.f)+'</b></span><small>Commission '+money(x.c)+'</small></div>'}).join('')+'</div></div>'};
+ return '<div class="card fcard"><div class="t17 sb6">Feet and commission by type</div>'+g('Depth','depth','cacc')+g('PVC','pvc','cpvc')+g('MS pipe','ms','cms')+(fc.man?'<div class="t12 l2" style="margin-top:10px">Commission by type uses the line rates. A bill whose commission was set by hand counts with its line rates here.</div>':'')+'</div>';
+}
 function agentView(c){
  var P=S.pr,a=agent(P.agent),r=mrange(P.range,0),st=c.st,stk=UI.ts>1.5?' stk':'';
  var bs=c.bs.slice().sort(function(x,y){return x.date<y.date?1:x.date>y.date?-1:y.bill-x.bill});
@@ -1264,6 +1300,7 @@ function agentView(c){
  h+='<div class="agp'+(profit<0?' neg':'')+'"><div class="t13 l2">Profit from this agent (received - commission)</div><div class="ahv '+(profit<0?'cout':'cin')+'">'+mfit(profit,'','Profit from this agent')+'</div><div class="t13">Expected when all pending is collected: <b>'+money(expd)+'</b></div><div class="t13 l2">All agents, after expenses: '+money(overall)+'</div><div class="t12 l2" style="margin-top:8px">Expenses are not tracked per agent, so they are not taken off this figure.</div></div>';
  h+='<div class="mgrid">'+mcard('Bills','receipt_long',String(bs.length),'','')+mcard('Total','account_balance_wallet_outlined',st.total,'cacc','')+mcard('Received','check_circle_outline',st.recv,'cin','')+mcard('Pending','pending_outlined',st.bal,'cbal','')+'</div>';
  if(!bs.length)return h+'<div class="t15 l2 tc" style="padding:32px 20px">No bills for '+esc(a.name)+' in this period</div>';
+ h+=feetCommCard(bs);
  var mk=[],mm={};bs.forEach(function(b){var k=b.date.slice(0,7);if(!mm[k]){mm[k]=[];mk.push(k)}mm[k].push(b)});
  if(mk.length>1)h+='<div class="card mtb'+stk+'"><div class="t17 sb6">By month</div><div class="mr th"><span>Month</span><span>Bills</span><span>Total</span><span>Commission</span></div>'+mk.map(function(k){var x=mm[k],d=pd(k+'-01');return '<div class="mr"><span class="t15 sb6">'+MON[d.getMonth()]+' '+d.getFullYear()+'</span><span data-l="Bills" class="t13">'+x.length+'</span><span data-l="Total">'+mfit(sum(x,function(b){return b.total}),'','Total '+MON[d.getMonth()])+'</span><span data-l="Commission">'+mfit(sum(x,function(b){return b.comm}),'ccom','Commission '+MON[d.getMonth()])+'</span></div>'}).join('')+'</div>';
  h+=sec('Bills');
@@ -1361,10 +1398,10 @@ function driveCard(){
 }
 function settingsTab(){
  var rig=VEH.filter(function(v){return v.id==S.rig})[0];
- var A=driveCard()+grp(ri({ico:'contrast',col:'var(--lb2)',t:'Appearance',v:UI.theme.charAt(0).toUpperCase()+UI.theme.slice(1),chev:true,fn:'appearanceSheet()'}).replace('<button class="ri ico"','<button class="ri ico" data-nl="needs logic: LR-23"')+ri({ico:'directions_car',col:'var(--acc)',t:'Rigs',s:'Current: '+rig.name,chev:true,fn:"push('vehicles')"})+ri({ico:'straighten',col:'var(--c-pvc)',t:'Ledger Types',s:'Depth, PVC and MS pipe sizes (7inch, 8inch, 9inch...)',chev:true,fn:"push('ledgerTypes')"}));
+ var A=driveCard()+grp(ri({ico:'contrast',col:'var(--lb2)',t:'Appearance',v:UI.theme.charAt(0).toUpperCase()+UI.theme.slice(1),chev:true,fn:'appearanceSheet()'}).replace('<button class="ri ico"','<button class="ri ico" data-nl="needs logic: LR-23"')+ri({ico:'directions_car',col:'var(--acc)',t:'Rigs',s:'Current: '+rig.name,chev:true,fn:"push('vehicles')"})+ri({ico:'trending_up',col:'var(--bal)',t:'Step Rates',s:'Extra rate beyond 300 ft, for each rig (new bills only)',chev:true,fn:"push('stepRates')"})+ri({ico:'straighten',col:'var(--c-pvc)',t:'Ledger Types',s:'Depth, PVC and MS pipe sizes (7inch, 8inch, 9inch...)',chev:true,fn:"push('ledgerTypes')"}));
  A+=ftl('Backup and restore')+grp(ri({ico:'backup',col:'var(--acc)',t:'Create Backup',s:'Backup all data to a file',chev:true,fn:"snack('Backup created successfully')"})+ri({ico:'restore',col:'var(--acc)',t:'Restore Backup',s:'Restore data from a backup file',chev:true,fn:'restoreDlg()'}));
  var B=ftl('Export and import')+grp(ri({ico:'file_download',col:'var(--in-btn)',t:'Export to CSV',s:'Export ledger entries as a CSV file',chev:true,fn:"push('exportCsv')"})+ri({ico:'file_upload',col:'var(--in-btn)',t:'Import from CSV',s:'Import ledger entries from a CSV file',chev:true,fn:"push('importCsv')"})+ri({ico:'picture_as_pdf',col:'var(--out-btn)',t:'Export to PDF',s:'Generate a PDF report',chev:true,fn:"push('exportPdf')"}));
- B+=ftl('About')+grp(ri({ico:'info',col:'var(--lb2)',t:'About RigLedger',s:'Version 2.0.3 (build 8), license, notices',chev:true,fn:"push('about')"}));
+ B+=ftl('About')+grp(ri({ico:'info',col:'var(--lb2)',t:'About RigLedger',s:'Version 2.0.4 (build 9), license, notices',chev:true,fn:"push('about')"}));
  B+=ftl('Data')+grp(ri({ico:'delete_forever',col:'var(--out-btn)',t:'Clear All Data',s:'Delete all ledger entries and agents',des:true,fn:'clearDlg()'}));
  return scr({t:'Settings',root:true},'<div class="grp2"><div>'+A+'</div><div>'+B+'</div></div>');
 }
@@ -1374,6 +1411,41 @@ function discDlg(){confirmUI('Disconnect Google Drive','Are you sure you want to
 function clearDlg(){alertUI('Clear All Data','This permanently deletes all ledger entries, all agents, all side-ledger entries and all rigs except the default. This action cannot be undone.',[{t:'Cancel',k:'def'},{t:'Delete Everything',k:'des',fn:"closeOv();snack('All data cleared')"}])}
 
 /* ========== SETTINGS SUB SCREENS ========== */
+/* ---------- Settings > Step Rates (v2.0.4): the 7 inch and 8 inch step rate tables of each main bore rig. Saved bills keep their step rate; new bills (and saved bills whose depth is edited) use these tables. Form state lives in F: srrig, and per table k (t7, t8) the text keys s<k>_th, s<k>_b, s<k>_n (rows) and s<k>_e<i>. ---------- */
+var SRT=[['t7','7 inch table'],['t8','8 inch table']];
+function srNum(v){v=String(v==null?'':v).trim();if(!v||!/^\d*\.?\d*$/.test(v)||v=='.')return null;return Number(v)}
+function srLoad(){var r=STEPR[F.srrig]||{t7:STDT.t7,t8:STDT.t8};SRT.forEach(function(x){var k=x[0],t=r[k];F['s'+k+'_th']=String(t.th);F['s'+k+'_b']=String(t.bey);F['s'+k+'_n']=t.ex.length;t.ex.forEach(function(v,i){F['s'+k+'_e'+i]=String(v)})})}
+/* the table as typed, or null when a field is empty or not a number (StepTable value()) */
+function srRead(k){var n=F['s'+k+'_n'],ex=[],i,ok=true,th=srNum(F['s'+k+'_th']),be=srNum(F['s'+k+'_b']);for(i=0;i<n;i++){var e=srNum(F['s'+k+'_e'+i]);if(e==null)ok=false;ex.push(e)}return(ok&&th!=null&&be!=null&&n>0)?{th:th,ex:ex,bey:be}:null}
+function srExample(k){var tb=srRead(k),th=srNum(F['s'+k+'_th'])||0,ft=th+100*(F['s'+k+'_n']+1);return tb?'Example: '+qty(ft)+' ft gives a step rate of '+money(stepCalc(tb,ft)):'Fill every rate to see an example'}
+function srLabel(k,i){var th=srNum(F['s'+k+'_th'])||0;return qty(th+100*i)+' to '+qty(th+100*(i+1))+' ft, extra per ft'}
+function srUpd(k){
+ if(k=='srrig'){srLoad();render();return}
+ var t=k.slice(1,3),n=F['s'+t+'_n'],i,e;
+ for(i=0;i<n;i++){e=$('#srl_'+t+'_'+i);if(e)e.textContent=srLabel(t,i)}
+ e=$('#srx_'+t);if(e)e.textContent=srExample(t);
+}
+function srAdd(k){var n=F['s'+k+'_n'],last=n?(srNum(F['s'+k+'_e'+(n-1)])||0):10,g=srNum(F['s'+k+'_b'])||0,v=n?last+g:10;F['s'+k+'_e'+n]=String(v);F['s'+k+'_n']=n+1;if($('#scc'))render()}
+function srRm(k,i){var n=F['s'+k+'_n'],j;if(n<=1)return;for(j=i;j<n-1;j++)F['s'+k+'_e'+j]=F['s'+k+'_e'+(j+1)];delete F['s'+k+'_e'+(n-1)];F['s'+k+'_n']=n-1;render()}
+function srSave(){var a=srRead('t7'),b=srRead('t8');if(!a||!b){snack('Fill every rate with a number');return}STEPR[F.srrig]={t7:a,t8:b};snack('Step rates saved. New bills use them')}
+function srResetDlg(){confirmUI('Reset step rates','Go back to the standard 7 inch and 8 inch tables for this rig? Saved bills keep their step rate.','Reset',"closeOv();srReset()",false)}
+function srReset(){delete STEPR[F.srrig];srLoad();render()}
+function stepCard(k,title){
+ var n=F['s'+k+'_n'],rows=fld('s'+k+'_th','Step rate starts after',{num:1,suf:'<span class="l2">ft</span>'}),i;
+ for(i=0;i<n;i++)rows+=fld('s'+k+'_e'+i,'<span id="srl_'+k+'_'+i+'">'+srLabel(k,i)+'</span>',{num:1,pre:RS,suf:'<button class="nbtn" aria-label="Remove bracket"'+(n<=1?' disabled style="opacity:.35"':' onclick="srRm(\''+k+'\','+i+')"')+'>'+ic('close',20)+'</button>'});
+ rows+='<button class="ri" onclick="srAdd(\''+k+'\')">'+ic('add_circle',22,'var(--acc)')+'<span class="tt cacc"><b>Add bracket</b></span></button>'
+  +fld('s'+k+'_b','After the last bracket, extra per ft grows by',{num:1,pre:RS,suf:'<span class="l2">per 100 ft</span>'});
+ return sec(title)+grp(rows,'<span id="srx_'+k+'">'+srExample(k)+'</span>');
+}
+SC.stepRates=function(){
+ window.curForm='steps';
+ var rigs=VEH.filter(function(v){return v.type==0});
+ if(F.srrig==null||!F.st7_n){F.srrig=F.srrig||rigs[0].id;srLoad()}
+ var b=grp(fld('srrig','Rig',{icon:'precision_manufacturing',sel:rigs.map(function(v){return [v.id,v.name]})}))
+ +'<div class="infob">'+ic('info',20)+'<div class="sp t13">The step rate is extra money charged on depth beyond the point where it starts. Each 100 ft bracket has its own extra rate per foot. Changes apply to new bills only: saved bills keep the step rate they were saved with. A saved bill uses the new tables only if you edit its depth.</div></div>';
+ SRT.forEach(function(x){b+=stepCard(x[0],x[1])});
+ return scr({t:'Step Rates',bot:'<div class="bs2"><button class="bs sp" onclick="srResetDlg()">Reset to standard</button><button class="bp sp" onclick="srSave()">Save</button></div>'},b);
+};
 /* ---------- Settings > Ledger Types (v2.0.1): add, rename, delete the depth, PVC and MS pipe types ---------- */
 var LTC=[['depth','Depth types','depth'],['pvc','PVC types','PVC'],['ms','MS pipe types','MS pipe']];
 function typeUse(cat,t){return BILLS.filter(function(b){return hasType(b,cat,t)}).length}
@@ -1426,7 +1498,7 @@ function vehDlg(ed){F.vt=F.vt||'main';
 function vehDel(){alertUI('Delete Rig','Are you sure you want to delete "Side Rig 1"? This deletes all ledger entries, side-ledger data and agent information for this rig.',[{t:'Cancel',k:'def'},{t:'Delete',k:'des',fn:"closeOv();snack('Rig deleted')"}])}
 SC.about=function(){
  var tx=function(t,l){return '<div class="card"><div class="t13 sb6 l2" style="margin-bottom:6px;text-transform:uppercase">'+t+'</div>'+l.map(function(x){return '<p class="t15" style="margin-bottom:8px;line-height:1.4">'+x+'</p>'}).join('')+'</div>'};
- var b='<div class="tc" style="padding:8px 0 18px"><div class="avatar" style="width:84px;height:84px;border-radius:22px;margin:0 auto 12px;background:var(--acc-btn);color:var(--onacc)">'+ic('precision_manufacturing',46)+'</div><div class="t22">RigLedger</div><div class="t15 l2">Version 2.0.3 (build 8)</div><div class="t12 l2">com.rigledger.app</div></div>'
+ var b='<div class="tc" style="padding:8px 0 18px"><div class="avatar" style="width:84px;height:84px;border-radius:22px;margin:0 auto 12px;background:var(--acc-btn);color:var(--onacc)">'+ic('precision_manufacturing',46)+'</div><div class="t22">RigLedger</div><div class="t15 l2">Version 2.0.4 (build 9)</div><div class="t12 l2">com.rigledger.app</div></div>'
  +tx('What it is',['A ledger for borewell drilling businesses: bills with payment logs and commission, agents, side ledger purchases and other expenses, user-defined ledger types, portfolio statistics, and an Account Ledger cash book with receiver books.','Available for Android.'])
  +tx('Your data',['All records are stored on this device and the app works without an internet connection.','Optional Google Drive backup and sync: after you sign in with Google, the app requests Google Drive access to create, read and update one file, rigledger_backup.json, in a folder named "RigLedger Backups" in your own Drive.','The app does not include advertising or usage analytics libraries.','Deleted Account Ledger transactions are removed permanently 30 days after deletion.'])
  +tx('Permissions (Android)',['Internet: Google Drive backup and sync.','Storage access: saving and reading backup and report files.'])
@@ -1518,6 +1590,8 @@ function cbHome(){
  b+=(UI.state=='empty'?emptyUI('account_balance_wallet_outlined','No transactions','Add an income or an expense to get started.'):cbRows(c));
  return scr({t:'Accounts',root:true,lead:lead,trail:trail,strip:'<span class="t15 sb6 sp ell">'+esc(bk.name)+'</span><span class="t15 sb6 '+(c.bal<0?'cout':'cacc')+'">Balance '+money(c.prev+c.bal)+'</span>'},b);
 }
+/* v2.0.4: name of an entry's rig, '' when it has none or the rig is gone */
+function rigName(id){var v=VEH.filter(function(x){return x.id==id})[0];return v?v.name:''}
 function cbRows(c){
  var out='';
  if(!c.es.length)return '<div class="empty" style="padding:28px">'+'<b>No transactions</b><div class="t15">Nothing matches this period or filter.</div></div>';
@@ -1527,7 +1601,7 @@ function cbRows(c){
  out+='<div class="dgrid">';
  dates.forEach(function(d){var day=es.filter(function(e){return e.d==d});
   out+='<div class="dg"><div class="gh"><span>'+dGroup(d)+'</span><span class="l2 t13">'+day.length+(day.length==1?' entry':' entries')+'</span></div><div class="grp">'+day.map(function(e){
-   return '<div class="swp"><div class="main"><button class="entry" onclick="cbForm(null,'+e.id+')"><div class="r1"><span class="sp"><b class="t17 sb6" style="display:block">'+(e.n?esc(e.n):'<span class="l2">No notes</span>')+'</b></span><b class="t17 '+(e.t=='in'?'cin':'cout')+'">'+(e.t=='in'?'+':'-')+mf(e.a)+'</b></div><div class="r2">'+(CB.set.time?'<span>'+(CB.set.showdate?dRow(e.d)+', ':'')+fT(e.tm)+'</span>':'')+(e.ln?'<span>'+ic('link',14)+' Linked to a bill</span>':'')+'<span class="sp"></span>'+(CB.set.bal?'<span>Balance '+money(e.run)+'</span>':'')+'</div></button></div><button class="act e" onclick="cbForm(null,'+e.id+')">Edit</button><button class="act d" onclick="cbDelDlg()">Delete</button></div>'}).join('')+'</div></div>'});
+   return '<div class="swp"><div class="main"><button class="entry" onclick="cbForm(null,'+e.id+')"><div class="r1"><span class="sp"><b class="t17 sb6" style="display:block">'+(e.n?esc(e.n):'<span class="l2">No notes</span>')+'</b></span><b class="t17 '+(e.t=='in'?'cin':'cout')+'">'+(e.t=='in'?'+':'-')+mf(e.a)+'</b></div><div class="r2">'+(CB.set.time?'<span>'+(CB.set.showdate?dRow(e.d)+', ':'')+fT(e.tm)+'</span>':'')+(e.ln?'<span>'+ic('link',14)+' Linked to a bill</span>':'')+'<span class="sp"></span>'+(CB.set.bal?'<span>Balance '+money(e.run)+'</span>':'')+'</div>'+(rigName(e.v)?'<div class="r2 rg">'+ic('precision_manufacturing',14)+'<span class="ell">'+esc(rigName(e.v))+'</span></div>':'')+'</button></div><button class="act e" onclick="cbForm(null,'+e.id+')">Edit</button><button class="act d" onclick="cbDelDlg()">Delete</button></div>'}).join('')+'</div></div>'});
  return out+'</div>';
 }
 function cbRefresh(){var s=$('#cbq');var v=s?s.value:'';render();var q=$('#cbq');if(q){q.focus();q.setSelectionRange(v.length,v.length)}}
@@ -1550,31 +1624,39 @@ function cbPicker(){
  sheet(grp('<label class="fr">'+ic('search',20,'var(--lb2)')+'<input style="text-align:left" placeholder="Search accounts"></label>')+grp(CB_BOOKS.map(function(b){return ri({ico:b.rec?'person_pin':'account_balance_wallet',col:b.rec?'var(--com)':'var(--acc)',t:esc(b.name),s:b.rec?'Receiver book':'Custom book',v:b.id==CB.book?ic('check',22,'var(--acc)'):'',fn:"CB.book='"+b.id+"';go()"})}).join('')+ri({ico:'add',t:'Add Account',fn:'cbBookDlg()'})),{t:'Accounts',right:'<button class="btx" onclick="closeOv();push(\'cbBooks\')">Edit</button>'});
 }
 function cbBookDlg(){F.bt='in';sheet(grp(fld('bn','Name',{hint:'Required'})+fld('bo','Opening balance',{num:1,pre:RS,hint:'Optional'})+'<div class="fr"><span class="fl">Type</span><span class="sp"></span><div class="seg" style="margin:0;flex:1;max-width:200px"><button class="on">Income</button><button>Expense</button></div></div><div class="fr"><span class="fl">Date</span><span class="sp tr">'+dFull(TODAY)+'</span></div>'+'<div class="fr"><span class="fl">Receiver book</span><span class="sp"></span>'+swt(false,'tg(this)')+'</div>','Receiver books receive payments logged on bills.'),{t:'Add Account',bot:bp('Save','closeOv()')})}
+/* v2.0.4 (cashbook_export_service): the CSV ends with a Rig column (single book and all books layouts, empty when the entry has no rig); the PDF notes get a line "Rig: NAME" for entries that have a rig. Totals and balances do not change. */
+function rigNote(){var e=CBE.filter(function(x){return rigName(x.v)})[0];return 'The CSV ends with a Rig column (empty when an entry has no rig). In the PDF the notes get a line "Rig: NAME" for entries that have a rig'+(e?', for example "'+esc(e.n)+'" gets "Rig: '+esc(rigName(e.v))+'"':'')+'. Totals and balances do not change.'}
 function cbReportDlg(single){
- if(single)sheet(grp(ri({ico:'picture_as_pdf',col:'var(--out-btn)',t:'PDF',fn:"closeOv();snack('Report exported')"})+ri({ico:'table_chart',col:'var(--in-btn)',t:'CSV',fn:"closeOv();snack('Report exported')"})),{t:'Report'});
- else sheet(chips([['all','All'],['range','Select Date Range']],'all','tg2')+'<div style="height:8px"></div>'+seg([['pdf','PDF'],['csv','CSV']],'pdf','tg2'),{t:'Report - All Accounts',bot:bp('OK',"closeOv();snack('Report exported')")});
+ if(single)sheet(grp(ri({ico:'picture_as_pdf',col:'var(--out-btn)',t:'PDF',fn:"closeOv();snack('Report exported')"})+ri({ico:'table_chart',col:'var(--in-btn)',t:'CSV',fn:"closeOv();snack('Report exported')"}),rigNote()),{t:'Report'});
+ else sheet(chips([['all','All'],['range','Select Date Range']],'all','tg2')+'<div style="height:8px"></div>'+seg([['pdf','PDF'],['csv','CSV']],'pdf','tg2')+fh(rigNote()),{t:'Report - All Accounts',bot:bp('OK',"closeOv();snack('Report exported')")});
 }
 function tg2(){}
 /* ---- entry form ---- */
 function cbForm(type,id){
  var e=id?CBE.filter(function(x){return x.id==id})[0]:null;
- F={ct:e?e.t:type,ca:e?e.a:'',cn:e?e.n:'',cd:e?e.d:TODAY,ctm:e?e.tm:'09:41',cb:e?e.b:CB.book,desc:false,bills:0,items:[],edit:id||0,ln:e?e.ln:0};
+ F={ct:e?e.t:type,ca:e?e.a:'',cn:e?e.n:'',cd:e?e.d:TODAY,ctm:e?e.tm:'09:41',cb:e?e.b:CB.book,cv:e&&e.v?e.v:'',desc:false,bills:0,items:[],edit:id||0,ln:e?e.ln:0};
  push('cbEntry');
 }
 function dayStep(n){F.cd=iso(addD(pd(F.cd),n));render()}
 SC.cbEntry=function(){
  var edit=!!F.edit,lbl=F.ct=='in'?'Income':'Expense',col=F.ct=='in'?'var(--in-tx)':'var(--out-tx)',lock=!!F.ln;
  var b=(lock?'<div class="fh" style="padding-top:0">Linked to a bill payment. The type cannot be changed.</div>':'')
- +'<div class="seg" style="'+(lock?'opacity:.55':'')+'"><button class="'+(F.ct=='in'?'on':'')+'" '+(lock?'disabled':'onclick="F.ct=\'in\';render()"')+'>Income</button><button class="'+(F.ct=='out'?'on':'')+'" '+(lock?'disabled':'onclick="F.ct=\'out\';render()"')+'>Expense</button></div>'
+ +'<div class="seg" style="'+(lock?'opacity:.65':'')+'"><button class="'+(F.ct=='in'?'on':'')+'" '+(lock?'disabled':'onclick="F.ct=\'in\';render()"')+'>Income</button><button class="'+(F.ct=='out'?'on':'')+'" '+(lock?'disabled':'onclick="F.ct=\'out\';render()"')+'>Expense</button></div>'
  +'<div class="card tc"><div class="t13 l2">'+lbl+'</div><div class="row" style="justify-content:center;gap:6px;margin-top:6px"><span class="t34 l2">'+RS+'</span><input id="i_ca" data-k="ca" inputmode="decimal" placeholder="0" value="'+esc(F.ca)+'" oninput="fi(this);F.caerr=0;var q=$(\'#caerr\');if(q)q.remove()" aria-label="'+lbl+' amount" style="font-size:calc(44px*var(--ts));font-weight:700;text-align:center;width:70%;color:'+col+'"></div><button class="btx" style="margin-top:6px" onclick="cbCalcSheet()">'+ic('calculate',20)+'Calculator</button></div>'+(F.caerr?'<div class="fh err" id="caerr" role="alert">Enter an amount</div>':'')
  +grp('<div class="fr"><button class="nbtn" aria-label="Previous day" onclick="dayStep(-1)">'+ic('chevron_left',24)+'</button><button class="sp tc t17" style="height:48px" onclick="datePick(F.cd,\'F.cd=&quot;__d__&quot;;closeOv();render()\')" aria-label="Change date">'+dFull(F.cd)+'</button><button class="nbtn" aria-label="Next day" onclick="dayStep(1)">'+ic('chevron_right',24)+'</button></div><div class="fr"><span class="fl">Time</span><span class="sp tr">'+fT(F.ctm)+'</span>'+ic('schedule',18,'var(--lb2)')+'</div>')
- +grp(fld('cn','Notes',{ta:2,hint:'What was this for?'})+(F.desc?fld('cdesc','Description / Category',{hint:'Optional'}):'')+(edit?fld('cb','Account',{sel:CB_BOOKS.map(function(x){return [x.id,x.name]})}):''))
+ +grp(fld('cn','Notes',{ta:2,hint:'What was this for?'})+(F.desc?fld('cdesc','Description / Category',{hint:'Optional'}):''))
+ +grp(cbRigRow(lock),lock?'Set from the bill':'')
+ +(edit?grp(fld('cb','Account',{sel:CB_BOOKS.map(function(x){return [x.id,x.name]})})):'')
  +grp(ri({ico:'add_a_photo',t:F.bills?'Bills ('+F.bills+')':'Add Bills',s:'Camera, gallery or PDF. Up to 3 per entry.',chev:true,fn:'cbBillMenu()'})+ri({ico:'list_alt',t:F.items.length?'Items ('+F.items.length+')':'Add Items',chev:true,fn:'cbItemsDlg()'}))
  +(F.bills?'<div class="chips" style="flex-wrap:wrap">'+Array.apply(null,Array(F.bills)).map(function(_,i){return '<button class="chip on" onclick="F.bills--;render()">bill_'+(i+1)+'.jpg  x</button>'}).join('')+'</div>':'');
  var bot=edit?'<div class="bs2"><button class="bs des sp" onclick="cbDelDlg()">Delete</button><button class="bp sp" onclick="cbSave(true)">Save</button></div>':'<div class="bs2"><button class="bs sp" onclick="cbSave(false)">Save and add another</button><button class="bp sp" onclick="cbSave(true)">Save</button></div>';
  var trail=edit?gb('content_copy','cbCopyDlg()','Copy')+gb('more_horiz','F.desc=!F.desc;render()','Toggle description'):gb('more_horiz','F.desc=!F.desc;render()','Toggle description');
  return fscr(edit?'Edit Transaction':'Add '+lbl,'<div class="nbr" style="gap:6px">'+trail+'</div>',b,bot);
 };
+/* Rig (optional) dropdown of the entry form (_rigField): No rig or a rig; disabled for income linked from a bill payment (the rig follows the bill). The mockup opens the choices as a sheet. */
+function cbRigRow(lock){return '<button class="fr sel" id="i_cv" aria-label="Rig (optional)"'+(lock?' disabled':' onclick="cbRigSheet()"')+'><span class="fl">'+ic('precision_manufacturing',20)+'Rig (optional)</span><span class="sp tr">'+(rigName(F.cv)||'No rig')+'</span>'+(lock?'':ic('expand_more',22,'var(--lb2)'))+'</button>'}
+function cbRigSheet(){var on=function(x){return F.cv==x?ic('check',22,'var(--acc)'):''};
+ sheet(grp(ri({ico:'block',col:'var(--lb2)',t:'No rig',v:on(''),fn:"F.cv='';closeOv();render()"})+VEH.map(function(v){return ri({ico:v.type?'engineering':'precision_manufacturing',col:F.cv==v.id?'var(--acc)':'var(--lb2)',t:v.name,s:v.type?'Side Bore':'Main Bore',v:on(v.id),fn:"F.cv='"+v.id+"';closeOv();render()"})}).join('')),{t:'Rig (optional)'})}
 /* Save returns to the ledger; Save and add another keeps the form and clears amount, notes, items and bills; an empty amount shows an inline error. The Saved snack lasts 1 second. */
 function cbSave(exit){
  if(!(parseFloat(F.ca)>0)){F.caerr=1;render();return}
@@ -1585,8 +1667,9 @@ function cbSave(exit){
 function cbBillMenu(){sheet(grp(ri({ico:'photo_camera',t:'Camera',fn:'cbBill()'})+ri({ico:'photo_library',t:'Gallery',fn:'cbBill()'})+ri({ico:'picture_as_pdf',t:'PDF',fn:'cbBill()'})),{t:'Add Bills'})}
 function cbBill(){if(F.bills<3){F.bills++}else{snack('Up to 3 bills per entry')}closeOv();render()}
 function cbDelDlg(){confirmUI('Delete','Move this transaction to Deleted Transactions?','Delete',"closeOv();back();snack('Moved to Deleted Transactions')",true)}
-function cbCopyDlg(){sheet(grp(ri({ico:'content_copy',t:'Copy to same account',fn:"closeOv();snack('Copied')"})+ri({ico:'copy_all',t:'Copy to different account',fn:'cbSelAcct()'})),{t:'Copy'})}
-function cbSelAcct(){sheet(grp(CB_BOOKS.map(function(b){return ri({ico:'account_balance_wallet',t:b.name,fn:"closeOv();snack('Copied')"})}).join('')),{t:'Select account'})}
+function cbCopy(bk){var e=CBE.filter(function(x){return x.id==F.edit})[0];if(!e)return;CBE.push({id:Math.max.apply(null,CBE.map(function(x){return x.id}))+1,b:bk,t:F.ct,a:parseFloat(F.ca)||e.a,n:F.cn,d:F.cd,tm:F.ctm,ln:0,v:F.cv||''});closeOv();snack('Copied')}
+function cbCopyDlg(){sheet(grp(ri({ico:'content_copy',t:'Copy to same account',fn:"cbCopy(F.cb)"})+ri({ico:'copy_all',t:'Copy to different account',fn:'cbSelAcct()'})),{t:'Copy'})}
+function cbSelAcct(){sheet(grp(CB_BOOKS.map(function(b){return ri({ico:'account_balance_wallet',t:b.name,fn:"cbCopy('"+b.id+"')"})}).join('')),{t:'Select account'})}
 /* ---- calculator ---- */
 function cbCalcSheet(){CK=F.ca?String(F.ca):'';calcRender()}
 function calcRender(){var v=calcVal();var K=['C','DEL','000','/','7','8','9','*','4','5','6','-','1','2','3','+','0','00','.','='];
@@ -1741,6 +1824,14 @@ J.push(['Agent view (v2.0.3)',[
  ['Agent view (manual commission bill)',function(){S.rig='main';S.tab=1;S.pr={tab:0,range:'3m',scope:'this',agent:'a3'}},function(){var e=document.querySelector('.agb[data-man]'),c=$('#scc');if(e&&c)c.scrollTop=e.offsetTop-120}],
  ['Agent view (no bills, empty state)',function(){S.rig='main';S.tab=1;S.pr={tab:0,range:'3m',scope:'this',agent:'a4'}}],
  ['Edit Agent dialog (prices change existing bills)',function(){S.rig='main';S.tab=1;S.pr={tab:0,range:'3m',scope:'this',agent:'a3'}},function(){agentDlg('a3')}]]]);
+J.push(['Step Rates and entry rig (v2.0.4)',[
+ ['Step Rates (default tables)',function(){S.tab=3;S.stack=[{id:'stepRates',p:{}}]}],
+ ['Step Rates (edited, one bracket added)',function(){S.tab=3;F={srrig:'main'};srLoad();F.st7_e6='110';F.st7_n=7;F.st7_e0='15';S.stack=[{id:'stepRates',p:{}}]}],
+ ['Reset step rates dialog',function(){S.tab=3;S.stack=[{id:'stepRates',p:{}}]},srResetDlg],
+ ['Agent view, Feet and commission by type',function(){S.rig='main';S.tab=1;S.pr={tab:0,range:'3m',scope:'this',agent:'a3'}},function(){var e=document.querySelector('.fcard'),c=$('#scc');if(e&&c)c.scrollTop=e.offsetTop-120}],
+ ['Account Ledger entry form, Rig dropdown (open)',function(){S.tab=2;CB.period='all';CB.book='cash';cbForm(null,6)},cbRigSheet],
+ ['Account Ledger linked entry form (rig locked)',function(){S.tab=2;CB.period='all';CB.book='mur';cbForm(null,14)}],
+ ['Account Ledger list with rig names',function(){S.tab=2;CB.period='all';CB.off=0;CB.book='cash';CB.search=false;CB.q='';CB.tf=null}]]]);
 var _jump=jump;
 jump=function(gi,ii){UI.state=null;UI.calSel=null;UI.feetOpen=false;UI.orange=null;F={};FM={};LASTKEY='';_jump(gi,ii)};
 
@@ -1779,7 +1870,7 @@ function devRow(label,kind,opts,cur){
  return '<h2>'+label+'</h2><div class="dv">'+opts.map(function(o){return '<button class="'+(String(cur)==String(o[0])?'on':'')+'" onclick="dev(\''+kind+'\',\''+o[0]+'\')">'+o[1]+'</button>'}).join('')+'</div>';
 }
 function buildSide(){
- var h='<h1>RigLedger 2.0.3</h1><div class="sub">Apple style mockup, dummy data. Click a screen, or use the phone directly.</div><h2 style="margin-top:4px">Dev</h2>';
+ var h='<h1>RigLedger 2.0.4</h1><div class="sub">Apple style mockup, dummy data. Click a screen, or use the phone directly.</div><h2 style="margin-top:4px">Dev</h2>';
  h+=devRow('Theme','theme',[['system','System'],['light','Light'],['dark','Dark']],UI.theme);
  h+=devRow('Accent preview','accent',[['blue','System blue'],['lime','Lime'],['green','Green'],['brand','Brand 315D9A']],UI.accent);
  h+=devRow('Text scale','ts',[[1,'100'],[1.3,'130'],[2,'200']],UI.ts);
