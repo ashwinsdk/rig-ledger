@@ -49,9 +49,14 @@ RigLedger syncs data between Android and macOS via Google Drive:
 
 ## Version
 
-Current: 2.0.2 (see `pubspec.yaml`)
+Current: 2.0.3 (see `pubspec.yaml`)
 
 ### Changelog
+
+v2.0.3
+- Changing an agent's commission prices now updates the commission of the agent's existing bills. Bills with a commission set by hand, and lines whose rate was typed by hand, are left as they are. The edit dialog says how many bills changed.
+- Portfolio agent view: pick an agent (pill or tap in the Agents section) to see their commission earned, totals, a month by month table and every bill in the period with its own commission.
+- macOS: the Agents screen is removed (agents are in Portfolio, as on Android). Shortcuts are Cmd+1 to Cmd+4.
 
 v2.0.2
 - A bill can have several depth, PVC and MS pipe lines, each with its own type, feet, rate and commission rate (for example 200 ft of 7inch and 150 ft of 8inch depth). Step rate is worked out for each depth line on its own. Side bore bills can have several depth lines.

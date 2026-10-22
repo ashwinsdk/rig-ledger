@@ -1,6 +1,6 @@
 # RigLedger - Session Memory
 
-Last updated: 2026-10-20 (v2.0.2 done, Apple-style design mockup)
+Last updated: 2026-10-22 (v2.0.3 done, Apple-style design mockup)
 
 ## Current versions
 
@@ -37,6 +37,12 @@ Last updated: 2026-10-20 (v2.0.2 done, Apple-style design mockup)
 - Review: `docs/v2.0.2-review.md`. Schema 7. `LedgerEntry.linesJson` (HiveField 38) with `LedgerLine` (depth/pvc/ms lines per bill); single-type fields stay as aggregates (`withLines`). Step rate per depth line, commission per line.
 - Gotchas: agent dialogs opened from a sheet must use the caller's context and ref, never the sheet's; widget test files with Hive and several tests can hang, keep one DB and few tests per file and pump twice after opening a sheet; the side bore form has no types (lines have feet, rate, commission rate only).
 - Not verified: any of it on a device. Both mockups were updated to 2.0.2 (Apple one: new QA baseline `qa/logic-baseline-v2.0.2.txt` and `qa/flows.mjs`).
+
+## v2.0.3 (version 2.0.3+8, T-K01..T-K04 done)
+
+- Review: `docs/v2.0.3-review.md`. Agent price edits recalculate the commission of the agent's bills (`CommissionRecalc`: skips `isCommissionManuallyEdited`, keeps hand-typed line rates by comparing with the old agent price). Portfolio `AgentView` (lib/features/portfolio/agent_view.dart). macOS shell has no Agents tab (Cmd+1..4); `agents_screen.dart` deleted.
+- Gotchas: agents are per rig (`getAllAgents` filters by the current rig), so tests must give agents `vehicleId: 'default_vehicle'`; tapping an agent row in Portfolio filters to that agent, the info icon opens the sheet.
+- Not verified: any of it on a device or on macOS. The mockups do not show the agent view.
 
 ## Apple-style design mockup (design only, no lib/ changes)
 

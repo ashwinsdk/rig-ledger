@@ -13,6 +13,38 @@ Resume notes:
 Commit:
 ```
 
+## v2.0.3 PLAN (source: developer list of 2026-10-22, Flutter app only)
+
+Rules as before (no push, one commit per task, no Co-Authored-By). The developer explicitly asked to change the macOS shell in T-K01, so the "macOS code is frozen" rule is lifted for that one edit (desktop_shell.dart only).
+
+## T-K01 Remove the Agents screen from the macOS shell (item 3) [DONE]
+Goal: macOS sidebar, View menu, shortcuts and page stack lose Agents (Cmd+1..4 now Ledger, Portfolio, Account Ledger, Settings); lib/features/agents/agents_screen.dart is deleted (nothing else used it). Agents live in the Portfolio tab like on Android.
+Files: lib/features/navigation/desktop_shell.dart, lib/features/agents/agents_screen.dart (git rm)
+Depends: none
+Resume notes: nav items, menu, shortcut map, _handleAdd indexes (Account Ledger is index 2) and IndexedStack updated; agents_screen.dart removed. agent_dialogs.dart stays (Portfolio uses it). Not run on macOS (no GoogleService-Info.plist).
+Commit: Remove the Agents screen from the macOS shell
+
+## T-K02 Agent price changes update the commission of existing bills (item 1) [DONE]
+Goal: saving an agent whose commission prices changed recalculates the commission of that agent's existing bills, except bills the user overrode. Rule per bill: skip when isCommissionManuallyEdited; per line, a rate that equals the agent's OLD price for the line type (auto) moves to the NEW price, a different rate (typed by hand) is kept; side bore bills follow the agent default depth rate; the bill commission total is recalculated from the lines; updatedAt changes so sync carries it. Edit dialog shows how many bills changed.
+Files: new lib/core/services/commission_recalc.dart, agent_provider.dart, agent_dialogs.dart, tests
+Depends: none
+Resume notes: CommissionRecalc (lib/core/services/commission_recalc.dart): changedBills (pure) and apply (saves). AgentsNotifier.updateAgent now returns how many bills changed; the Edit dialog snack says so. A line follows the new price only when its rate equals the agent's OLD price (so hand-typed rates stay); bills with isCommissionManuallyEdited are skipped; side bore bills use the default depth rate; commission total is recomputed from the lines. test/commission_recalc_test.dart. 123 tests pass.
+Commit: Recalculate commission on existing bills when agent prices change
+
+## T-K03 Clear agent view in Portfolio (item 2) [DONE]
+Goal: with an agent chosen (any period, for example 3 months) Overview shows an agent view: header with name and period, KPI cards (bills, total, received, pending, commission), a month by month table, and the agent's bills in the period (date, bill, address, total, received, balance, commission with manual marker, tap opens the bill) with totals. Agents section rows get the same clarity.
+Files: lib/features/portfolio/portfolio_view.dart (+ widgets file), tests
+Depends: T-K02
+Resume notes: new lib/features/portfolio/agent_view.dart (AgentView: header with agent, period and commission earned, Bills/Total/Received/Pending cards, By month table when the period spans months, every bill with date, number, address, total, received, balance and its commission (manual marker, split per kind), totals row, tap opens the bill form, All agents button). Choosing an agent (pill sheet or tapping a row in the Agents section) shows it instead of the profit cards. Agent rows in the Agents section: tap = that agent's bills, info icon = prices and details sheet. Agents are per rig (getAllAgents filters by current rig). Older tests adjusted (sheet opened with the info icon). test/agent_view_test.dart. 124 tests pass.
+Commit: Add a clear agent view to Portfolio
+
+## T-K04 Version 2.0.3 and release notes [DONE]
+Goal: pubspec 2.0.3+8, README changelog, docs/v2.0.3-review.md, MEMORY.md.
+Files: pubspec.yaml, README.md, docs/v2.0.3-review.md, MEMORY.md
+Depends: all
+Resume notes: pubspec 2.0.3+8, README changelog, docs/v2.0.3-review.md, MEMORY.md.
+Commit: Bump version to 2.0.3+8
+
 ## v2.0.2 PLAN (source: developer list of 2026-10-20, Flutter app only, APPROVED decisions 2026-10-20)
 
 Decisions: step rate is worked out separately for each depth line (each line like its own entry, its own type table, feet counted from 0); each line has its own commission rate filled from the agent price of the line type (editable); Portfolio agent filter becomes a dropdown with search. Rules as in v2.0.1 (no macos, no push, one commit per task, no Co-Authored-By). One Hive change: LedgerEntry.linesJson (HiveField 38), schema 6 -> 7.
