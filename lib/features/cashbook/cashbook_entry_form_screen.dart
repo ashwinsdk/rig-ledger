@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/providers/vehicle_provider.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:uuid/uuid.dart';
@@ -44,6 +45,7 @@ class _CashbookEntryFormScreenState
   late bool _isIn;
   late DateTime _date;
   late String _bookId;
+  String? _vehicleId; // optional rig of this entry (v2.0.4)
   final _amount = TextEditingController();
   final _notes = TextEditingController();
   final _desc = TextEditingController();
@@ -71,6 +73,7 @@ class _CashbookEntryFormScreenState
         widget.prefill?.bookId ??
         ref.read(currentCashBookProvider)?.id ??
         '';
+    _vehicleId = src?.vehicleId;
     if (src != null) {
       _amount.text = _plain(src.amount);
       _notes.text = src.notes;
@@ -214,6 +217,7 @@ class _CashbookEntryFormScreenState
       e.description = built.description;
       e.attachmentPaths = built.attachmentPaths;
       e.itemsJson = built.itemsJson;
+      e.vehicleId = _isLinked ? e.vehicleId : _vehicleId;
       final (_, err) =
           await ref.read(cashEntriesProvider.notifier).updateEntry(e);
       error = err;
@@ -227,6 +231,7 @@ class _CashbookEntryFormScreenState
             description: built.description,
             attachmentPaths: built.attachmentPaths,
             itemsJson: built.itemsJson,
+            vehicleId: _vehicleId,
           );
       error = err;
     }
@@ -250,6 +255,27 @@ class _CashbookEntryFormScreenState
       showCashSnack(context, 'Saved', duration: const Duration(seconds: 1));
       _amountFocus.requestFocus();
     }
+  }
+
+  /// Optional rig of the entry. Income linked from a bill payment takes the
+  /// bill's rig and cannot be changed here.
+  Widget _rigField() {
+    final rigs = ref.watch(vehiclesProvider);
+    final known = rigs.any((v) => v.id == _vehicleId);
+    return DropdownButtonFormField<String?>(
+      key: ValueKey('rig-$_vehicleId-$_isLinked'),
+      initialValue: known ? _vehicleId : null,
+      decoration: InputDecoration(
+        labelText: 'Rig (optional)',
+        helperText: _isLinked ? 'Set from the bill' : null,
+      ),
+      items: [
+        const DropdownMenuItem<String?>(value: null, child: Text('No rig')),
+        for (final v in rigs)
+          DropdownMenuItem<String?>(value: v.id, child: Text(v.name)),
+      ],
+      onChanged: _isLinked ? null : (v) => setState(() => _vehicleId = v),
+    );
   }
 
   Future<void> _delete() async {
@@ -532,6 +558,8 @@ class _CashbookEntryFormScreenState
                               labelText: 'Description / Category'),
                         ),
                       ],
+                      const SizedBox(height: 16),
+                      _rigField(),
                       if (_isEdit) ...[
                         const SizedBox(height: 16),
                         DropdownButtonFormField<String>(

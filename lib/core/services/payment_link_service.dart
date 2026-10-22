@@ -78,11 +78,13 @@ class PaymentLinkService {
           sourceType: sourceType,
           sourceId: bill.id,
           sourcePaymentId: p.id,
+          vehicleId: bill.vehicleId,
         ));
       } else {
         final changed = existing.bookId != bookId ||
             existing.amount != p.amount ||
             existing.date != p.date ||
+            existing.vehicleId != bill.vehicleId ||
             existing.isDeleted;
         if (changed) {
           existing
@@ -93,6 +95,7 @@ class PaymentLinkService {
             ..isDeleted = false
             ..deletedAt = null
             ..bookNameSnapshot = null
+            ..vehicleId = bill.vehicleId
             ..updatedAt = now;
           toSave.add(existing);
         }

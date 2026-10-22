@@ -313,6 +313,7 @@ Serialisation: `toJson()`/`fromJson()`. Adapter not yet registered (T-CB02).
 | sourceType | 16 | String? | 'ledger_payment' |
 | sourceId | 17 | String? | LedgerEntry.id |
 | sourcePaymentId | 18 | String? | |
+| vehicleId | 19 | String? | v2.0.4: optional rig (Vehicle.id). Chosen on the entry form; set from the bill's rig for income linked from a bill payment (and backfilled on the next sync); null on older entries. `copyWith(clearVehicle: true)` clears it. |
 
 No stored balance: balances are computed. Getter `signedAmount`.
 

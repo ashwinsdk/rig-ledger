@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/providers/vehicle_provider.dart';
 import '../../../core/providers/cashbook_provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/cashbook_calculator.dart';
@@ -28,7 +30,7 @@ class CashbookDayHeader extends StatelessWidget {
 /// One ledger entry as a floating card: notes, description and time at the
 /// left, the signed amount at the right with the running balance under it
 /// (PARITY-032). Same card style as the ledger bill cards.
-class CashbookRow extends StatelessWidget {
+class CashbookRow extends ConsumerWidget {
   final CashLedgerRow row;
   final CashSettings settings;
   final VoidCallback onTap;
@@ -41,8 +43,15 @@ class CashbookRow extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final e = row.entry;
+    final rigName = e.vehicleId == null
+        ? null
+        : ref
+            .watch(vehiclesProvider)
+            .where((v) => v.id == e.vehicleId)
+            .firstOrNull
+            ?.name;
     final color = e.isCashIn ? CashColors.income : CashColors.expense;
     final meta = <String>[
       if (settings.showDateInEntry) settings.formatDate(e.date),
@@ -118,6 +127,26 @@ class CashbookRow extends StatelessWidget {
                           ],
                         ],
                       ),
+                      if (rigName != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.precision_manufacturing_outlined,
+                                  size: 13, color: AppColors.textSecondary),
+                              const SizedBox(width: 4),
+                              Flexible(
+                                child: Text(rigName,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                        fontSize: 12,
+                                        color: AppColors.textSecondary)),
+                              ),
+                            ],
+                          ),
+                        ),
                     ],
                   ),
                 ),

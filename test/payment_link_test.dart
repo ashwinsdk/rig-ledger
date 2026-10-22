@@ -100,6 +100,8 @@ void main() {
     expect(l.first.sourceId, 'bill1');
     expect(l.first.sourcePaymentId, 'p1');
     expect(l.first.notes, 'Bill 101 - Salem');
+    // the income carries the rig of the bill (v2.0.4)
+    expect(l.first.vehicleId, 'default_vehicle');
     // Payments without a receiver create nothing.
     await c
         .read(ledgerEntriesProvider.notifier)

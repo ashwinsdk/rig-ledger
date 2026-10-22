@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/providers/vehicle_provider.dart';
 import '../../core/models/cash_entry.dart';
 import '../../core/providers/cashbook_provider.dart';
 import '../../core/theme/app_colors.dart';
@@ -105,6 +106,7 @@ class _CashbookHomeScreenState extends ConsumerState<CashbookHomeScreen> {
           : CashbookCalculator.rangeLabel(range).replaceAll(' -> ', ' To '),
       allBooks: false,
       rows: rows,
+      rigNames: {for (final v in ref.read(vehiclesProvider)) v.id: v.name},
       previousBalance: view.previousBalance,
       hasPreviousBalance: view.hasPreviousBalance,
       reporter: settings.reporterName,

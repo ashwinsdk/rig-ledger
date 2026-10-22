@@ -38,11 +38,11 @@ Depends: none
 Resume notes: AgentView has a 'Feet by type' card (Depth, PVC, MS pipe groups, a chip per type with its feet, group total; types without feet left out) from FeetTotals.compute over the agent's bills of the period, so every line counts under its own type. AgentView takes the ledger types. test/agent_view_test.dart extended.
 Commit: Show feet by type in the Portfolio agent view
 
-## T-L04 Account Ledger entries remember the rig (item 3) [PENDING] [HIVE/SYNC FLAG]
+## T-L04 Account Ledger entries remember the rig (item 3) [DONE] [HIVE/SYNC FLAG]
 Goal: CashEntry.vehicleId (optional): entry form dropdown "Rig (optional)", rig shown on rows and in reports, set automatically for income linked from a bill payment (the bill's rig); copies and transfers keep or clear it sensibly; backup and sync carry it.
 Files: lib/core/models/cash_entry.dart (+ build_runner), payment_link_service.dart, cashbook_entry_form_screen.dart, widgets/cashbook_row.dart, cashbook_export_service.dart, MODELS.md, tests
 Depends: T-L01 (schema 8)
-Resume notes:
+Resume notes: CashEntry.vehicleId (HiveField 19, build_runner done, toJson/fromJson/copyWith with clearVehicle); addEntry takes vehicleId; entry form has a 'Rig (optional)' dropdown (No rig + rigs; locked with 'Set from the bill' for linked income; copies keep the rig); PaymentLinkService sets the bill's rig on new linked income and backfills it on existing ones during sync/reconcile; rows show the rig name; CSV has a Rig column (both layouts, total rows padded) and PDF notes get a 'Rig: name' line (CashExportData.rigNames). Transfers do not set a rig. test/cashbook_rig_test.dart, payment_link and export tests updated. 137 tests pass.
 Commit: Add an optional rig to Account Ledger entries
 
 ## T-L05 Version 2.0.4 and release notes [PENDING]

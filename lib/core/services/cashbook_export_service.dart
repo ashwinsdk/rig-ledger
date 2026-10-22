@@ -16,6 +16,9 @@ class CashExportData {
   final bool allBooks;
   final List<CashLedgerRow> rows;
   final Map<String, String> bookNames;
+
+  /// Rig names by Vehicle.id for the Rig column (v2.0.4).
+  final Map<String, String> rigNames;
   final double previousBalance;
   final bool hasPreviousBalance;
   final String reporter;
@@ -27,6 +30,7 @@ class CashExportData {
     required this.allBooks,
     required this.rows,
     this.bookNames = const {},
+    this.rigNames = const {},
     this.previousBalance = 0,
     this.hasPreviousBalance = false,
     this.reporter = '',
@@ -59,6 +63,7 @@ class CashbookExportService {
     'Income',
     'Expense',
     'Balance',
+    'Rig',
   ];
   static const List<String> _allHeaders = [
     'Date',
@@ -68,6 +73,7 @@ class CashbookExportService {
     'Description',
     'Income',
     'Expense',
+    'Rig',
   ];
 
   static String _plain(double v) =>
@@ -88,7 +94,8 @@ class CashbookExportService {
         '',
         '',
         '',
-        _plain(data.previousBalance)
+        _plain(data.previousBalance),
+        ''
       ]);
     }
     for (final r in data.rows) {
@@ -104,6 +111,7 @@ class CashbookExportService {
           e.description ?? '',
           inAmt,
           outAmt,
+          data.rigNames[e.vehicleId] ?? '',
         ]);
       } else {
         rows.add([
@@ -114,12 +122,14 @@ class CashbookExportService {
           inAmt,
           outAmt,
           _plain(r.balance),
+          data.rigNames[e.vehicleId] ?? '',
         ]);
       }
     }
     final t = data.totals;
     if (data.allBooks) {
-      rows.add(['', '', '', 'Total', '', _plain(t.cashIn), _plain(t.cashOut)]);
+      rows.add(
+          ['', '', '', 'Total', '', _plain(t.cashIn), _plain(t.cashOut), '']);
     } else {
       rows.add([
         '',
@@ -128,7 +138,8 @@ class CashbookExportService {
         '',
         _plain(t.cashIn),
         _plain(t.cashOut),
-        _plain(t.balance)
+        _plain(t.balance),
+        ''
       ]);
     }
     final text = const ListToCsvConverter().convert(rows);
@@ -210,7 +221,9 @@ class CashbookExportService {
       n++;
       final notes = [
         e.notes,
-        if ((e.description ?? '').isNotEmpty) e.description!
+        if ((e.description ?? '').isNotEmpty) e.description!,
+        if (data.rigNames[e.vehicleId] != null)
+          'Rig: ${data.rigNames[e.vehicleId]}',
       ].where((s) => s.isNotEmpty).join('\n');
       body.add([
         '$n',

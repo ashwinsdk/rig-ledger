@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/providers/vehicle_provider.dart';
 import '../../core/providers/cashbook_provider.dart';
 import '../../core/services/cashbook_export_service.dart';
 import '../../core/services/file_save_service.dart';
@@ -145,6 +146,7 @@ CashExportData buildAllBooksExport(WidgetRef ref, CashDateRange? range) {
     allBooks: true,
     rows: rows,
     bookNames: {for (final b in books) b.id: b.name},
+    rigNames: {for (final v in ref.read(vehiclesProvider)) v.id: v.name},
     reporter: settings.reporterName,
     generatedAt: DateTime.now(),
   );

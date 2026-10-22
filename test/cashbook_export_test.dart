@@ -51,20 +51,40 @@ void main() {
     expect(bytes.take(3), [0xEF, 0xBB, 0xBF]);
     final text = utf8.decode(bytes.skip(3).toList());
     final lines = const LineSplitter().convert(text);
-    expect(lines.first, 'Date,Time,Notes,Description,Income,Expense,Balance');
+    expect(
+        lines.first, 'Date,Time,Notes,Description,Income,Expense,Balance,Rig');
     expect(text, contains('"Diesel, ""top up""\nline 2"'));
     expect(
         text, contains('2026-10-12,15:30,Opening Balance,,1000.00,,1000.00'));
     expect(text, contains('599.50'));
-    expect(text.trim().split('\r\n').last, ',,Total,,1050.00,400.50,649.50');
+    expect(text.trim().split('\r\n').last, ',,Total,,1050.00,400.50,649.50,');
   });
 
   test('all books CSV has an Account column and no balance', () {
     final text = utf8.decode(
         CashbookExportService.buildCsvBytes(data(all: true)).skip(3).toList());
     expect(text.split('\r\n').first,
-        'Date,Time,Account,Notes,Description,Income,Expense');
+        'Date,Time,Account,Notes,Description,Income,Expense,Rig');
     expect(text, contains('2026-10-13,09:00,Other,Other,,50.00,'));
+  });
+
+  test('CSV has a Rig column with the rig name when the entry has one', () {
+    final base = data(all: false);
+    final rows = [
+      for (final r in base.rows)
+        CashLedgerRow(r.entry..vehicleId = 'rig1', r.balance),
+    ];
+    final d = CashExportData(
+      title: base.title,
+      rangeLabel: base.rangeLabel,
+      allBooks: false,
+      rows: rows,
+      rigNames: const {'rig1': 'Main Rig'},
+      generatedAt: base.generatedAt,
+    );
+    final text =
+        utf8.decode(CashbookExportService.buildCsvBytes(d).skip(3).toList());
+    expect(text, contains('1000.00,,1000.00,Main Rig'));
   });
 
   test('CSV with previous balance row', () {
@@ -79,7 +99,7 @@ void main() {
     );
     final text =
         utf8.decode(CashbookExportService.buildCsvBytes(d).skip(3).toList());
-    expect(text, contains(',,Previous Balance,,,,20.00'));
+    expect(text, contains(',,Previous Balance,,,,20.00,'));
   });
 
   test('PDF builds for both layouts', () async {

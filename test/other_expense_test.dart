@@ -39,8 +39,12 @@ void main() {
     final newer =
         expense('o1', 'v1', total: 900, updated: DateTime(2026, 4, 1)).toJson();
     final merged = SyncService.mergeSnapshots(
-      {'otherExpenseEntries': [older]},
-      {'otherExpenseEntries': [newer]},
+      {
+        'otherExpenseEntries': [older]
+      },
+      {
+        'otherExpenseEntries': [newer]
+      },
     );
     final list = merged['otherExpenseEntries'] as List;
     expect(list.length, 1);

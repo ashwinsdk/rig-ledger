@@ -36,13 +36,14 @@ class CashEntryAdapter extends TypeAdapter<CashEntry> {
       sourceType: fields[16] as String?,
       sourceId: fields[17] as String?,
       sourcePaymentId: fields[18] as String?,
+      vehicleId: fields[19] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, CashEntry obj) {
     writer
-      ..writeByte(19)
+      ..writeByte(20)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -80,7 +81,9 @@ class CashEntryAdapter extends TypeAdapter<CashEntry> {
       ..writeByte(17)
       ..write(obj.sourceId)
       ..writeByte(18)
-      ..write(obj.sourcePaymentId);
+      ..write(obj.sourcePaymentId)
+      ..writeByte(19)
+      ..write(obj.vehicleId);
   }
 
   @override

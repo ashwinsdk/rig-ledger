@@ -61,6 +61,12 @@ class CashEntry extends HiveObject {
   @HiveField(18)
   String? sourcePaymentId; // payment log id
 
+  /// Rig (Vehicle.id) the entry belongs to (v2.0.4). Optional when typed by
+  /// hand; set automatically for income linked from a bill payment (the
+  /// bill's rig). Null on older entries.
+  @HiveField(19)
+  String? vehicleId;
+
   CashEntry({
     required this.id,
     required this.bookId,
@@ -81,6 +87,7 @@ class CashEntry extends HiveObject {
     this.sourceType,
     this.sourceId,
     this.sourcePaymentId,
+    this.vehicleId,
   });
 
   /// Signed amount: positive for cash in, negative for cash out.
@@ -106,6 +113,8 @@ class CashEntry extends HiveObject {
     String? sourceType,
     String? sourceId,
     String? sourcePaymentId,
+    String? vehicleId,
+    bool clearVehicle = false,
   }) {
     return CashEntry(
       id: id ?? this.id,
@@ -127,6 +136,7 @@ class CashEntry extends HiveObject {
       sourceType: sourceType ?? this.sourceType,
       sourceId: sourceId ?? this.sourceId,
       sourcePaymentId: sourcePaymentId ?? this.sourcePaymentId,
+      vehicleId: clearVehicle ? null : (vehicleId ?? this.vehicleId),
     );
   }
 
@@ -151,6 +161,7 @@ class CashEntry extends HiveObject {
       'sourceType': sourceType,
       'sourceId': sourceId,
       'sourcePaymentId': sourcePaymentId,
+      'vehicleId': vehicleId,
     };
   }
 
@@ -178,6 +189,7 @@ class CashEntry extends HiveObject {
       sourceType: map['sourceType'] as String?,
       sourceId: map['sourceId'] as String?,
       sourcePaymentId: map['sourcePaymentId'] as String?,
+      vehicleId: map['vehicleId'] as String?,
     );
   }
 }

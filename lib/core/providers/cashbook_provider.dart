@@ -368,6 +368,7 @@ class CashEntriesNotifier extends StateNotifier<List<CashEntry>> {
     String? sourceType,
     String? sourceId,
     String? sourcePaymentId,
+    String? vehicleId,
   }) async {
     if (amount.isNaN || amount < 0) return (null, 'Enter a valid amount');
     if (DatabaseService.getCashBook(bookId) == null) {
@@ -390,6 +391,7 @@ class CashEntriesNotifier extends StateNotifier<List<CashEntry>> {
       sourceType: sourceType,
       sourceId: sourceId,
       sourcePaymentId: sourcePaymentId,
+      vehicleId: (vehicleId == null || vehicleId.isEmpty) ? null : vehicleId,
     );
     await DatabaseService.saveCashEntry(entry);
     loadEntries();
