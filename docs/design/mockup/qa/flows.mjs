@@ -1,4 +1,4 @@
-// Click-through checks of the v2.0.2 behaviours (several bill lines, agent filter, agent edit). usage: node flows.mjs
+// Click-through checks of the v2.0.2 and v2.0.3 behaviours (several bill lines, agent filter, agent edit, agent view, commission recalculation). usage: node flows.mjs
 import { chromium } from 'playwright-core';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -79,11 +79,77 @@ check('search keeps only Karthik and hides the All agents row', await page.evalu
 await page.click('#aflist .ri');
 check('sheet closed after choosing', await page.evaluate(() => $('#ov').innerHTML === ''), true);
 check('pill shows the agent and is tinted', await page.evaluate(() => { const e = document.querySelector('.afp'); return e.classList.contains('on') + ' ' + e.innerText.replace(/\s+/g, ' ').trim(); }), 'true person_outline Agent: Karthik arrow_drop_down');
-check('profit card replaced by the note', await page.evaluate(() => /Expenses are not tracked per agent/.test(document.querySelector('#scc').innerText)), true);
-check('Karthik total billed card', await page.evaluate(() => [...document.querySelectorAll('.mc')].filter(e => /Total billed/.test(e.innerText))[0].querySelector('.fit').dataset.full), '₹1,74,710');
-check('Karthik commission card', await page.evaluate(() => [...document.querySelectorAll('.mc')].filter(e => /Commission/.test(e.innerText))[0].querySelector('.fit').dataset.full), '₹16,130');
+check('agent view replaces the profit card, metric cards and Agents section', await page.evaluate(() => !!document.querySelector('.agh') && !document.querySelector('.hero.cin') && !document.querySelector('.plink') && /Profit from this agent/.test(document.querySelector('#scc').innerText)), true);
+check('Karthik (Oct) commission earned in the header', await page.evaluate(() => document.querySelector('.agh .ahv .fit').dataset.full), '₹16,130');
+check('Karthik (Oct) Total card', await page.evaluate(() => [...document.querySelectorAll('.mc')].filter(e => /Total/.test(e.innerText))[0].querySelector('.fit').dataset.full), '₹1,74,710');
 await page.evaluate(() => setPS('all'));
 check('agent filter resets on This rig / All rigs change', await page.evaluate(() => S.pr.agent), 'all');
+
+// 7. agent view (v2.0.3), 3 month period
+await jumpTo('Agent view (3 month, Karthik)');
+const hd = await page.evaluate(() => document.querySelector('.agh').innerText.replace(/\s+/g, ' ').trim());
+check('header: name, period, commission earned, back button', hd.replace(/^person /, '').replace(/ tune /, ' ').replace(/arrow_back /, ''), 'Karthik 01 Aug 2026 to 13 Oct 2026 Commission earned ₹22,350 All agents');
+check('header has the tune and back icons with 48 dp targets', await page.evaluate(() => [...document.querySelectorAll('.agh button')].map(e => Math.round(e.getBoundingClientRect().height)).join(',')), '48,48');
+const pc = await page.evaluate(() => document.querySelector('.agp').innerText.replace(/\s+/g, ' ').trim());
+check('profit card', pc, 'Profit from this agent (received - commission) ₹1,52,650 Expected when all pending is collected: ₹2,38,100 All agents, after expenses: ₹2,63,905 Expenses are not tracked per agent, so they are not taken off this figure.');
+check('profit card is green', await page.evaluate(() => !document.querySelector('.agp').classList.contains('neg')), true);
+check('Bills, Total, Received, Pending cards', await page.evaluate(() => [...document.querySelectorAll('.mgrid .mc')].map(e => e.innerText.replace(/\s+/g, ' ').trim()).join(' | ')), 'Bills 6 | Total ₹2,60,710 | Received ₹1,75,000 | Pending ₹85,450');
+check('By month rows (newest first)', await page.evaluate(() => [...document.querySelectorAll('.mtb .mr')].map(e => [...e.children].map(c => c.innerText.replace(/\s+/g, ' ').trim()).join(' ')).join(' ; ')), 'Month Bills Total Commission ; Oct 2026 4 ₹1,74,710 ₹16,130 ; Sep 2026 1 ₹50,000 ₹3,000 ; Aug 2026 1 ₹36,000 ₹3,220');
+check('bills newest first', await page.evaluate(() => [...document.querySelectorAll('.agb b.t15')].map(e => e.textContent).join(' ')), '#1043 #1044 #1040 #1045 #1037 #1036');
+check('bill 1044 card: commission strip with split', await page.evaluate(() => [...document.querySelectorAll('.agb')].filter(e => /#1044/.test(e.innerText))[0].innerText.replace(/\s+/g, ' ').trim()), '11 Oct #1044 Namakkal chevron_right Total ₹54,450 Received ₹30,000 Balance ₹24,450 handshake Commission ₹4,410 Depth ₹3,650 PVC ₹760');
+check('bill 1037 card: manual, no split', await page.evaluate(() => [...document.querySelectorAll('.agb')].filter(e => /#1037/.test(e.innerText))[0].querySelector('.cmstrip').innerText.replace(/\s+/g, ' ').trim()), 'handshake Commission (manual) ₹3,000');
+check('totals row', await page.evaluate(() => document.querySelector('.agt').innerText.replace(/\s+/g, ' ').trim()), '6 bills Total ₹2,60,710 Received ₹1,75,000 Pending ₹85,450 Commission ₹22,350');
+// tap a bill opens its form, back returns to the agent view
+await page.evaluate(() => [...document.querySelectorAll('.agb')].filter(e => /#1043/.test(e.innerText))[0].click());
+await page.waitForTimeout(150);
+check('tapping a bill opens its form', await txt('#ltot'), '₹35,000');
+await page.evaluate(() => back());
+check('back returns to the agent view', await page.evaluate(() => !!document.querySelector('.agh')), true);
+// back button returns to the normal Overview
+await page.evaluate(() => document.querySelector('.ahb').click());
+check('All agents button returns to the Overview', await page.evaluate(() => S.pr.agent + ' ' + !document.querySelector('.agh') + ' ' + !!document.querySelector('.hero.cin')), 'all true true');
+// the Agents section: tap a row opens the agent view, the info icon opens the details sheet
+check('Agents section rows have an info icon button and no chevron', await page.evaluate(() => [...document.querySelectorAll('.plink')].every(e => e.querySelector('.agi[title="Prices and details"]') && !/chevron_right/.test(e.innerText))), true);
+await page.evaluate(() => document.querySelector('.plink .agi').click());
+check('info icon opens the details sheet', await page.evaluate(() => /commission per foot/i.test(document.querySelector("#ov").innerText)), true);
+await page.evaluate(() => closeOv());
+await page.evaluate(() => [...document.querySelectorAll('.plink .pm')].filter(e => /Selvam/.test(e.innerText))[0].click());
+check('tapping an agent row opens that agent view and the pill shows the name', await page.evaluate(() => document.querySelector('.agh b').textContent + ' / ' + document.querySelector('.afp').innerText.replace(/\s+/g, ' ').trim()), 'Selvam / person_outline Agent: Selvam arrow_drop_down');
+await page.evaluate(() => setPS('all'));
+check('scope change resets the agent view', await page.evaluate(() => S.pr.agent + ' ' + !document.querySelector('.agh')), 'all true');
+await page.evaluate(() => setPS('this'));
+// empty state
+await jumpTo('Agent view (no bills, empty state)');
+check('empty state text', await page.evaluate(() => /No bills for Prakash in this period/.test(document.querySelector('#scc').innerText) && !document.querySelector('.agb') && !document.querySelector('.mtb')), true);
+// no month table with a one month period
+await page.evaluate(() => { S.pr = { tab: 0, range: 'month', scope: 'this', agent: 'a3' }; render(); });
+check('one month period: no By month table', await page.evaluate(() => !document.querySelector('.mtb') && document.querySelectorAll('.agb').length), 4);
+check('All time wording', await page.evaluate(() => agPeriod(null)), 'All time');
+
+// 8. commission recalculation when the agent prices are saved (v2.0.3)
+await page.evaluate(() => { S.pr = { tab: 0, range: '3m', scope: 'this', agent: 'a3' }; S.tab = 1; render(); });
+const save = async fields => { await page.evaluate(() => agentDlg('a3')); for (const [id, v] of Object.entries(fields)) await page.fill('#i_' + id, v); await page.evaluate(() => saveAgent()); await page.waitForTimeout(100); };
+await save({ rp_pvc_8inch: '7' });
+check('snack for one bill (singular)', await txt('.sn'), 'Agent updated. Commission changed on 1 bill');
+check('1044 follows the new PVC 8inch price (60 ft x 7)', await page.evaluate(() => BILLS.filter(b => b.bill === '1044')[0].comm), 4470);
+check('agent view header follows (22,350 + 60)', await page.evaluate(() => document.querySelector('.agh .ahv .fit').dataset.full), '₹22,410');
+await save({ rp_depth_7inch: '12', rp_pvc_7inch: '6' });
+check('snack for five bills (plural)', await txt('.sn'), 'Agent updated. Commission changed on 5 bills');
+check('manual bill 1037 skipped, hand-typed PVC line of 1036 keeps 8', await page.evaluate(() => ['1037', '1036'].map(n => BILLS.filter(b => b.bill === n)[0].comm).join(',')), '3000,3720');
+check('agent view numbers follow (24,750 commission, profit 175,000 - 24,750)', await page.evaluate(() => document.querySelector('.agh .ahv .fit').dataset.full + ' ' + document.querySelector('.agp .ahv .fit').dataset.full), '₹24,750 ₹1,50,250');
+check('bill card of 1040 shows the new commission (3,960)', await page.evaluate(() => [...document.querySelectorAll('.agb')].filter(e => /#1040/.test(e.innerText))[0].querySelector('.cmstrip b').innerText), '₹3,960');
+await page.evaluate(() => { S.tab = 0; S.stack = []; S.lt = 0; S.view = 0; S.per = '3m'; render(); });
+check('Ledger card of 1044 shows the new split (Depth 4,050 PVC 900)', await page.evaluate(() => [...document.querySelectorAll('.entry')].filter(e => /#1044/.test(e.innerText))[0].querySelector('.cmstrip').innerText.replace(/\s+/g, ' ').trim()), 'handshake Commission ₹4,950 Depth ₹4,050 PVC ₹900');
+await page.evaluate(() => { S.per = 'month'; S.tab = 1; render(); });
+await save({ an: 'Karthik K' });
+check('saving without a price change says only Agent updated', await txt('.sn'), 'Agent updated');
+// the side bore bill follows the default depth rate (Murugan 10 -> 11): s4 220 ft
+await page.evaluate(() => agentDlg('a1'));
+await page.fill('#i_acd', '11');
+await page.evaluate(() => saveAgent());
+await page.waitForTimeout(100);
+check('Murugan default depth 10 -> 11 changes 4 bills', await txt('.sn'), 'Agent updated. Commission changed on 4 bills');
+check('side bill 204 commission 220 x 11', await page.evaluate(() => BILLS.filter(b => b.bill === '204')[0].comm), 2420);
 
 // 6. agent sheet Edit really changes the agent, Delete really removes it
 await page.evaluate(() => { S.tab = 1; render(); agentSheet('a3'); });

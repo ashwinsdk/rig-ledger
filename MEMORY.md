@@ -42,7 +42,7 @@ Last updated: 2026-10-22 (v2.0.3 done, Apple-style design mockup)
 
 - Review: `docs/v2.0.3-review.md`. Agent price edits recalculate the commission of the agent's bills (`CommissionRecalc`: skips `isCommissionManuallyEdited`, keeps hand-typed line rates by comparing with the old agent price). Portfolio `AgentView` (lib/features/portfolio/agent_view.dart). macOS shell has no Agents tab (Cmd+1..4); `agents_screen.dart` deleted.
 - Gotchas: agents are per rig (`getAllAgents` filters by the current rig), so tests must give agents `vehicleId: 'default_vehicle'`; tapping an agent row in Portfolio filters to that agent, the info icon opens the sheet.
-- Not verified: any of it on a device or on macOS. The mockups do not show the agent view.
+- Not verified: any of it on a device or on macOS. Both mockups were updated to 2.0.3 (Apple one: `qa/logic-baseline-v2.0.3.txt`).
 
 ## Apple-style design mockup (design only, no lib/ changes)
 

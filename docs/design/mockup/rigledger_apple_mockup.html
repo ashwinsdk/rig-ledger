@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>RigLedger 2.0.2 - Android mockup, Apple look (dummy data)</title>
+<title>RigLedger 2.0.3 - Android mockup, Apple look (dummy data)</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light dark">
 <script>(function(){var r=document.documentElement;try{var t=localStorage.getItem('rl.theme')||'system',a=localStorage.getItem('rl.accent')||'blue';var d=t=='dark'||(t=='system'&&window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches);r.dataset.th=d?'dark':'light';r.dataset.accent=a}catch(e){r.dataset.th='light';r.dataset.accent='blue'}})()</script>
@@ -377,7 +377,41 @@ body.tsbig .strip3{flex-direction:column}
 .scope button.on{background:var(--acc-btn);color:var(--onacc)}
 .scope button .mi{font-size:calc(18px*var(--ts))}
 .hint{padding:0 calc(var(--mx) + 8px) 10px}
-.plink{display:flex;flex-direction:column;justify-content:center;width:100%;min-height:var(--tap);text-align:left;padding:10px 0;border-top:.5px solid var(--sep)}
+.plink{display:flex;align-items:center;width:100%;min-height:var(--tap);border-top:.5px solid var(--sep)}
+.plink .pm{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;min-height:var(--tap);text-align:left;padding:10px 0}
+/* v2.0.3: info icon button (opens the agent details sheet), agent view header, agent profit card, month table, agent bill card */
+.agi{display:inline-flex;align-items:center;justify-content:center;width:var(--tap);height:var(--tap);flex:none;border-radius:24px;color:var(--lb2)}
+.agi:active{box-shadow:inset 0 0 0 100vmax var(--press)}
+.agh{margin:0 var(--mx) var(--gap);padding:12px 8px 12px 16px;border-radius:var(--r);background:linear-gradient(135deg,var(--acc-btn),color-mix(in srgb,var(--acc-btn) 70%,var(--black)));color:var(--onacc)}
+.agh .ah1{display:flex;align-items:center;gap:6px;min-height:var(--tap)}
+.agh .ah1 .mi{font-size:calc(20px*var(--ts))}
+.agh .ah1 b{flex:1;min-width:0;font-size:calc(20px*var(--ts));font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.agh .agi{color:var(--onacc)}
+.agh .ahp{font-size:calc(13px*var(--ts));margin-top:-4px}
+.agh .ahl{font-size:calc(13px*var(--ts));margin-top:10px}
+.agh .ahv{font-size:calc(34px*var(--ts));font-weight:700;letter-spacing:-.5px;line-height:1.1;padding-right:8px}
+.agh .ahb{display:inline-flex;align-items:center;gap:4px;min-height:var(--tap);margin-top:4px;padding:0 14px 0 8px;border-radius:24px;font-weight:600;font-size:calc(15px*var(--ts));box-shadow:inset 0 0 0 1px var(--onacc)}
+.agh .ahb:active{box-shadow:inset 0 0 0 1px var(--onacc),inset 0 0 0 100vmax var(--press)}
+.agp{margin:0 var(--mx) var(--gap);padding:16px;border-radius:var(--r);background:color-mix(in srgb,var(--in) 10%,var(--s1));box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--in) 35%,transparent)}
+.agp.neg{background:color-mix(in srgb,var(--out) 10%,var(--s1));box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--out) 35%,transparent)}
+.agp .ahv{font-size:calc(28px*var(--ts));font-weight:700;letter-spacing:-.4px;line-height:1.1;margin:6px 0 8px}
+.agp .t13+.t13{margin-top:2px}
+.mtb .mr{display:grid;grid-template-columns:1.25fr .6fr 1.2fr 1.2fr;gap:8px;align-items:baseline;padding:8px 0;border-top:.5px solid var(--sep)}
+.mtb .mr.th{border-top:0;padding:10px 0 4px;font-size:calc(12px*var(--ts));font-weight:600;color:var(--lb2)}
+.mtb .mr>span:not(:first-child){text-align:right;min-width:0}
+.mtb .mr .fit{display:block;font-size:calc(13px*var(--ts));font-weight:600}
+.mtb.stk .mr{display:block}
+.mtb.stk .mr>span:not(:first-child){display:flex;justify-content:space-between;gap:12px;text-align:right}
+.mtb.stk .mr>span:not(:first-child)::before{content:attr(data-l);color:var(--lb2);font-size:calc(12px*var(--ts));font-weight:600;text-align:left}
+.agb{display:block;width:calc(100% - 2*var(--mx));margin:0 var(--mx) var(--gap);padding:14px 16px;background:var(--s1);border-radius:var(--r);box-shadow:var(--sh)}
+.agb .r1{display:flex;align-items:center;gap:8px}
+.agb .r1 .d{font-size:calc(13px*var(--ts));color:var(--lb2);flex:none}
+.agb .r1 .ad{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:calc(15px*var(--ts))}
+.agb .r3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:10px}
+.agb.stk .r3{grid-template-columns:1fr}
+.agb .r3 .t12{color:var(--lb2)}
+.agb .r3 .fit{display:block;font-size:calc(14px*var(--ts));font-weight:600}
+.agt{margin:0 var(--mx) var(--gap);padding:12px 16px;border-radius:var(--r);background:var(--acc-tint);display:flex;flex-wrap:wrap;gap:4px 16px;font-size:calc(14px*var(--ts))}
 /* reduced motion */
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
 .dg{min-width:0}
@@ -426,7 +460,7 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--acc);outli
 <div id="sysnav"></div>
 </div></div>
 <script>
-/* ================= LOGIC BLOCK: v2.0.2 data and derived logic, frozen (checked by qa/logic-diff.mjs against qa/logic-baseline-v2.0.2.txt) ================= */
+/* ================= LOGIC BLOCK: v2.0.3 data and derived logic, frozen (checked by qa/logic-diff.mjs against qa/logic-baseline-v2.0.3.txt) ================= */
 var $=function(s){return document.querySelector(s)};
 var MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 var MONF=['January','February','March','April','May','June','July','August','September','October','November','December'];
@@ -455,7 +489,8 @@ function stepFor(t,ft){var inc=STEP[STEPT[t]];if(!inc)return 0;var s=0,i;for(i=0
 /* agent price per foot for a type, else the default of that kind (Agent.rateFor) */
 function rateFor(a,cat,t){var v=a.pr&&a.pr[cat+':'+t];if(v!=null)return v;return cat=='depth'?a.cd:cat=='pvc'?a.cp:a.cm}
 /* v2.0.2: a bill has lines. Each line is one category (depth, pvc, ms), a type, feet f, rate per foot r and a commission rate k per foot. */
-function LN(c,t,f,r){return {c:c,t:t,f:f,r:r,k:0}}
+/* v2.0.3: an optional 5th argument is a commission rate typed by hand on that line (hk); without it the line takes the agent price */
+function LN(c,t,f,r,hk){return {c:c,t:t,f:f,r:r,k:0,hk:hk}}
 var BILLS=[
  {id:'b1',rig:'main',date:'2026-10-12',bill:'1042',ag:'a1',addr:'Salem',L:[LN('depth','7inch',350,90),LN('pvc','7inch',120,150),LN('ms','6inch',20,400)],ex:1000,cash:30000,pp:10000,payer:'Ravi Kumar',less:500,notes:'Water at 340 ft'},
  {id:'b2',rig:'main',date:'2026-10-10',bill:'1041',ag:'a2',addr:'Attur',L:[LN('depth','8inch',420,95),LN('pvc','8inch',150,170),LN('ms','6inch',30,400)],ex:0,cash:78800,pp:0,payer:'',less:0,notes:''},
@@ -466,6 +501,7 @@ var BILLS=[
  {id:'b7',rig:'main',date:'2026-10-13',bill:'1043',ag:'a3',addr:'Yercaud',L:[LN('depth','9inch',260,100),LN('pvc','7inch',60,150)],ex:0,cash:15000,pp:0,payer:'',less:0,notes:'9 inch, no step rate'},
  {id:'b8',rig:'main',date:'2026-10-11',bill:'1044',ag:'a3',addr:'Namakkal',L:[LN('depth','7inch',200,90),LN('depth','8inch',150,95),LN('pvc','7inch',80,150),LN('pvc','8inch',60,170)],ex:0,cash:30000,pp:0,payer:'',less:0,notes:'Two depth lines and two PVC lines'},
  {id:'b9',rig:'main',date:'2026-10-06',bill:'1045',ag:'a3',addr:'Erode',L:[LN('depth','7inch',320,90),LN('depth','9inch',150,100)],ex:0,cash:40000,pp:0,payer:'',less:0,notes:'Step rate only on the 7inch line'},
+ {id:'b10',rig:'main',date:'2026-08-18',bill:'1036',ag:'a3',addr:'Sankari',L:[LN('depth','7inch',250,90),LN('pvc','7inch',90,150,8)],ex:0,cash:20000,pp:0,payer:'',less:0,notes:'PVC commission rate typed by hand (8)'},
  {id:'s1',rig:'side',date:'2026-10-11',bill:'201',ag:'a2',addr:'Omalur',L:[LN('depth','7inch',200,85)],ex:0,cash:17000,pp:0,payer:'',less:0,notes:''},
  {id:'s2',rig:'side',date:'2026-10-08',bill:'202',ag:'a1',addr:'Attur',L:[LN('depth','7inch',250,85)],ex:0,cash:10000,pp:5000,payer:'Suresh',less:0,notes:''},
  {id:'s3',rig:'side',date:'2026-10-02',bill:'203',ag:'a3',addr:'Salem',L:[LN('depth','7inch',180,85)],ex:0,cash:15300,pp:0,payer:'',less:0,notes:''},
@@ -485,14 +521,30 @@ function calcBill(b){
  b.step=stepSum(b.L,side);
  b.total=sum(b.L,function(l){return l.f*l.r})+b.step+b.ex;
  b.man=b.cmo!=null;
- b.comm=b.man?b.cmo:sum(b.L,function(l){return l.f*l.k});
+ b.comm=b.man?b.cmo:Math.round(sum(b.L,function(l){return l.f*l.k})*100)/100;
  b.recv=b.cash+b.pp;b.bal=b.total-b.recv-b.less;
 }
 BILLS.forEach(function(b){
  var a=AG.filter(function(x){return x.id==b.ag})[0];
- b.L.forEach(function(l){l.k=b.rig=='side'?a.cd:rateFor(a,l.c,l.t)});
+ b.L.forEach(function(l){l.k=l.hk!=null?l.hk:(b.rig=='side'?a.cd:rateFor(a,l.c,l.t))});
  calcBill(b);
 });
+/* v2.0.3 (CommissionRecalc.changedBills): after an agent's prices change, the bills of that agent follow the new price. A bill with a hand-typed commission total (man) is skipped. A line follows only when its rate still equals the OLD agent price of its type (the rate came from the agent); a line with another rate was typed by hand and stays. Side bore bills use the default depth rate (depth lines only). The bill commission is recalculated from the lines. Returns the number of bills changed. */
+function agentPrice(a,c,t,side){return side?a.cd:rateFor(a,c,t)}
+function recalcAgentBills(oldA,newA){
+ var n=0;
+ BILLS.forEach(function(b){
+  if(b.ag!=newA.id||b.man)return;
+  var side=b.rig=='side',any=false;
+  b.L.forEach(function(l){
+   if(side&&l.c!='depth')return;
+   var o=agentPrice(oldA,l.c,l.t,side),w=agentPrice(newA,l.c,l.t,side);
+   if(Math.abs(o-w)>1e-9&&Math.abs(l.k-o)<1e-9){l.k=w;any=true}
+  });
+  if(any){calcBill(b);n++}
+ });
+ return n;
+}
 var SL={
  diesel:[{bill:'231',date:'2026-10-11',l:120,r:92.5,paid:8000,place:'Salem HP Bunk'},{bill:'230',date:'2026-10-04',l:100,r:91.8,paid:9180,place:'Attur Indian Oil'},{bill:'229',date:'2026-09-22',l:150,r:90.5,paid:13575,place:'Salem HP Bunk'}],
  pvc:[{bill:'88',date:'2026-10-09',t:[{n:'7 inch',c:20,r:850},{n:'8 inch',c:10,r:1050}],paid:20000,place:'Salem yard'},{bill:'87',date:'2026-09-26',t:[{n:'7 inch',c:15,r:850}],paid:12750,place:'Salem yard'}],
@@ -580,8 +632,8 @@ function calcMain(side){
 }
 /* bills of the Portfolio scope and period, before the agent filter (the agent filter sheet counts these) */
 function pfScopeBills(){var P=S.pr,r=mrange(P.range,0);return BILLS.filter(function(b){return inR(b.date,r)&&(P.scope=='all'||b.rig==S.rig)})}
-function pfCalc(){
- var P=S.pr,r=mrange(P.range,0),bs=pfScopeBills().filter(function(b){return P.agent=='all'||b.ag==P.agent});
+function pfCalc(ag){
+ var P=S.pr,a0=ag||P.agent,r=mrange(P.range,0),bs=pfScopeBills().filter(function(b){return a0=='all'||b.ag==a0});
  var st=stats(bs),ex=expenses(r),less=sum(bs,function(b){return b.less});
  var rows=AG.map(function(a){var x=bs.filter(function(b){return b.ag==a.id});return {name:a.name,n:x.length,total:sum(x,function(b){return b.total}),recv:sum(x,function(b){return b.recv}),pend:sum(x,function(b){return b.bal}),comm:sum(x,function(b){return b.comm})}}).filter(function(x){return x.n});
  return {bs:bs,st:st,ex:ex,less:less,rows:rows,profit:st.recv-ex.total-st.comm,exp:st.total-st.comm-ex.total-0};
@@ -693,7 +745,7 @@ function fitAll(){
  for(var i=0;i<els.length;i++){var e=els[i];if(!e.dataset)continue;e.textContent=e.dataset.full;e.style.fontSize='';e.dataset.fit='';
   var cw=e.clientWidth,sw=e.scrollWidth;if(!cw||sw<=cw)continue;
   var fs=parseFloat(getComputedStyle(e).fontSize),ratio=cw/sw;
-  if(ratio>=.75){e.style.fontSize=(fs*ratio).toFixed(2)+'px';e.dataset.fit='scaled'}
+  if(ratio>=.75&&fs*ratio>=11){e.style.fontSize=(fs*ratio).toFixed(2)+'px';e.dataset.fit='scaled'}
   else{e.textContent=e.dataset.comp;e.dataset.fit='compact';
    if(e.scrollWidth>e.clientWidth)e.style.fontSize=(fs*Math.max(11/fs,e.clientWidth/e.scrollWidth)).toFixed(2)+'px'}
   for(var k=0;k<4&&e.scrollWidth>e.clientWidth;k++){var cur=parseFloat(getComputedStyle(e).fontSize);var nx=Math.max(11,cur*(e.clientWidth/e.scrollWidth)*.97);if(nx>=cur)break;e.style.fontSize=nx.toFixed(2)+'px'}
@@ -1190,7 +1242,7 @@ function kvs(r){return '<span>Total <b class="cacc">'+money(r.total)+'</b></span
 function agentsSection(c){
  var rows=UI.state=='empty'?[]:agentRows(c);
  return '<div class="hlcard"><div class="hh"><span>Agents</span><button class="btx" onclick="agentDlg()" aria-label="Add agent">'+ic('add',18)+'Add agent</button></div>'
-  +(rows.length?rows.map(function(r){return '<button class="plink" onclick="agentSheet(\''+r.a.id+'\')" aria-label="'+esc(r.a.name)+' details"><div class="row g8"><b class="t17 sp ell">'+esc(r.a.name)+'</b><span class="t13 l2">'+(r.n?r.n+(r.n==1?' bill':' bills'):'no bills')+'</span>'+ic('chevron_right',20,'var(--lb3)')+'</div>'+(r.n?'<div class="row t13 g12 wrap" style="margin-top:4px">'+kvs(r)+'</div>':'')+'</button>'}).join(''):'<div class="t15 l2" style="padding:12px 0">No agents yet. Tap Add agent to create one.</div>')+'</div>';
+  +(rows.length?rows.map(function(r){return '<div class="plink"><button class="pm" onclick="setPA(\''+r.a.id+'\')" aria-label="'+esc(r.a.name)+', show bills"><div class="row g8"><b class="t17 sp ell">'+esc(r.a.name)+'</b><span class="t13 l2">'+(r.n?r.n+(r.n==1?' bill':' bills'):'no bills')+'</span></div>'+(r.n?'<div class="row t13 g12 wrap" style="margin-top:4px">'+kvs(r)+'</div>':'')+'</button><button class="agi" onclick="agentSheet(\''+r.a.id+'\')" aria-label="Prices and details of '+esc(r.a.name)+'" title="Prices and details">'+ic('info_outline',22)+'</button></div>'}).join(''):'<div class="t15 l2" style="padding:12px 0">No agents yet. Tap Add agent to create one.</div>')+'</div>';
 }
 /* detail sheet of one agent: contact, this period, commission per foot, Delete and Edit */
 function agentSheet(id){
@@ -1202,6 +1254,23 @@ function agentSheet(id){
   +ftl('Commission per foot')+(prices.length?grp(prices.map(function(x){return '<div class="ri"><span class="tt">'+x[0]+'</span>'+mf(x[1],'b')+'<span class="l2 t13">/ ft</span></div>'}).join('')):'<div class="card t15 l2">No prices set. Tap Edit to add them.</div>');
  sheet(b,{t:esc(a.name),full:true,bot:'<div class="bs2" style="margin:0"><button class="bs des sp" onclick="agentDel(\''+id+'\')">'+ic('delete_outline',20)+'Delete</button><button class="bp sp" onclick="agentDlg(\''+id+'\')">'+ic('edit',20)+'Edit</button></div>'});
 }
+/* v2.0.3 agent view (AgentView): shown instead of the profit card, metric cards, expenses, Agents section and definitions when an agent is chosen (pill sheet or tap on an agent row). Every number comes from pfCalc() (scope, period and this agent) and the dataset. */
+function agPeriod(r){if(!r)return 'All time';var t=pd(TODAY),e=r[1]>t?t:r[1],f=function(d){return p2(d.getDate())+' '+MON[d.getMonth()]+' '+d.getFullYear()};return f(r[0])+' to '+f(e)}
+function agentView(c){
+ var P=S.pr,a=agent(P.agent),r=mrange(P.range,0),st=c.st,stk=UI.ts>1.5?' stk':'';
+ var bs=c.bs.slice().sort(function(x,y){return x.date<y.date?1:x.date>y.date?-1:y.bill-x.bill});
+ var profit=st.recv-st.comm,expd=st.total-c.less-st.comm,overall=pfCalc('all').profit;
+ var h='<div class="agh"><div class="ah1">'+ic('person',20)+'<b>'+esc(a.name)+'</b><button class="agi" onclick="agentSheet(\''+a.id+'\')" aria-label="Prices and details" title="Prices and details">'+ic('tune',24)+'</button></div><div class="ahp">'+agPeriod(r)+'</div><div class="ahl">Commission earned</div><div class="ahv">'+mfit(st.comm,'','Commission earned')+'</div><button class="ahb" onclick="setPA(\'all\')" aria-label="Back to all agents">'+ic('arrow_back',20)+'All agents</button></div>';
+ h+='<div class="agp'+(profit<0?' neg':'')+'"><div class="t13 l2">Profit from this agent (received - commission)</div><div class="ahv '+(profit<0?'cout':'cin')+'">'+mfit(profit,'','Profit from this agent')+'</div><div class="t13">Expected when all pending is collected: <b>'+money(expd)+'</b></div><div class="t13 l2">All agents, after expenses: '+money(overall)+'</div><div class="t12 l2" style="margin-top:8px">Expenses are not tracked per agent, so they are not taken off this figure.</div></div>';
+ h+='<div class="mgrid">'+mcard('Bills','receipt_long',String(bs.length),'','')+mcard('Total','account_balance_wallet_outlined',st.total,'cacc','')+mcard('Received','check_circle_outline',st.recv,'cin','')+mcard('Pending','pending_outlined',st.bal,'cbal','')+'</div>';
+ if(!bs.length)return h+'<div class="t15 l2 tc" style="padding:32px 20px">No bills for '+esc(a.name)+' in this period</div>';
+ var mk=[],mm={};bs.forEach(function(b){var k=b.date.slice(0,7);if(!mm[k]){mm[k]=[];mk.push(k)}mm[k].push(b)});
+ if(mk.length>1)h+='<div class="card mtb'+stk+'"><div class="t17 sb6">By month</div><div class="mr th"><span>Month</span><span>Bills</span><span>Total</span><span>Commission</span></div>'+mk.map(function(k){var x=mm[k],d=pd(k+'-01');return '<div class="mr"><span class="t15 sb6">'+MON[d.getMonth()]+' '+d.getFullYear()+'</span><span data-l="Bills" class="t13">'+x.length+'</span><span data-l="Total">'+mfit(sum(x,function(b){return b.total}),'','Total '+MON[d.getMonth()])+'</span><span data-l="Commission">'+mfit(sum(x,function(b){return b.comm}),'ccom','Commission '+MON[d.getMonth()])+'</span></div>'}).join('')+'</div>';
+ h+=sec('Bills');
+ h+=bs.map(function(b){return '<button class="agb'+stk+'"'+(b.man?' data-man="1"':'')+' onclick="openBill(\''+b.id+'\')" aria-label="Bill '+b.bill+', open"><div class="r1"><span class="d">'+dRow(b.date)+'</span><b class="t15">#'+b.bill+'</b><span class="ad">'+esc(b.addr)+'</span>'+ic('chevron_right',20,'var(--lb3)')+'</div><div class="r3"><div><div class="t12">Total</div>'+mfit(b.total,'cacc','Total')+'</div><div><div class="t12">Received</div>'+mfit(b.recv,'cin','Received')+'</div><div><div class="t12">Balance</div>'+mfit(b.bal,b.bal>0?'cbal':'cin','Balance')+'</div></div>'+commStrip(b)+'</button>'}).join('');
+ h+='<div class="agt"><b>'+bs.length+(bs.length==1?' bill':' bills')+'</b><span>Total <b class="cacc">'+money(st.total)+'</b></span><span>Received <b class="cin">'+money(st.recv)+'</b></span><span>Pending <b class="cbal">'+money(st.bal)+'</b></span><span>Commission <b class="ccom">'+money(st.comm)+'</b></span></div>';
+ return h;
+}
 function portfolioTab(){
  var P=S.pr,c=pfCalc(),r=mrange(P.range,0),rig=VEH.filter(function(v){return v.id==S.rig})[0];
  var b=rigPill()+seg([[0,'Overview'],[1,'Ledger'],[2,'Side Ledger']],P.tab,'setPT')+chips(PRR,P.range,'setPR');
@@ -1211,6 +1280,7 @@ function portfolioTab(){
  if(P.tab==0){
   b+=scopeToggle(rig);
   b+=agentPill();
+  if(P.agent!='all')b+=agentView(c);else{
   if(P.agent=='all')b+='<div class="card"><div class="t15 sb6 l2">Profit</div><div class="hero '+(c.profit<0?'cout':'cin')+'" style="margin-top:6px">'+mfit(c.profit,'','Profit')+'</div><div class="t13 l2" style="margin-top:8px">Received minus expenses minus commission</div><div class="t13" style="margin-top:12px;padding-top:12px;border-top:.5px solid var(--sep)">Expected when all pending is collected <b class="cacc">'+money(c.profit+c.st.bal)+'</b></div></div>';
   else b+='<div class="card t15">Expenses are not tracked per agent, so profit is shown for all agents only.</div>';
   b+=sec('Pinned')+'<div class="mgrid">'+mcard('Total billed','account_balance_wallet_outlined',c.st.total,'cacc',c.bs.length+' bills')+mcard('Received','check_circle_outline',c.st.recv,'cin','')+mcard('Pending','pending_outlined',c.st.bal,'cbal',c.less>0?'after '+money(c.less)+' less':'')+mcard('Commission','handshake_outlined',c.st.comm,'ccom','not part of total')+'</div>';
@@ -1227,6 +1297,7 @@ function portfolioTab(){
   b+='<div class="grp2">'+hl+'</div>';
   b+=agentsSection(c);
   b+=foot('Total billed is the sum of bill totals. Pending is total minus received minus less. Commission is never part of a bill total. Expenses are side ledger purchases and other expenses in the period. Profit is received minus expenses minus commission.');
+  }
  }else if(P.tab==1){
   b+='<div class="mgrid">'+mcard('Total','account_balance_wallet_outlined',c.st.total,'cacc','')+mcard('Entries','receipt_long',String(c.bs.length),'cacc','')+mcard('Received','check_circle_outline',c.st.recv,'cin','')+mcard('Pending','pending_outlined',c.st.bal,'cbal','')+'</div>';
   if(!c.rows.length)b+=emptyUI('pie_chart_outline','No data available','Add ledger entries to see statistics.');
@@ -1258,10 +1329,12 @@ function saveAgent(){
  var nm=(F.an||'').trim();if(!nm){snack('Name is required');return}
  if(!F.aid&&AG.some(function(x){return x.name.toLowerCase()==nm.toLowerCase()})){snack('An agent with this name already exists');return}
  var pr={};['depth','pvc','ms'].forEach(function(cat){TYPES[cat].forEach(function(t){var v=F['rp_'+cat+'_'+t];if(v!==''&&v!=null&&!isNaN(parseFloat(v)))pr[cat+':'+t]=parseFloat(v)})});
- var a=F.aid?agent(F.aid):{id:'a'+Date.now()};
+ var a=F.aid?agent(F.aid):{id:'a'+Date.now()},old=F.aid?JSON.parse(JSON.stringify(a)):null;
  a.name=nm;a.phone=(F.ap||'').trim();a.notes=(F.anote||'').trim();a.cd=parseFloat(F.acd)||0;a.cp=parseFloat(F.acp)||0;a.cm=parseFloat(F.acm)||0;a.pr=pr;
  if(!F.aid)AG.push(a);
- var edit=!!F.aid;closeOv();render();snack(edit?'Agent updated':'Agent added');
+ var edit=!!F.aid,n=old?recalcAgentBills(old,a):0;closeOv();render();
+ /* v2.0.3: the snack says how many existing bills took the new price */
+ snack(!edit?'Agent added':n?'Agent updated. Commission changed on '+n+(n==1?' bill':' bills'):'Agent updated');
 }
 function agentDel(id){var a=agent(id),n=BILLS.filter(function(b){return b.ag==id}).length;F.adm=F.adm||'del';
  if(!n){confirmUI('Delete Agent','Are you sure you want to delete "'+a.name+'"?','Delete',"agentGone('"+id+"')",true);return}
@@ -1291,7 +1364,7 @@ function settingsTab(){
  var A=driveCard()+grp(ri({ico:'contrast',col:'var(--lb2)',t:'Appearance',v:UI.theme.charAt(0).toUpperCase()+UI.theme.slice(1),chev:true,fn:'appearanceSheet()'}).replace('<button class="ri ico"','<button class="ri ico" data-nl="needs logic: LR-23"')+ri({ico:'directions_car',col:'var(--acc)',t:'Rigs',s:'Current: '+rig.name,chev:true,fn:"push('vehicles')"})+ri({ico:'straighten',col:'var(--c-pvc)',t:'Ledger Types',s:'Depth, PVC and MS pipe sizes (7inch, 8inch, 9inch...)',chev:true,fn:"push('ledgerTypes')"}));
  A+=ftl('Backup and restore')+grp(ri({ico:'backup',col:'var(--acc)',t:'Create Backup',s:'Backup all data to a file',chev:true,fn:"snack('Backup created successfully')"})+ri({ico:'restore',col:'var(--acc)',t:'Restore Backup',s:'Restore data from a backup file',chev:true,fn:'restoreDlg()'}));
  var B=ftl('Export and import')+grp(ri({ico:'file_download',col:'var(--in-btn)',t:'Export to CSV',s:'Export ledger entries as a CSV file',chev:true,fn:"push('exportCsv')"})+ri({ico:'file_upload',col:'var(--in-btn)',t:'Import from CSV',s:'Import ledger entries from a CSV file',chev:true,fn:"push('importCsv')"})+ri({ico:'picture_as_pdf',col:'var(--out-btn)',t:'Export to PDF',s:'Generate a PDF report',chev:true,fn:"push('exportPdf')"}));
- B+=ftl('About')+grp(ri({ico:'info',col:'var(--lb2)',t:'About RigLedger',s:'Version 2.0.2 (build 7), license, notices',chev:true,fn:"push('about')"}));
+ B+=ftl('About')+grp(ri({ico:'info',col:'var(--lb2)',t:'About RigLedger',s:'Version 2.0.3 (build 8), license, notices',chev:true,fn:"push('about')"}));
  B+=ftl('Data')+grp(ri({ico:'delete_forever',col:'var(--out-btn)',t:'Clear All Data',s:'Delete all ledger entries and agents',des:true,fn:'clearDlg()'}));
  return scr({t:'Settings',root:true},'<div class="grp2"><div>'+A+'</div><div>'+B+'</div></div>');
 }
@@ -1353,7 +1426,7 @@ function vehDlg(ed){F.vt=F.vt||'main';
 function vehDel(){alertUI('Delete Rig','Are you sure you want to delete "Side Rig 1"? This deletes all ledger entries, side-ledger data and agent information for this rig.',[{t:'Cancel',k:'def'},{t:'Delete',k:'des',fn:"closeOv();snack('Rig deleted')"}])}
 SC.about=function(){
  var tx=function(t,l){return '<div class="card"><div class="t13 sb6 l2" style="margin-bottom:6px;text-transform:uppercase">'+t+'</div>'+l.map(function(x){return '<p class="t15" style="margin-bottom:8px;line-height:1.4">'+x+'</p>'}).join('')+'</div>'};
- var b='<div class="tc" style="padding:8px 0 18px"><div class="avatar" style="width:84px;height:84px;border-radius:22px;margin:0 auto 12px;background:var(--acc-btn);color:var(--onacc)">'+ic('precision_manufacturing',46)+'</div><div class="t22">RigLedger</div><div class="t15 l2">Version 2.0.2 (build 7)</div><div class="t12 l2">com.rigledger.app</div></div>'
+ var b='<div class="tc" style="padding:8px 0 18px"><div class="avatar" style="width:84px;height:84px;border-radius:22px;margin:0 auto 12px;background:var(--acc-btn);color:var(--onacc)">'+ic('precision_manufacturing',46)+'</div><div class="t22">RigLedger</div><div class="t15 l2">Version 2.0.3 (build 8)</div><div class="t12 l2">com.rigledger.app</div></div>'
  +tx('What it is',['A ledger for borewell drilling businesses: bills with payment logs and commission, agents, side ledger purchases and other expenses, user-defined ledger types, portfolio statistics, and an Account Ledger cash book with receiver books.','Available for Android.'])
  +tx('Your data',['All records are stored on this device and the app works without an internet connection.','Optional Google Drive backup and sync: after you sign in with Google, the app requests Google Drive access to create, read and update one file, rigledger_backup.json, in a folder named "RigLedger Backups" in your own Drive.','The app does not include advertising or usage analytics libraries.','Deleted Account Ledger transactions are removed permanently 30 days after deletion.'])
  +tx('Permissions (Android)',['Internet: Google Drive backup and sync.','Storage access: saving and reading backup and report files.'])
@@ -1630,7 +1703,7 @@ var J=[
  ['Ledger tab',[['Home (Ledger, Daily)',function(){S.tab=0;S.lt=0;S.view=0}],['Calendar view',function(){S.tab=0;S.lt=0;S.view=1}],['Side Ledger',function(){S.tab=0;S.lt=1}],['Switch Vehicle sheet',function(){S.tab=0;S.lt=0;S.view=0},rigSheet],['Search sheet',null,searchSheet],['Filter sheet',null,filterSheet],['Add Entry sheet',null,addEntrySheet],['Feet drop down expanded',function(){S.rig='main';S.tab=0;S.lt=0;S.view=0;UI.feetOpen=true}],['Side Bore rig home (Total Depth, no drop down)',function(){S.rig='side';S.tab=0;S.lt=0;S.view=0}],['Add Entry sheet (Side rig, 4 options)',function(){S.rig='side';S.tab=0},addEntrySheet],['Side Ledger (Side rig)',function(){S.rig='side';S.tab=0;S.lt=1}]]],
  ['Bill forms',[['Main Bore - Edit Entry',function(){S.rig='main';S.tab=0;openBill('b1')}],['Main Bore - Edit Entry (manual commission)',function(){S.rig='main';S.tab=0;openBill('b6')}],['Main Bore - Edit Entry (9inch)',function(){S.rig='main';S.tab=0;openBill('b7')}],['Main Bore - Edit Entry (two depth lines, two PVC lines)',function(){S.rig='main';S.tab=0;openBill('b8')}],['Main Bore - Edit Entry (two depth lines, step on one line)',function(){S.rig='main';S.tab=0;openBill('b9')}],['Commission section with several lines',function(){S.rig='main';S.tab=0;openBill('b8')},function(){var e=$('#i_L_depth_0_k'),c=$('#scc');if(e&&c)c.scrollTop+=e.getBoundingClientRect().top-c.getBoundingClientRect().top-70}],['Main Bore - New Entry',function(){S.rig='main';S.tab=0;newForm('billForm')}],['Add payment dialog',function(){S.rig='main';S.tab=0;openBill('b1')},function(){payDlg(false)}],['Add agent dialog (form)',function(){S.rig='main';S.tab=0;newForm('billForm')},function(){addAgentDlg(false)}],['Side Bore - Edit Entry',function(){S.rig='side';S.tab=0;openBill('s2')}],['Side Bore - Edit Entry (two depth lines)',function(){S.rig='side';S.tab=0;openBill('s4')}],['Side Bore - New Entry',function(){S.rig='side';S.tab=0;newForm('sideBoreForm')}],['Delete entry dialog',function(){S.rig='main';openBill('b1')},delBillDlg]]],
  ['Side ledger',[['Diesel Ledger',function(){S.rig='main';S.tab=0;S.stack=[{id:'diesel',p:{}}]}],['PVC Ledger',function(){S.rig='main';S.stack=[{id:'pvc',p:{}}]}],['Bit Ledger',function(){S.rig='main';S.stack=[{id:'bit',p:{}}]}],['Hammer Ledger',function(){S.rig='main';S.stack=[{id:'hammer',p:{}}]}],['Add Diesel Entry',function(){S.rig='main';newSl('diesel')}],['Add PVC Entry',function(){S.rig='main';F={date:TODAY,types:['7 inch'],cnt:{'7 inch':10},rate:{'7 inch':850}};S.stack=[{id:'slForm',p:{k:'pvc'}}]}],['Add Bit Entry',function(){S.rig='main';newSl('bit')}],['Add Hammer Entry',function(){S.rig='main';newSl('hammer')}],['Other Expenses list',function(){S.rig='main';S.stack=[{id:'other',p:{}}]}],['Other Expenses list (date filter)',function(){S.rig='main';UI.orange=[pd('2026-10-05'),pd('2026-10-13')];S.stack=[{id:'other',p:{}}]}],['Other Expenses list (Side rig)',function(){S.rig='side';S.stack=[{id:'other',p:{}}]}],['Add Other Expense',function(){S.rig='main';newOther()}],['Edit Other Expense',function(){S.rig='main';newOther(1)}],['Date range sheet (Other Expenses)',function(){S.rig='main';S.stack=[{id:'other',p:{}}]},otherRange]]],
- ['Portfolio',[['Overview',function(){S.rig='main';S.tab=1;S.pr={tab:0,range:'month',scope:'this',agent:'all'}}],['Overview (agent filter)',function(){S.rig='main';S.tab=1;S.pr={tab:0,range:'month',scope:'this',agent:'a1'}}],['Ledger tab (donut)',function(){S.rig='main';S.tab=1;S.pr={tab:1,range:'month',scope:'this',agent:'all'}}],['Side Ledger tab',function(){S.rig='main';S.tab=1;S.pr={tab:2,range:'6m',scope:'this',agent:'all'}}],['Overview (All rigs scope)',function(){S.rig='main';S.tab=1;S.pr={tab:0,range:'month',scope:'all',agent:'all'}}],['Agent filter sheet',function(){S.rig='main';S.tab=1;S.pr={tab:0,range:'month',scope:'this',agent:'all'}},function(){agentFilterSheet()}],['Agent filter sheet (search typed)',function(){S.rig='main';S.tab=1;S.pr={tab:0,range:'month',scope:'this',agent:'a3'}},function(){agentFilterSheet('kar')}]]],
+ ['Portfolio',[['Overview',function(){S.rig='main';S.tab=1;S.pr={tab:0,range:'month',scope:'this',agent:'all'}}],['Overview (agent view, Murugan)',function(){S.rig='main';S.tab=1;S.pr={tab:0,range:'month',scope:'this',agent:'a1'}}],['Ledger tab (donut)',function(){S.rig='main';S.tab=1;S.pr={tab:1,range:'month',scope:'this',agent:'all'}}],['Side Ledger tab',function(){S.rig='main';S.tab=1;S.pr={tab:2,range:'6m',scope:'this',agent:'all'}}],['Overview (All rigs scope)',function(){S.rig='main';S.tab=1;S.pr={tab:0,range:'month',scope:'all',agent:'all'}}],['Agent filter sheet',function(){S.rig='main';S.tab=1;S.pr={tab:0,range:'month',scope:'this',agent:'all'}},function(){agentFilterSheet()}],['Agent filter sheet (search typed)',function(){S.rig='main';S.tab=1;S.pr={tab:0,range:'month',scope:'this',agent:'a3'}},function(){agentFilterSheet('kar')}]]],
  ['Agents (inside Portfolio)',[['Agents section (Portfolio Overview)',function(){S.rig='main';S.tab=1;S.pr={tab:0,range:'month',scope:'this',agent:'all'};setTimeout(function(){var e=$('#scc');var h=document.querySelector('.plink');if(e&&h)e.scrollTop=h.offsetTop-120},60)}],['Agent detail sheet',function(){S.rig='main';S.tab=1},function(){agentSheet('a3')}],['Agent detail sheet (no bills)',function(){S.rig='main';S.tab=1},function(){agentSheet('a4')}],['Add Agent dialog',function(){S.tab=1},function(){agentDlg()}],['Edit Agent dialog',function(){S.tab=1},function(){agentDlg('a3')}],['Delete Agent dialog',function(){S.tab=1},function(){agentDel('a4')}]]],
  ['Account Ledger',[['Home (All)',function(){S.tab=2;CB.period='all';CB.off=0;CB.book='cash';CB.search=false;CB.q='';CB.tf=null}],['Home (Monthly, previous balance)',function(){S.tab=2;CB.period='monthly';CB.off=0;CB.book='cash'}],['Receiver book (linked rows)',function(){S.tab=2;CB.period='all';CB.book='mur'}],['Drawer hub',function(){S.tab=2;CB.period='all'},cbDrawer],['Book picker',function(){S.tab=2},cbPicker],['Overflow menu',function(){S.tab=2},cbMenu],['Add Income form',function(){S.tab=2;CB.period='all';cbForm('in')}],['Edit Transaction form',function(){S.tab=2;cbForm(null,5)}],['Calculator sheet',function(){S.tab=2;cbForm('out')},function(){CK='1500+250';calcRender()}],['Add Items dialog',function(){S.tab=2;cbForm('out')},cbItemsDlg],['Accounts screen',function(){S.tab=2;S.stack=[{id:'cbBooks',p:{}}]}],['Account actions sheet',function(){S.tab=2;S.stack=[{id:'cbBooks',p:{}}]},function(){cbBookSheet('mur')}],['Add Account dialog',function(){S.tab=2;S.stack=[{id:'cbBooks',p:{}}]},cbBookDlg],['Transfer',function(){S.tab=2;F={};S.stack=[{id:'cbTransfer',p:{}}]}],['Summary',function(){S.tab=2;CB.period='all';S.stack=[{id:'cbSummary',p:{}}]}],['Account Summary',function(){S.tab=2;F={};S.stack=[{id:'cbAcctSummary',p:{}}]}],['Transaction-All Accounts',function(){S.tab=2;CB.period='all';F={};S.stack=[{id:'cbAllTx',p:{}}]}],['Calendar',function(){S.tab=2;F={};S.stack=[{id:'cbCalendar',p:{}}]}],['Notebook',function(){S.tab=2;F={};S.stack=[{id:'cbNotebook',p:{}}]}],['Note form',function(){S.tab=2;S.stack=[{id:'cbNote',p:{id:1}}]}],['Deleted Transactions',function(){S.tab=2;S.stack=[{id:'cbTrash',p:{}}]}],['Account Ledger settings',function(){S.tab=2;S.stack=[{id:'cbSettings',p:{}}]}],['Import (dry run)',function(){S.tab=2;F={imp:1};S.stack=[{id:'cbImport',p:{}}]}],['Import (result)',function(){S.tab=2;F={imp:2};S.stack=[{id:'cbImport',p:{}}]}],['Help',function(){S.tab=2;S.stack=[{id:'cbHelp',p:{}}]}],['Report dialog (all)',function(){S.tab=2},function(){cbReportDlg(0)}]]],
  ['Settings',[['Settings (Drive connected)',function(){S.tab=3;S.drive=true}],['Settings (Drive not connected)',function(){S.tab=3;S.drive=false}],['Vehicle Management',function(){S.tab=3;S.stack=[{id:'vehicles',p:{}}]}],['Add Vehicle dialog',function(){S.tab=3;S.stack=[{id:'vehicles',p:{}}]},vehDlg],['Export to CSV',function(){S.tab=3;F={};S.stack=[{id:'exportCsv',p:{}}]}],['Ledger Types',function(){S.tab=3;S.stack=[{id:'ledgerTypes',p:{}}]}],['Add type dialog',function(){S.tab=3;S.stack=[{id:'ledgerTypes',p:{}}]},function(){typeDlg('depth')}],['Rename type dialog',function(){S.tab=3;S.stack=[{id:'ledgerTypes',p:{}}]},function(){typeDlg('depth','9inch')}],['Step rate table sheet',function(){S.tab=3;S.stack=[{id:'ledgerTypes',p:{}}]},function(){stepDlg('9inch')}],['Delete type dialog',function(){S.tab=3;S.stack=[{id:'ledgerTypes',p:{}}]},function(){typeDelDlg('depth','8inch')}],['Import from CSV',function(){S.tab=3;F={is:0};S.stack=[{id:'importCsv',p:{}}]}],['Export to PDF',function(){S.tab=3;F={};S.stack=[{id:'exportPdf',p:{}}]}],['Export to CSV (Other expenses)',function(){S.tab=3;F={xt:'Other expenses'};S.stack=[{id:'exportCsv',p:{}}]}],['Export to PDF (Other expenses)',function(){S.tab=3;F={xt:'Other expenses'};S.stack=[{id:'exportPdf',p:{}}]}],['About',function(){S.tab=3;S.stack=[{id:'about',p:{}}]}],['Clear All Data dialog',function(){S.tab=3},clearDlg],['Restore Backup dialog',function(){S.tab=3},restoreDlg]]]
@@ -1663,6 +1736,11 @@ J.push(['Apple direction: overlays',[
  ['Agent delete with entries',function(){S.tab=1},function(){F={};agentDel('a1')}],
  ['Rig sheet from Portfolio (B1)',function(){S.tab=1},rigSheet],
  ['Calendar view with selected day',function(){S.tab=0;S.lt=0;S.view=1;UI.calSel='2026-10-12'}]]]);
+J.push(['Agent view (v2.0.3)',[
+ ['Agent view (3 month, Karthik)',function(){S.rig='main';S.tab=1;S.pr={tab:0,range:'3m',scope:'this',agent:'a3'}}],
+ ['Agent view (manual commission bill)',function(){S.rig='main';S.tab=1;S.pr={tab:0,range:'3m',scope:'this',agent:'a3'}},function(){var e=document.querySelector('.agb[data-man]'),c=$('#scc');if(e&&c)c.scrollTop=e.offsetTop-120}],
+ ['Agent view (no bills, empty state)',function(){S.rig='main';S.tab=1;S.pr={tab:0,range:'3m',scope:'this',agent:'a4'}}],
+ ['Edit Agent dialog (prices change existing bills)',function(){S.rig='main';S.tab=1;S.pr={tab:0,range:'3m',scope:'this',agent:'a3'}},function(){agentDlg('a3')}]]]);
 var _jump=jump;
 jump=function(gi,ii){UI.state=null;UI.calSel=null;UI.feetOpen=false;UI.orange=null;F={};FM={};LASTKEY='';_jump(gi,ii)};
 
@@ -1701,7 +1779,7 @@ function devRow(label,kind,opts,cur){
  return '<h2>'+label+'</h2><div class="dv">'+opts.map(function(o){return '<button class="'+(String(cur)==String(o[0])?'on':'')+'" onclick="dev(\''+kind+'\',\''+o[0]+'\')">'+o[1]+'</button>'}).join('')+'</div>';
 }
 function buildSide(){
- var h='<h1>RigLedger 2.0.2</h1><div class="sub">Apple style mockup, dummy data. Click a screen, or use the phone directly.</div><h2 style="margin-top:4px">Dev</h2>';
+ var h='<h1>RigLedger 2.0.3</h1><div class="sub">Apple style mockup, dummy data. Click a screen, or use the phone directly.</div><h2 style="margin-top:4px">Dev</h2>';
  h+=devRow('Theme','theme',[['system','System'],['light','Light'],['dark','Dark']],UI.theme);
  h+=devRow('Accent preview','accent',[['blue','System blue'],['lime','Lime'],['green','Green'],['brand','Brand 315D9A']],UI.accent);
  h+=devRow('Text scale','ts',[[1,'100'],[1.3,'130'],[2,'200']],UI.ts);

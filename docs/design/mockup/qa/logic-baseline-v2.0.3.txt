@@ -1,0 +1,199 @@
+var $=function(s){return document.querySelector(s)};
+var MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+var MONF=['January','February','March','April','May','June','July','August','September','October','November','December'];
+var DOW=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+var RS='₹';
+var TODAY='2026-10-13';
+function p2(n){return String(n).padStart(2,'0')}
+function pd(s){var a=s.split('-').map(Number);return new Date(a[0],a[1]-1,a[2])}
+function iso(d){return d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate())}
+function addD(d,n){return new Date(d.getFullYear(),d.getMonth(),d.getDate()+n)}
+function fT(t){var a=t.split(':').map(Number);var h=a[0]%12||12;return p2(h)+':'+p2(a[1])+' '+(a[0]<12?'AM':'PM')}
+function sum(a,f){return a.reduce(function(t,x){return t+f(x)},0)}
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;')}
+/* ---------- dummy data ---------- */
+var VEH=[{id:'main',name:'Main Rig',type:0},{id:'side',name:'Side Rig 1',type:1}];
+var AG=[
+ {id:'a1',name:'Murugan',phone:'98765 43210',notes:'Salem region',cd:10,cp:5,cm:0,pr:{}},
+ {id:'a2',name:'Selvam',phone:'98421 77012',notes:'',cd:8,cp:4,cm:0,pr:{}},
+ {id:'a3',name:'Karthik',phone:'99440 12345',notes:'Omalur',cd:10,cp:5,cm:2,pr:{'depth:7inch':10,'depth:8inch':11,'depth:9inch':12,'pvc:7inch':5,'pvc:8inch':6,'ms:6inch':2}},
+ {id:'a4',name:'Prakash',phone:'97890 55123',notes:'New agent, no bills yet',cd:9,cp:0,cm:0,pr:{}}];
+/* v2.0.1 user-defined types (Settings, Ledger Types). Step table per depth type: '7inch', '8inch' or 'none'. */
+var TYPES={depth:['7inch','8inch','9inch'],pvc:['7inch','8inch'],ms:['6inch']};
+var STEP={'7inch':[10,20,30,50,70,90],'8inch':[10,20,40,60,80,100]};
+var STEPT={'7inch':'7inch','8inch':'8inch','9inch':'none'};
+function stepFor(t,ft){var inc=STEP[STEPT[t]];if(!inc)return 0;var s=0,i;for(i=0;i<6;i++){var lo=300+i*100;var f=Math.max(0,Math.min(ft,lo+100)-lo);s+=f*inc[i]}return s}
+/* agent price per foot for a type, else the default of that kind (Agent.rateFor) */
+function rateFor(a,cat,t){var v=a.pr&&a.pr[cat+':'+t];if(v!=null)return v;return cat=='depth'?a.cd:cat=='pvc'?a.cp:a.cm}
+/* v2.0.2: a bill has lines. Each line is one category (depth, pvc, ms), a type, feet f, rate per foot r and a commission rate k per foot. */
+/* v2.0.3: an optional 5th argument is a commission rate typed by hand on that line (hk); without it the line takes the agent price */
+function LN(c,t,f,r,hk){return {c:c,t:t,f:f,r:r,k:0,hk:hk}}
+var BILLS=[
+ {id:'b1',rig:'main',date:'2026-10-12',bill:'1042',ag:'a1',addr:'Salem',L:[LN('depth','7inch',350,90),LN('pvc','7inch',120,150),LN('ms','6inch',20,400)],ex:1000,cash:30000,pp:10000,payer:'Ravi Kumar',less:500,notes:'Water at 340 ft'},
+ {id:'b2',rig:'main',date:'2026-10-10',bill:'1041',ag:'a2',addr:'Attur',L:[LN('depth','8inch',420,95),LN('pvc','8inch',150,170),LN('ms','6inch',30,400)],ex:0,cash:78800,pp:0,payer:'',less:0,notes:''},
+ {id:'b3',rig:'main',date:'2026-10-07',bill:'1040',ag:'a3',addr:'Omalur',L:[LN('depth','7inch',280,92),LN('pvc','7inch',100,150)],ex:500,cash:20000,pp:0,payer:'',less:260,notes:'Balance next week'},
+ {id:'b4',rig:'main',date:'2026-10-03',bill:'1039',ag:'a1',addr:'Mettur',L:[LN('depth','8inch',510,95),LN('pvc','8inch',200,170),LN('ms','6inch',40,400)],ex:2000,cash:60000,pp:30000,payer:'Mani',less:0,notes:''},
+ {id:'b5',rig:'main',date:'2026-09-28',bill:'1038',ag:'a2',addr:'Salem',L:[LN('depth','7inch',320,90),LN('pvc','7inch',80,150)],ex:0,cash:41000,pp:0,payer:'',less:0,notes:''},
+ {id:'b6',rig:'main',date:'2026-09-20',bill:'1037',ag:'a3',addr:'Attur',L:[LN('depth','7inch',300,90),LN('pvc','7inch',100,150),LN('ms','6inch',20,400)],ex:0,cash:50000,pp:0,payer:'',less:0,notes:'Commission typed by hand',cmo:3000},
+ {id:'b7',rig:'main',date:'2026-10-13',bill:'1043',ag:'a3',addr:'Yercaud',L:[LN('depth','9inch',260,100),LN('pvc','7inch',60,150)],ex:0,cash:15000,pp:0,payer:'',less:0,notes:'9 inch, no step rate'},
+ {id:'b8',rig:'main',date:'2026-10-11',bill:'1044',ag:'a3',addr:'Namakkal',L:[LN('depth','7inch',200,90),LN('depth','8inch',150,95),LN('pvc','7inch',80,150),LN('pvc','8inch',60,170)],ex:0,cash:30000,pp:0,payer:'',less:0,notes:'Two depth lines and two PVC lines'},
+ {id:'b9',rig:'main',date:'2026-10-06',bill:'1045',ag:'a3',addr:'Erode',L:[LN('depth','7inch',320,90),LN('depth','9inch',150,100)],ex:0,cash:40000,pp:0,payer:'',less:0,notes:'Step rate only on the 7inch line'},
+ {id:'b10',rig:'main',date:'2026-08-18',bill:'1036',ag:'a3',addr:'Sankari',L:[LN('depth','7inch',250,90),LN('pvc','7inch',90,150,8)],ex:0,cash:20000,pp:0,payer:'',less:0,notes:'PVC commission rate typed by hand (8)'},
+ {id:'s1',rig:'side',date:'2026-10-11',bill:'201',ag:'a2',addr:'Omalur',L:[LN('depth','7inch',200,85)],ex:0,cash:17000,pp:0,payer:'',less:0,notes:''},
+ {id:'s2',rig:'side',date:'2026-10-08',bill:'202',ag:'a1',addr:'Attur',L:[LN('depth','7inch',250,85)],ex:0,cash:10000,pp:5000,payer:'Suresh',less:0,notes:''},
+ {id:'s3',rig:'side',date:'2026-10-02',bill:'203',ag:'a3',addr:'Salem',L:[LN('depth','7inch',180,85)],ex:0,cash:15300,pp:0,payer:'',less:0,notes:''},
+ {id:'s4',rig:'side',date:'2026-10-09',bill:'204',ag:'a1',addr:'Mettur',L:[LN('depth','7inch',120,85),LN('depth','7inch',100,90)],ex:0,cash:10000,pp:0,payer:'',less:0,notes:'Two depth lines'}
+];
+/* lines of one category, feet of a category, types a bill uses (LedgerEntry.typesOf: lines with feet, else the first line), any line has a type */
+function linesOf(b,c){return b.L.filter(function(l){return l.c==c})}
+function lfeet(b,c){return sum(linesOf(b,c),function(l){return l.f})}
+function lcomm(b,c){return sum(linesOf(b,c),function(l){return l.f*l.k})}
+function typesOf(b,c){var l=linesOf(b,c),w=l.filter(function(x){return x.f>0}),o=[];(w.length?w:l.slice(0,1)).forEach(function(x){if(o.indexOf(x.t)<0)o.push(x.t)});return o}
+function hasType(b,c,t){return linesOf(b,c).some(function(l){return l.t==t})}
+/* step rate of all depth lines: every line is worked out on its own (own type table, feet from 0); the bill step rate is the sum; side bore has none */
+function stepSum(L,side){return side?0:sum(L.filter(function(l){return l.c=='depth'}),function(l){return stepFor(l.t,l.f)})}
+function calcBill(b){
+ var side=b.rig=='side';
+ b.d=lfeet(b,'depth');b.p=lfeet(b,'pvc');b.m=lfeet(b,'ms');
+ b.step=stepSum(b.L,side);
+ b.total=sum(b.L,function(l){return l.f*l.r})+b.step+b.ex;
+ b.man=b.cmo!=null;
+ b.comm=b.man?b.cmo:Math.round(sum(b.L,function(l){return l.f*l.k})*100)/100;
+ b.recv=b.cash+b.pp;b.bal=b.total-b.recv-b.less;
+}
+BILLS.forEach(function(b){
+ var a=AG.filter(function(x){return x.id==b.ag})[0];
+ b.L.forEach(function(l){l.k=l.hk!=null?l.hk:(b.rig=='side'?a.cd:rateFor(a,l.c,l.t))});
+ calcBill(b);
+});
+/* v2.0.3 (CommissionRecalc.changedBills): after an agent's prices change, the bills of that agent follow the new price. A bill with a hand-typed commission total (man) is skipped. A line follows only when its rate still equals the OLD agent price of its type (the rate came from the agent); a line with another rate was typed by hand and stays. Side bore bills use the default depth rate (depth lines only). The bill commission is recalculated from the lines. Returns the number of bills changed. */
+function agentPrice(a,c,t,side){return side?a.cd:rateFor(a,c,t)}
+function recalcAgentBills(oldA,newA){
+ var n=0;
+ BILLS.forEach(function(b){
+  if(b.ag!=newA.id||b.man)return;
+  var side=b.rig=='side',any=false;
+  b.L.forEach(function(l){
+   if(side&&l.c!='depth')return;
+   var o=agentPrice(oldA,l.c,l.t,side),w=agentPrice(newA,l.c,l.t,side);
+   if(Math.abs(o-w)>1e-9&&Math.abs(l.k-o)<1e-9){l.k=w;any=true}
+  });
+  if(any){calcBill(b);n++}
+ });
+ return n;
+}
+var SL={
+ diesel:[{bill:'231',date:'2026-10-11',l:120,r:92.5,paid:8000,place:'Salem HP Bunk'},{bill:'230',date:'2026-10-04',l:100,r:91.8,paid:9180,place:'Attur Indian Oil'},{bill:'229',date:'2026-09-22',l:150,r:90.5,paid:13575,place:'Salem HP Bunk'}],
+ pvc:[{bill:'88',date:'2026-10-09',t:[{n:'7 inch',c:20,r:850},{n:'8 inch',c:10,r:1050}],paid:20000,place:'Salem yard'},{bill:'87',date:'2026-09-26',t:[{n:'7 inch',c:15,r:850}],paid:12750,place:'Salem yard'}],
+ bit:[{bill:'41',date:'2026-10-06',t:[{n:'7.5 inch',c:2,r:6500}],paid:13000,place:'BIT-7-014'},{bill:'40',date:'2026-09-18',t:[{n:'7.25 inch',c:1,r:5800}],paid:0,place:'BIT-7-009'}],
+ hammer:[{bill:'12',date:'2026-10-02',t:[{n:'6.5 inch',c:1,r:9500}],paid:5000,place:'DTH-6.5 A'}],
+ other:[{bill:'',date:'2026-10-11',desc:'Labour wages',total:9000,paid:9000},{bill:'15',date:'2026-10-08',desc:'Rig repair',total:4500,paid:3000},{bill:'',date:'2026-10-02',desc:'Food for the crew',total:2400,paid:2400},{bill:'14',date:'2026-09-20',desc:'Welding work',total:3200,paid:3200}]
+};
+SL.diesel.forEach(function(e){e.total=e.l*e.r;e.pend=e.total-e.paid});
+SL.other.forEach(function(e){e.pend=e.total-e.paid});
+['pvc','bit','hammer'].forEach(function(k){SL[k].forEach(function(e){e.total=sum(e.t,function(x){return x.c*x.r});e.cnt=sum(e.t,function(x){return x.c});e.pend=e.total-e.paid})});
+var CB_BOOKS=[{id:'cash',name:'Cash',rec:false},{id:'bank',name:'Bank',rec:false},{id:'mur',name:'Murugan',rec:true}];
+var CBE=[
+ {id:1,b:'cash',t:'in',a:50000,n:'Cash from owner',d:'2026-09-25',tm:'10:00',ln:0},
+ {id:2,b:'cash',t:'in',a:15000,n:'Selvam advance',d:'2026-09-28',tm:'11:20',ln:0},
+ {id:3,b:'cash',t:'out',a:4200,n:'Diesel for rig',d:'2026-09-30',tm:'08:45',ln:0},
+ {id:4,b:'cash',t:'out',a:1800,n:'Tea and food for crew',d:'2026-10-02',tm:'13:10',ln:0},
+ {id:5,b:'cash',t:'out',a:12000,n:'Labour wages',d:'2026-10-03',tm:'18:30',ln:0},
+ {id:6,b:'cash',t:'out',a:3500,n:'Compressor service',d:'2026-10-08',tm:'12:00',ln:0},
+ {id:7,b:'cash',t:'out',a:10000,n:'Transfer to Bank',d:'2026-10-09',tm:'16:40',ln:0},
+ {id:8,b:'cash',t:'out',a:2500,n:'Spare parts',d:'2026-10-10',tm:'09:15',ln:0},
+ {id:9,b:'cash',t:'out',a:6000,n:'Labour wages',d:'2026-10-11',tm:'18:05',ln:0},
+ {id:10,b:'bank',t:'in',a:25000,n:'Opening balance',d:'2026-09-29',tm:'09:00',ln:0},
+ {id:11,b:'bank',t:'in',a:10000,n:'Transfer from Cash',d:'2026-10-09',tm:'16:40',ln:0},
+ {id:12,b:'bank',t:'out',a:7500,n:'Insurance premium',d:'2026-10-10',tm:'11:30',ln:0},
+ {id:13,b:'mur',t:'in',a:90000,n:'Bill 1039 payment',d:'2026-10-03',tm:'17:00',ln:1},
+ {id:14,b:'mur',t:'in',a:30000,n:'Bill 1042 cash',d:'2026-10-12',tm:'15:20',ln:1},
+ {id:15,b:'mur',t:'in',a:10000,n:'Bill 1042 PhonePe',d:'2026-10-12',tm:'15:25',ln:1},
+ {id:16,b:'mur',t:'out',a:20000,n:'Paid to Murugan',d:'2026-10-13',tm:'10:10',ln:0}
+];
+var CB_TRASH=[{n:'Hotel stay',a:3200,t:'out',book:'Cash',d:'2026-10-05',tm:'20:10',left:24}];
+var CB_NOTES=[{id:1,d:'2026-10-12',tm:'09:30',text:'Call Selvam about pending 1041 balance',done:false},{id:2,d:'2026-10-08',tm:'17:00',text:'Order PVC 7 inch from Salem yard',done:true},{id:3,d:'2026-10-05',tm:'08:15',text:'Insurance renewal due on Oct 10',done:true}];
+
+/* ---------- state ---------- */
+var S={tab:0,stack:[],rig:'main',lt:0,per:'month',pm:0,view:0,q:'',flt:{},slper:'month',
+ pr:{tab:0,range:'month',scope:'this',agent:'all'},drive:true,setT:0};
+var CB={book:'cash',period:'all',off:0,custom:null,q:'',tf:null,asc:false,search:false,
+ set:{time:true,t12:true,prev:true,bal:true,desc:false,showdate:false,sug:true,rtime:false}};
+var F={},FM={};
+/* ---------- derived ---------- */
+function agent(id){return AG.filter(function(a){return a.id==id})[0]||{name:'',cd:0,cp:0,cm:0,pr:{}}}
+function rigBills(rig){return BILLS.filter(function(b){return b.rig==rig})}
+function isSide(){return S.rig=='side'}
+function mrange(per,off){
+ var a=pd(TODAY),y=a.getFullYear(),m=a.getMonth();
+ if(per=='day')return [a,a];
+ if(per=='month'){return [new Date(y,m+off,1),new Date(y,m+off+1,0)]}
+ if(per=='3m')return [new Date(y,m-2,1),new Date(y,m+1,0)];
+ if(per=='6m')return [new Date(y,m-5,1),new Date(y,m+1,0)];
+ if(per=='year')return [new Date(y+off,0,1),new Date(y+off,11,31)];
+ if(per=='custom')return [new Date(y,m-1,1),a];
+ return null;
+}
+function inR(s,r){if(!r)return true;var d=pd(s);return d>=r[0]&&d<=r[1]}
+function periodBills(){
+ var r=mrange(S.per,S.pm),f=S.flt,q=S.q.toLowerCase();
+ return BILLS.filter(function(b){
+  if(b.rig!=S.rig||!inR(b.date,r))return false;
+  if(f.bill&&b.bill.indexOf(f.bill)<0)return false;
+  if(f.addr&&b.addr.toLowerCase().indexOf(f.addr.toLowerCase())<0)return false;
+  if(f.ag&&b.ag!=f.ag)return false;
+  if(f.dt&&!hasType(b,'depth',f.dt))return false;
+  if(f.pt&&!hasType(b,'pvc',f.pt))return false;
+  if(q&&(b.bill+' '+b.addr+' '+agent(b.ag).name+' '+b.notes).toLowerCase().indexOf(q)<0)return false;
+  return true;
+ }).sort(function(a,b){return a.date<b.date?1:a.date>b.date?-1:b.bill-a.bill});
+}
+/* feet per user-defined type, in list order (FeetTotals); every line counts under its own type; a type that no list knows is kept under its own name */
+function feetBy(bs,cat){var o={};TYPES[cat].forEach(function(t){o[t]=0});bs.forEach(function(b){linesOf(b,cat).forEach(function(l){o[l.t]=(o[l.t]||0)+l.f})});return o}
+function feetTotals(bs){var d=feetBy(bs,'depth'),p=feetBy(bs,'pvc'),m=feetBy(bs,'ms'),t=function(o){return sum(Object.keys(o),function(k){return o[k]})};return {depth:d,pvc:p,ms:m,depthTotal:t(d),pvcTotal:t(p),msTotal:t(m)}}
+function stats(bs){return {total:sum(bs,function(b){return b.total}),recv:sum(bs,function(b){return b.recv}),bal:sum(bs,function(b){return b.bal}),comm:sum(bs,function(b){return b.comm}),ft:feetTotals(bs),ms:sum(bs,function(b){return b.m}),dep:sum(bs,function(b){return b.d})}}
+function slIn(k,r){return SL[k].filter(function(e){return inR(e.date,r)})}
+function expenses(r){var o={diesel:0,pvc:0,bit:0,hammer:0,other:0};for(var k in o)o[k]=sum(slIn(k,r),function(e){return e.total});o.total=o.diesel+o.pvc+o.bit+o.hammer+o.other;return o}
+/* the lines of the open bill form as numbers (F.LN holds the text of each line) */
+function formLines(){var o=[];['depth','pvc','ms'].forEach(function(c){((F.LN&&F.LN[c])||[]).forEach(function(l){o.push({c:c,t:l.t,f:parseFloat(l.f)||0,r:parseFloat(l.r)||0,k:parseFloat(l.k)||0})})});return o}
+function calcMain(side){
+ var n=function(k){return parseFloat(F[k])||0},L=formLines(),of=function(c){return L.filter(function(l){return l.c==c})};
+ var dep=sum(of('depth'),function(l){return l.f*l.r}),pv=sum(of('pvc'),function(l){return l.f*l.r}),ms=sum(of('ms'),function(l){return l.f*l.r}),ex=n('ex');
+ if(!FM.step)F.step=stepSum(L,side);
+ var st=n('step'),tot=dep+st+pv+ms+ex;
+ if(!FM.total)F.total=tot;
+ var comm=sum(L,function(l){return l.f*l.k});if(!FM.comm)F.comm=comm;
+ var rec=n('early')+sum(F.pays||[],function(p){return p.amt});
+ var bal=n('total')-rec-n('less');
+ return {dep:dep,pv:pv,ms:ms,ex:ex,st:st,tot:tot,comm:comm,rec:rec,bal:bal,lines:L};
+}
+/* bills of the Portfolio scope and period, before the agent filter (the agent filter sheet counts these) */
+function pfScopeBills(){var P=S.pr,r=mrange(P.range,0);return BILLS.filter(function(b){return inR(b.date,r)&&(P.scope=='all'||b.rig==S.rig)})}
+function pfCalc(ag){
+ var P=S.pr,a0=ag||P.agent,r=mrange(P.range,0),bs=pfScopeBills().filter(function(b){return a0=='all'||b.ag==a0});
+ var st=stats(bs),ex=expenses(r),less=sum(bs,function(b){return b.less});
+ var rows=AG.map(function(a){var x=bs.filter(function(b){return b.ag==a.id});return {name:a.name,n:x.length,total:sum(x,function(b){return b.total}),recv:sum(x,function(b){return b.recv}),pend:sum(x,function(b){return b.bal}),comm:sum(x,function(b){return b.comm})}}).filter(function(x){return x.n});
+ return {bs:bs,st:st,ex:ex,less:less,rows:rows,profit:st.recv-ex.total-st.comm,exp:st.total-st.comm-ex.total-0};
+}
+function cbRange(){
+ if(CB.custom)return CB.custom;var a=pd(TODAY),p=CB.period,o=CB.off;
+ if(p=='all')return null;
+ if(p=='daily'){var d=addD(a,o);return [d,d]}
+ if(p=='weekly'){var s=addD(a,-a.getDay()+7*o);return [s,addD(s,6)]}
+ if(p=='monthly')return [new Date(a.getFullYear(),a.getMonth()+o,1),new Date(a.getFullYear(),a.getMonth()+o+1,0)];
+ return [new Date(a.getFullYear()+o,0,1),new Date(a.getFullYear()+o,11,31)];
+}
+function cbEntries(bookId,r,opt){opt=opt||{};
+ return CBE.filter(function(e){if(bookId&&e.b!=bookId)return false;if(r&&!inR(e.d,r))return false;if(opt.tf&&e.t!=opt.tf)return false;if(opt.q&&(e.n+' '+book(e.b).name).toLowerCase().indexOf(opt.q.toLowerCase())<0)return false;return true});
+}
+function net(es){return sum(es,function(e){return e.t=='in'?e.a:-e.a})}
+function cbCalc(){
+ var r=CB.q?null:cbRange(),es=cbEntries(CB.book,r,{tf:CB.tf,q:CB.q});
+ var prev=(r&&CB.set.prev&&!CB.q)?net(CBE.filter(function(e){return e.b==CB.book&&pd(e.d)<r[0]})):0;
+ var inc=sum(es,function(e){return e.t=='in'?e.a:0}),exp=sum(es,function(e){return e.t=='out'?e.a:0});
+ var chron=es.slice().sort(function(a,b){return (a.d+a.tm)<(b.d+b.tm)?-1:1}),run=prev;chron.forEach(function(e){run+=e.t=='in'?e.a:-e.a;e.run=run});
+ return {r:r,es:es,prev:prev,inc:inc,exp:exp,bal:inc-exp};
+}
+var CK='';
+function calcVal(){try{if(!/^[0-9+\-*\/. ]+$/.test(CK)||!CK)return null;var v=Function('"use strict";return ('+CK+')')();return isFinite(v)?Math.round(v*100)/100:null}catch(e){return null}}
+function tot0(){return sum(F.items,function(i){return i.q*i.r})}

@@ -1,10 +1,10 @@
 # Mockup progress (checkpoints, newest last)
 
-Resume rule: this file plus `rigledger_apple_mockup.html` are the whole state. The v1 file at `docs/design/ref/mockup-v1/rigledger_android_mockup.html` is no longer the logic baseline (since the 2.0.2 update the baseline is `qa/logic-baseline-v2.0.2.txt`; the 2.0.1 copy stays for history) and must not be edited from here. Nothing under `lib/` was touched.
+Resume rule: this file plus `rigledger_apple_mockup.html` are the whole state. The v1 file at `docs/design/ref/mockup-v1/rigledger_android_mockup.html` is no longer the logic baseline (since the 2.0.3 update the baseline is `qa/logic-baseline-v2.0.3.txt`; the 2.0.1 and 2.0.2 copies stay for history) and must not be edited from here. Nothing under `lib/` was touched.
 
 Authoring note: the file was assembled once from parts kept ignored by git (CSS, core, ledger, portfolio/agents/settings, accounts, dev), with the logic block copied from the baseline by line range. After the first assembly it is edited directly. `qa/logic-diff.mjs` re-proves the freeze at any time.
 
-## Status by J group (all DONE; 117 screens after the 2.0.2 update, 111 after 2.0.1, 91 before: 68 from v1, 23 added for the Apple direction, 20 added for 2.0.1)
+## Status by J group (all DONE; 121 screens after the 2.0.3 update, 117 after 2.0.2, 111 after 2.0.1, 91 before: 68 from v1, 23 added for the Apple direction, 20 added for 2.0.1)
 
 | J group | Screens | Status | Notes |
 |---|---|---|---|
@@ -17,6 +17,7 @@ Authoring note: the file was assembled once from parts kept ignored by git (CSS,
 | Settings | 10 | DONE | Drive hero card (connected, not connected, error), Appearance row (LR-23), Rigs, exports |
 | Apple direction: states (new) | 14 | DONE | empty, loading, error for every list |
 | Apple direction: overlays (new) | 9 | DONE | row actions, full value popover, alerts, appearance, date picker |
+| Agent view (v2.0.3, new) | 4 | DONE | 3 month agent view, manual commission bill, empty state, Edit Agent dialog |
 
 ## Checkpoint 2: Android platform pass (2026-10-13)
 
@@ -128,3 +129,45 @@ Fix found on the way: typing in the agent dialog after visiting a bill form call
 ### Open
 
 Nothing blocks. Not shown: per-line step rate editing, import and PDF per-line columns (the app has none). The older docs `docs/v2.0.2-review.md` ("mockups show one line per category") can now be updated by the developer.
+
+## Checkpoint 5: update to app version 2.0.3 (2026-10-22)
+
+Source of truth: `docs/v2.0.3-review.md` and the Flutter code (`agent_view.dart`, `portfolio_view.dart`, `commission_recalc.dart`, `agent_provider.dart`, `agent_dialogs.dart`, read only). The mockup now matches 2.0.3+8. Per item:
+
+1. Version text is 2.0.3 (build 8): page title, dev panel title, About, Settings row.
+2. Agent prices update existing bills: saving the Edit Agent dialog runs `recalcAgentBills` on the page data (same rule as `CommissionRecalc.changedBills`, see MOCKUP_NOTES.md) and shows "Agent updated" or "Agent updated. Commission changed on N bills" (1 bill singular). Ledger cards, summary strip, Portfolio and the agent view change with it.
+3. Portfolio agent view (`agentView()`): choosing an agent in the pill sheet or tapping an agent row replaces the profit card, metric cards, expenses card, Agents section and definitions with the gradient header (name, period "01 Aug 2026 to 13 Oct 2026" or "All time", Commission earned, "All agents" back button, tune icon), the profit card (green or red, Expected, All agents after expenses, the note), Bills / Total and Received / Pending cards, the By month table (only when the period spans more than one month), one card per bill newest first (tap opens the form) and a totals row; empty case "No bills for NAME in this period". The Agents section rows have an info icon button (tooltip "Prices and details", opens the details sheet) and no chevron. `fitAll` no longer scales a figure below 11 px (it falls to the compact form instead; the STRESS month table needed it).
+4. Screen jump list: 121 entries; new group "Agent view (v2.0.3)": 3 month Karthik, manual commission bill, no bills (empty), Edit Agent dialog. "Overview (agent filter)" is now "Overview (agent view, Murugan)".
+
+### Intentional logic changes (the baseline was updated deliberately)
+
+`qa/logic-baseline-v2.0.3.txt` is the new frozen copy. Changes against the v2.0.2 block: new bill `b10` (1036, Karthik, 18 Aug 2026, depth 250 ft 7inch x 90, PVC 90 ft 7inch x 150 with a hand-typed commission rate 8) so Karthik has bills in Aug, Sep and Oct; `LN(c,t,f,r,hk)` takes an optional hand-typed commission rate (`hk`, used when the dummy lines get their rate); `calcBill` rounds the commission to paise; new `agentPrice` and `recalcAgentBills(oldAgent,newAgent)`; `pfCalc(ag)` takes an optional agent id ('all' gives the overall figures used by the agent view). Numbers of the older bills and the October figures are unchanged (bill 1036 is in August).
+
+### Hand check (recomputed outside the page, `qa/logic-diff.mjs` asserts the same numbers)
+
+- Bill 1036: depth 250 x 90 = 22,500 (under 300 ft, no step), PVC 90 x 150 = 13,500, total 36,000. Commission 250 x 10 + 90 x 8 (hand-typed) = 2,500 + 720 = 3,220.
+- Karthik, 3 Mo (1 Aug to 31 Oct, main rig; 1036, 1037, 1040, 1043, 1044, 1045): total 36,000 + 50,000 + 41,260 + 35,000 + 54,450 + 44,000 = 260,710; received 20,000 + 50,000 + 20,000 + 15,000 + 30,000 + 40,000 = 175,000; less 260; pending 260,710 - 175,000 - 260 = 85,450; commission 3,220 + 3,000 (manual) + 3,300 + 3,420 + 4,410 + 5,000 = 22,350.
+- Agent profit = 175,000 - 22,350 = 152,650. Expected = 260,710 - 260 - 22,350 = 238,100.
+- All agents, same period: received 424,800, commission 39,390, expenses 121,505 (diesel 33,855, PVC 40,250, bit 18,800, hammer 9,500, other 19,100); profit 424,800 - 121,505 - 39,390 = 263,905.
+- Price edit, one bill: Karthik PVC 8inch 6 to 7 changes only 1044 (its auto line 60 ft): 200 x 10 + 150 x 11 + 80 x 5 + 60 x 7 = 4,470 (was 4,410).
+- Price edit, several bills: Karthik depth 7inch 10 to 12 and PVC 7inch 5 to 6 change 5 bills; 1037 is skipped (manual 3,000); 1036 keeps its hand-typed 8: 250 x 12 + 90 x 8 = 3,720 (was 3,220); 1040 3,960; 1043 3,480; 1044 4,950; 1045 5,640; the agent view commission becomes 24,750.
+- Murugan default depth 10 to 11 changes 4 bills (1042, 1039, side 202, side 204); side 204 = 220 x 11 = 2,420.
+
+### Verification (2026-10-22)
+
+| Check | Result |
+|---|---|
+| `node qa/token-audit.mjs` | OK |
+| `node qa/logic-diff.mjs` | identical to the 2.0.3 baseline, 59 hand checks OK |
+| `node qa/smoke.mjs` | 121 screens, no errors |
+| `node qa/flows.mjs` | all click-through checks OK (67), no script errors |
+| `node qa/shoot.mjs` (412 dp, light and dark) | 0 issues |
+| `--stress`, `--stress --ts 2`, `--stress --ts 1.3` | 0 issues |
+| `--width 360` and `--width 360 --stress --ts 2` | 0 issues |
+| `--nav3`, `--blur` | 0 issues |
+
+Fix found on the way: in STRESS data the By month Total figure was scaled to 10.2 px (under the 11 px floor); `fitAll` now uses the compact form instead of scaling below 11 px. Gotcha: in zsh a loop variable holding several flags must be expanded with `${=a}` or the flags reach `shoot.mjs` as one argument and the run silently tests the default mode.
+
+### Open
+
+Nothing blocks. Not verified: the real Flutter agent view on a device (the review lists the same gap). `docs/v2.0.3-review.md` item "The mockups under docs/design do not show the agent view yet" can now be removed by the developer.
