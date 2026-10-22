@@ -1,36 +1,36 @@
 # RigLedger
 
-A fast, lightweight, production-ready Flutter application for borewell drilling business management. Available on **Android** and **macOS**. Supports multiple vehicles (rigs), ledger entries, agent management, side ledger tracking (diesel, PVC, bit, hammer), comprehensive reporting, and cross-device sync via Google Drive. 100% offline operation — all data stored locally on device with optional cloud sync.
+A fast, lightweight, production-ready Flutter application for borewell drilling business management. Available on **Android** and **macOS**. Supports multiple vehicles (rigs), ledger entries, agent management, side ledger tracking (diesel, PVC, bit, hammer), comprehensive reporting, and cross-device sync via Google Drive. 100% offline operation. All data is stored locally on the device with optional cloud sync.
 
 ## Platforms
 
 | Platform | Status | Notes |
 |----------|--------|-------|
-| Android  | ✅ Production | APK / App Bundle |
-| macOS    | ✅ Production | Native .app bundle |
+| Android  | Production | APK / App Bundle |
+| macOS    | Production | Native .app bundle |
 
 ### macOS Desktop App
 
 The macOS companion app is a full-featured desktop version of RigLedger with:
 
-- **Sidebar navigation** — five sections: Ledger, Portfolio, Agents, Account Ledger, Settings
-- **Custom title bar** with vehicle switcher dropdown and sync status indicator
-- **Keyboard shortcuts** — Cmd+1–5 (tabs), Cmd+N (new entry), Cmd+S (sync), Cmd+F (search)
-- **Native macOS menu bar** — File, View, Window menus with standard Mac conventions
-- **Width-constrained forms** — form screens center at 700px max for comfortable editing
-- **Adaptive headers** — slim section headers on desktop vs gradient headers on mobile
-- **Google Drive sync** — bi-directional sync with tombstone-based conflict resolution
-- **Window management** — 1280×820 default, 900×600 minimum, hidden native title bar
+- **Sidebar navigation:** five sections: Ledger, Portfolio, Agents, Account Ledger, Settings
+- **Custom title bar:** vehicle switcher dropdown and sync status indicator
+- **Keyboard shortcuts:** Cmd+1–5 (tabs), Cmd+N (new entry), Cmd+S (sync), Cmd+F (search)
+- **Native macOS menu bar:** File, View, Window menus with standard Mac conventions
+- **Width-constrained forms:** form screens center at 700px max for comfortable editing
+- **Adaptive headers:** slim section headers on desktop vs gradient headers on mobile
+- **Google Drive sync:** bi-directional sync with tombstone-based conflict resolution
+- **Window management:** 1280×820 default, 900×600 minimum, hidden native title bar
 
 ### Cross-Device Sync
 
 RigLedger syncs data between Android and macOS via Google Drive:
 
-1. **Bi-directional merge** — changes from both devices are merged, not overwritten
-2. **Tombstone tracking** — deletions propagate correctly across devices
-3. **Conflict resolution** — newest `updatedAt` timestamp wins; tombstones override stale data
-4. **Periodic sync** — auto-syncs every 10 minutes on desktop; manual trigger via Cmd+S
-5. **Sync indicator** — real-time status (idle / syncing / success / error) in the title bar
+1. **Bi-directional merge:** changes from both devices are merged, not overwritten
+2. **Tombstone tracking:** deletions propagate correctly across devices
+3. **Conflict resolution:** newest `updatedAt` timestamp wins; tombstones override stale data
+4. **Periodic sync:** auto-syncs every 10 minutes on desktop; manual trigger via Cmd+S
+5. **Sync indicator:** real-time status (idle / syncing / success / error) in the title bar
 
 #### Sync Architecture
 
