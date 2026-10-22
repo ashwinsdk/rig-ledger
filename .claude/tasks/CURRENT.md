@@ -45,11 +45,11 @@ Depends: T-L01 (schema 8)
 Resume notes: CashEntry.vehicleId (HiveField 19, build_runner done, toJson/fromJson/copyWith with clearVehicle); addEntry takes vehicleId; entry form has a 'Rig (optional)' dropdown (No rig + rigs; locked with 'Set from the bill' for linked income; copies keep the rig); PaymentLinkService sets the bill's rig on new linked income and backfills it on existing ones during sync/reconcile; rows show the rig name; CSV has a Rig column (both layouts, total rows padded) and PDF notes get a 'Rig: name' line (CashExportData.rigNames). Transfers do not set a rig. test/cashbook_rig_test.dart, payment_link and export tests updated. 137 tests pass.
 Commit: Add an optional rig to Account Ledger entries
 
-## T-L05 Version 2.0.4 and release notes [PENDING]
+## T-L05 Version 2.0.4 and release notes [DONE]
 Goal: pubspec 2.0.4+9, README changelog, docs/v2.0.4-review.md, MEMORY.md.
 Files: pubspec.yaml, README.md, docs/v2.0.4-review.md, MEMORY.md
 Depends: all
-Resume notes:
+Resume notes: pubspec 2.0.4+9, README changelog, docs/v2.0.4-review.md, MEMORY.md.
 Commit: Bump version to 2.0.4+9
 
 ## v2.0.3 PLAN (source: developer list of 2026-10-22, Flutter app only)

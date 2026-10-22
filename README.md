@@ -49,9 +49,15 @@ RigLedger syncs data between Android and macOS via Google Drive:
 
 ## Version
 
-Current: 2.0.3 (see `pubspec.yaml`)
+Current: 2.0.4 (see `pubspec.yaml`)
 
 ### Changelog
+
+v2.0.4
+- Step rates are editable per rig (Settings, Step Rates): where the step starts, the extra rate per foot for each 100 ft bracket, and the growth per further 100 ft, for the 7 inch and 8 inch tables. Saved bills keep their step rate; new bills use the tables.
+- Portfolio agent view shows the feet of each depth, PVC and MS pipe type for the agent's bills in the period.
+- Account Ledger entries have an optional rig. Income created from a bill payment takes the bill's rig automatically. The rig shows on the entry and in the CSV and PDF reports.
+- Schema version 8.
 
 v2.0.3
 - Changing an agent's commission prices now updates the commission of the agent's existing bills. Bills with a commission set by hand, and lines whose rate was typed by hand, are left as they are. The edit dialog says how many bills changed.

@@ -1,6 +1,6 @@
 # RigLedger - Session Memory
 
-Last updated: 2026-10-22 (v2.0.3 done, Apple-style design mockup)
+Last updated: 2026-10-22 (v2.0.4 done, Apple-style design mockup)
 
 ## Current versions
 
@@ -43,6 +43,12 @@ Last updated: 2026-10-22 (v2.0.3 done, Apple-style design mockup)
 - Review: `docs/v2.0.3-review.md`. Agent price edits recalculate the commission of the agent's bills (`CommissionRecalc`: skips `isCommissionManuallyEdited`, keeps hand-typed line rates by comparing with the old agent price). Portfolio `AgentView` (lib/features/portfolio/agent_view.dart). macOS shell has no Agents tab (Cmd+1..4); `agents_screen.dart` deleted.
 - Gotchas: agents are per rig (`getAllAgents` filters by the current rig), so tests must give agents `vehicleId: 'default_vehicle'`; tapping an agent row in Portfolio filters to that agent, the info icon opens the sheet.
 - Not verified: any of it on a device or on macOS. Both mockups were updated to 2.0.3 (Apple one: `qa/logic-baseline-v2.0.3.txt`).
+
+## v2.0.4 (version 2.0.4+9, T-L01..T-L05 done)
+
+- Review: `docs/v2.0.4-review.md`. Schema 8. `StepRates` per rig (settings key `stepRates`, lib/core/models/step_rates.dart, Settings > Step Rates); saved bills keep `stepRate`. `AgentView` shows feet by type. `CashEntry.vehicleId` (HiveField 19): optional rig, automatic for linked bill payments.
+- Gotchas: `calculateStepRate(custom:)` delegates to `StepTable.calculate`; `CashbookRow` is now a ConsumerWidget (reads the rig name); CSV of the Account Ledger has a trailing Rig column.
+- Not verified: any of it on a device. The mockups do not show these three changes yet.
 
 ## Apple-style design mockup (design only, no lib/ changes)
 
