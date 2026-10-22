@@ -3,6 +3,8 @@ import 'package:intl/intl.dart';
 import '../../core/database/database_service.dart';
 import '../../core/models/agent.dart';
 import '../../core/models/ledger_entry.dart';
+import '../../core/models/ledger_types.dart';
+import '../../core/utils/feet_totals.dart';
 import '../../core/models/vehicle.dart';
 import '../../core/theme/app_colors.dart';
 import '../ledger_form/ledger_form_screen.dart';
@@ -35,6 +37,9 @@ class AgentView extends StatelessWidget {
   /// reference line under this agent's profit).
   final double? overallProfit;
 
+  /// The ledger type lists, for the feet by type (list order).
+  final LedgerTypes types;
+
   const AgentView({
     super.key,
     required this.agent,
@@ -45,6 +50,7 @@ class AgentView extends StatelessWidget {
     required this.onShowAll,
     required this.onDetails,
     this.overallProfit,
+    required this.types,
   });
 
   String get _period {
@@ -89,6 +95,10 @@ class AgentView extends StatelessWidget {
             _kpi('Pending', '₹${_money.format(pending)}', AppColors.warning),
           ],
         ),
+        if (sorted.isNotEmpty) ...[
+          const SizedBox(height: 16),
+          _feetByType(FeetTotals.compute(sorted, types)),
+        ],
         if (sorted.isEmpty)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 32),
@@ -254,6 +264,92 @@ class AgentView extends StatelessWidget {
           ),
         ),
       );
+
+  /// Feet of every depth, PVC and MS pipe type over the agent's bills: every
+  /// line counts under its own type. Types without feet are left out.
+  Widget _feetByType(FeetTotals f) {
+    final feet = NumberFormat('#,##0.##');
+    Widget group(String title, Map<String, double> map, Color color) {
+      final used = {
+        for (final e in map.entries)
+          if (e.value > 0) e.key: e.value
+      };
+      if (used.isEmpty) return const SizedBox.shrink();
+      final total = used.values.fold(0.0, (a, b) => a + b);
+      return Padding(
+        padding: const EdgeInsets.only(top: 10),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(title,
+                      style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textSecondary)),
+                ),
+                Text('Total ${feet.format(total)} ft',
+                    style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: color)),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Wrap(
+              spacing: 8,
+              runSpacing: 6,
+              children: [
+                for (final e in used.entries)
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: color.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text.rich(TextSpan(children: [
+                      TextSpan(
+                          text: '${LedgerTypes.shortLabel(e.key)}  ',
+                          style: const TextStyle(
+                              fontSize: 12, color: AppColors.textSecondary)),
+                      TextSpan(
+                          text: '${feet.format(e.value)} ft',
+                          style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: color)),
+                    ])),
+                  ),
+              ],
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.divider),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Feet by type',
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+          group('Depth', f.depth, Colors.blue),
+          group('PVC', f.pvc, Colors.teal),
+          group('MS pipe', f.ms, Colors.orange),
+        ],
+      ),
+    );
+  }
 
   Widget _monthTable(Map<String, List<LedgerEntry>> months) {
     TextStyle head() => const TextStyle(

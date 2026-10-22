@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../../core/models/agent.dart';
 import '../../core/models/ledger_types.dart';
 import '../../core/providers/agent_provider.dart';
+import '../../core/providers/ledger_types_provider.dart';
 import '../../core/providers/portfolio_provider.dart';
 import '../../core/providers/vehicle_provider.dart';
 import '../../core/theme/app_colors.dart';
@@ -201,6 +202,7 @@ class _PortfolioViewState extends ConsumerState<PortfolioView> {
                       (widget.end == null || !b.date.isAfter(widget.end!)))
                     b
               ],
+              types: ref.watch(ledgerTypesProvider),
               start: widget.start,
               end: widget.end,
               overallProfit: PortfolioCalculator.compute(

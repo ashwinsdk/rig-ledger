@@ -115,6 +115,10 @@ void main() {
         findsOneWidget);
     expect(find.text('₹17,400.00'), findsOneWidget);
     expect(find.textContaining('All agents, after expenses'), findsOneWidget);
+    // feet by type: 100 + 200 + 50 ft of 7inch depth
+    expect(find.text('Feet by type'), findsOneWidget);
+    expect(find.text('Total 350 ft'), findsOneWidget);
+    expect(find.text('7"  350 ft', findRichText: true), findsOneWidget);
     expect(find.text('By month'), findsOneWidget);
     for (final m in ['Aug 2026', 'Sep 2026', 'Oct 2026']) {
       expect(find.text(m), findsOneWidget);

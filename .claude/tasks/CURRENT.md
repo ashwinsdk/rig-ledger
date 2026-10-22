@@ -31,11 +31,11 @@ Depends: T-L01
 Resume notes: Settings > Step Rates (lib/features/settings/step_rates_screen.dart): rig dropdown (main bore rigs), two editors (7 inch, 8 inch): where the step starts, extra per ft for each 100 ft bracket (add and remove), growth per further 100 ft, live example; Save and Reset to standard (confirm). Note on screen says saved bills keep their step rate. test/step_rates_flow_test.dart: edit and save, a new bill uses the table (350 ft = 1250 with +25), a saved bill opened and saved keeps 500. 134 tests pass.
 Commit: Add Step Rates settings per rig
 
-## T-L03 Agent view: feet by type (item 2) [PENDING]
+## T-L03 Agent view: feet by type (item 2) [DONE]
 Goal: in the Portfolio agent view show total depth per type, total PVC per type and total MS pipe per type for the agent's bills in the period (every line counted), next to the totals.
 Files: lib/features/portfolio/agent_view.dart, tests
 Depends: none
-Resume notes:
+Resume notes: AgentView has a 'Feet by type' card (Depth, PVC, MS pipe groups, a chip per type with its feet, group total; types without feet left out) from FeetTotals.compute over the agent's bills of the period, so every line counts under its own type. AgentView takes the ledger types. test/agent_view_test.dart extended.
 Commit: Show feet by type in the Portfolio agent view
 
 ## T-L04 Account Ledger entries remember the rig (item 3) [PENDING] [HIVE/SYNC FLAG]
